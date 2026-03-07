@@ -1,0 +1,1 @@
+// This file contains code for the sessions ui design, how the text will be displayed, etc. use-session hook will be used here to manage session state and actions, allowing the user to send messages, view participants, and handle any session-related events.
