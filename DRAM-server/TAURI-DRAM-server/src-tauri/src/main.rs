@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    dram_chatroom_lib::run()
+    tauri_dram_server_lib::run()
 }
