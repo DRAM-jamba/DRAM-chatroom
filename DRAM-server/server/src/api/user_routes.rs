@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
-use crate::state::AppState;
+use crate::modules::state::AppState;
 
 #[derive(Clone, Serialize)]
 pub struct User {
