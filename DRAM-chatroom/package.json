@@ -1,5 +1,5 @@
 {
-  "name": "dram-chatroom",
+  "name": "dram-client",
   "private": true,
   "version": "0.1.0",
   "type": "module",
