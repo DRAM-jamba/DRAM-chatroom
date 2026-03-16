@@ -1,6 +1,6 @@
+use crate::websocket::WsClient;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::websocket::WsClient;
 
 #[derive(Debug)]
 pub enum ConnectionState {

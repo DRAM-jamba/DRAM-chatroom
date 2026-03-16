@@ -1,11 +1,11 @@
-use tauri::{App, AppHandle, Manager, State};
 use crate::error::AppError;
 use crate::state::{AppState, ConnectionState, SessionState};
 use crate::websocket::WsClient;
+use tauri::{AppHandle, State};
 
 mod error;
-mod state;
 mod events;
+mod state;
 pub mod websocket;
 
 #[tauri::command]
@@ -16,10 +16,10 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 async fn connect(
     ip: String,
-    state: State<'_, AppState>,   // ← was missing entirely
+    state: State<'_, AppState>, // ← was missing entirely
     app: AppHandle,
 ) -> Result<(), AppError> {
-    let mut conn = state.connection.lock().await;  // ← conn not __conn__
+    let mut conn = state.connection.lock().await; // ← conn not __conn__
     if let ConnectionState::Connected(_) = &*conn {
         return Err(AppError::Network("Already connected".into()));
     }
@@ -34,7 +34,7 @@ async fn connect(
 async fn disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
     websocket::stop_heartbeat(&state).await;
     *state.connection.lock().await = ConnectionState::Disconnected;
-    *state.session.lock().await    = SessionState::Idle;
+    *state.session.lock().await = SessionState::Idle;
     Ok(())
 }
 
@@ -55,10 +55,13 @@ async fn join_session(
             session_id: session_id.clone(),
             participants: vec![],
         };
-        events::emit_session_update(&app, events::SessionPayload {
-            session_id,
-            participants: vec![],
-        });
+        events::emit_session_update(
+            &app,
+            events::SessionPayload {
+                session_id,
+                participants: vec![],
+            },
+        );
         Ok(())
     } else {
         Err(AppError::Network("Not connected".into()))
@@ -66,10 +69,7 @@ async fn join_session(
 }
 
 #[tauri::command]
-async fn send_message(
-    body: String,
-    state: State<'_, AppState>,
-) -> Result<(), AppError> {
+async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let conn = state.connection.lock().await;
     match &*conn {
         ConnectionState::Connected(client) => client.send(&body).await,

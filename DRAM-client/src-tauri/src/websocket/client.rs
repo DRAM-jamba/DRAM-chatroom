@@ -1,17 +1,14 @@
 use futures_util::{SinkExt, StreamExt};
-use tokio::net::TcpStream;
-use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
-use tokio::sync::Mutex;
 use std::sync::Arc;
 use tauri::AppHandle;
+use tokio::net::TcpStream;
+use tokio::sync::Mutex;
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 //use crate::{error::AppError, events};
 use crate::error::AppError;
-use crate::events;            
+use crate::events;
 
-type WsSink = futures_util::stream::SplitSink<
-    WebSocketStream<MaybeTlsStream<TcpStream>>,
-    Message,
->;
+type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
 #[derive(Debug)]
 pub struct WsClient {
@@ -21,9 +18,10 @@ pub struct WsClient {
 impl WsClient {
     pub async fn connect(ip: String, app: AppHandle) -> Result<Self, AppError> {
         let url = format!("ws://{}", ip);
-        let (ws_stream, _) = connect_async(url).await
-        .map_err(|e| AppError::Network(e.to_string()))?;
-    
+        let (ws_stream, _) = connect_async(url)
+            .await
+            .map_err(|e| AppError::Network(e.to_string()))?;
+
         let (sink, mut stream) = ws_stream.split();
 
         // Spawn a task to handle incoming messages and forward them to the frontend
@@ -49,14 +47,20 @@ impl WsClient {
     }
 
     pub async fn send(&self, msg: &str) -> Result<(), AppError> {
-        self.sink.lock().await
-            .send(Message::Text(msg.to_string().into())).await
+        self.sink
+            .lock()
+            .await
+            .send(Message::Text(msg.to_string().into()))
+            .await
             .map_err(|e| AppError::Network(e.to_string()))
     }
 
     pub async fn ping(&self) -> Result<(), AppError> {
-        self.sink.lock().await
-            .send(Message::Ping(vec![].into())).await
+        self.sink
+            .lock()
+            .await
+            .send(Message::Ping(vec![].into()))
+            .await
             .map_err(|e| AppError::Network(e.to_string()))
     }
 }

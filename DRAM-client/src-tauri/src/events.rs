@@ -5,12 +5,12 @@ use tauri::{AppHandle, Emitter}; // ← Emitter trait must be in scope in v2
 pub struct MessagePayload {
     pub from: String,
     pub body: String,
-    pub ts:   u64,
+    pub ts: u64,
 }
 
 #[derive(Clone, Serialize)]
 pub struct SessionPayload {
-    pub session_id:   String,
+    pub session_id: String,
     pub participants: Vec<String>,
 }
 
