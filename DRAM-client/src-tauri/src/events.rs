@@ -1,6 +1,7 @@
 use serde::Serialize;
 use tauri::{AppHandle, Emitter}; // ← Emitter trait must be in scope in v2
 
+#[allow(dead_code)]
 #[derive(Clone, Serialize)]
 pub struct MessagePayload {
     pub from: String,
@@ -12,6 +13,7 @@ pub struct MessagePayload {
 pub struct SessionPayload {
     pub session_id: String,
     pub participants: Vec<String>,
+    pub chat_log:     Vec<MessagePayload>,
 }
 
 pub fn emit_message(app: &AppHandle, raw: &str) {

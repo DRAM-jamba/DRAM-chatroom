@@ -60,6 +60,7 @@ async fn join_session(
             events::SessionPayload {
                 session_id,
                 participants: vec![],
+                chat_log: vec![],
             },
         );
         Ok(())
