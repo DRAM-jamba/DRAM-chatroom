@@ -14,8 +14,7 @@ pub enum SessionState {
     JoinedSession {
         // If requirements change, we can add more fields here
         session_id: String,
-        users: Vec<String>,
-        participants: Vec<_>,
+        participants: Vec<String>,
     },
     Recconnecting {
         attempts: u32,

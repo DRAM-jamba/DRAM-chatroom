@@ -1,14 +1,101 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use tauri::{App, AppHandle, Manager, State};
+use crate::error::AppError;
+use crate::state::{AppState, ConnectionState, SessionState};
+use crate::websocket::WsClient;
+
+mod error;
+mod state;
+mod events;
+pub mod websocket;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+async fn connect(
+    ip: String,
+    state: State<'_, AppState>,   // ← was missing entirely
+    app: AppHandle,
+) -> Result<(), AppError> {
+    let mut conn = state.connection.lock().await;  // ← conn not __conn__
+    if let ConnectionState::Connected(_) = &*conn {
+        return Err(AppError::Network("Already connected".into()));
+    }
+    let client = WsClient::connect(ip, app).await?;
+    *conn = ConnectionState::Connected(client);
+    drop(conn);
+    websocket::start_heartbeat(&state).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
+    websocket::stop_heartbeat(&state).await;
+    *state.connection.lock().await = ConnectionState::Disconnected;
+    *state.session.lock().await    = SessionState::Idle;
+    Ok(())
+}
+
+#[tauri::command]
+async fn join_session(
+    session_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), AppError> {
+    let conn = state.connection.lock().await;
+    if let ConnectionState::Connected(client) = &*conn {
+        let msg = serde_json::json!({
+            "action": "join",
+            "session_id": session_id
+        });
+        client.send(&msg.to_string()).await?;
+        *state.session.lock().await = SessionState::JoinedSession {
+            session_id: session_id.clone(),
+            participants: vec![],
+        };
+        events::emit_session_update(&app, events::SessionPayload {
+            session_id,
+            participants: vec![],
+        });
+        Ok(())
+    } else {
+        Err(AppError::Network("Not connected".into()))
+    }
+}
+
+#[tauri::command]
+async fn send_message(
+    body: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let conn = state.connection.lock().await;
+    match &*conn {
+        ConnectionState::Connected(client) => client.send(&body).await,
+        _ => Err(AppError::Network("Not connected".into())),
+    }
+}
+
+#[tauri::command]
+async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
+    *state.session.lock().await = SessionState::Idle;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(AppState::new())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            connect,
+            disconnect,
+            join_session,
+            leave_session,
+            send_message,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
