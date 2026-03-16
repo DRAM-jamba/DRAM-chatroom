@@ -1,50 +1,63 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import JoinServerPage from "./pages/JoinServerPage";
+import DashboardPage from "./pages/DashboardPage";
+import { ConnectionData, SessionItem } from "./types/app";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [connection, setConnection] = useState<ConnectionData | null>(null);
+  const [joinedSessions, setJoinedSessions] = useState<SessionItem[]>([]);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  function handleJoinServer(data: ConnectionData) {
+    setConnection(data);
+  }
+
+  function handleBackToJoin() {
+    setConnection(null);
+  }
+
+  function handleChangeUserName(newName: string) {
+    setConnection((previous) => {
+      if (!previous) return previous;
+      return { ...previous, displayName: newName };
+    });
+  }
+
+  function handleCreateSession(sessionName: string) {
+    const newSession: SessionItem = {
+      id: crypto.randomUUID(),
+      name: sessionName,
+      sessionKey: Math.random().toString(36).slice(2, 8).toUpperCase(),
+      role: "Owner",
+    };
+
+    setJoinedSessions((previous) => [newSession, ...previous]);
+  }
+
+  function handleJoinSessionByKey(sessionKey: string) {
+    const newSession: SessionItem = {
+      id: crypto.randomUUID(),
+      name: `Session ${sessionKey}`,
+      sessionKey: sessionKey.toUpperCase(),
+      role: "Member",
+    };
+
+    setJoinedSessions((previous) => [newSession, ...previous]);
+  }
+
+  if (!connection) {
+    return <JoinServerPage onJoinServer={handleJoinServer} />;
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <DashboardPage
+      connection={connection}
+      joinedSessions={joinedSessions}
+      onBackToJoin={handleBackToJoin}
+      onChangeUserName={handleChangeUserName}
+      onCreateSession={handleCreateSession}
+      onJoinSessionByKey={handleJoinSessionByKey}
+    />
   );
 }
 
