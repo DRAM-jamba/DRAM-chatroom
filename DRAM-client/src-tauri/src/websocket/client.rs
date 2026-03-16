@@ -4,7 +4,9 @@ use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, Web
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use tauri::AppHandle;
-use crate::{error::AppError, events};
+//use crate::{error::AppError, events};
+use crate::error::AppError;
+use crate::events;            
 
 type WsSink = futures_util::stream::SplitSink<
     WebSocketStream<MaybeTlsStream<TcpStream>>,
@@ -43,18 +45,18 @@ impl WsClient {
 
         Ok(Self {
             sink: Arc::new(Mutex::new(sink)),
-        });
+        })
     }
 
     pub async fn send(&self, msg: &str) -> Result<(), AppError> {
         self.sink.lock().await
-            .send(Message::Text(msg.to_string())).await
+            .send(Message::Text(msg.to_string().into())).await
             .map_err(|e| AppError::Network(e.to_string()))
     }
 
     pub async fn ping(&self) -> Result<(), AppError> {
         self.sink.lock().await
-            .send(Message::Ping(vec![])).await
+            .send(Message::Ping(vec![].into())).await
             .map_err(|e| AppError::Network(e.to_string()))
     }
 }

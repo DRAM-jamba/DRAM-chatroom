@@ -4,4 +4,5 @@
 mod client;
 mod heartbeat;
 pub use client::WsClient;
-pub use heartbeat::{start as start_heartbeat, stop as stop_heartbeat};
+pub use heartbeat::start as start_heartbeat;
+pub use heartbeat::stop as stop_heartbeat;

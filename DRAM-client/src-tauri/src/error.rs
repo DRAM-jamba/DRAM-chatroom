@@ -20,6 +20,6 @@ pub enum AppError {
 // Convert AppError to String for Tauri's InvokeError
 impl From<AppError> for String {
     fn from(e: AppError) -> Self {
-        tauri::ipc::InvokeError::from_anyhow(e.into())
+        e.to_string()
     }
 }
