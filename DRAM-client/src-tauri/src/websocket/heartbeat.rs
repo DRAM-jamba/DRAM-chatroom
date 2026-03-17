@@ -9,7 +9,7 @@ pub async fn start(app_state: &AppState) {
     let handle = tokio::spawn(async move {
         let mut ticker = interval(Duration::from_secs(30));
         loop {
-            ticker.tick().await; // ← no underscores
+            ticker.tick().await;
             let conn = connection.lock().await;
             if let ConnectionState::Connected(client) = &*conn {
                 if client.ping().await.is_err() {
@@ -25,7 +25,6 @@ pub async fn start(app_state: &AppState) {
 }
 
 pub async fn stop(app_state: &AppState) {
-    // ← &AppState not AppState
     if let Some(handle) = app_state
         .heartbeat
         .lock()
