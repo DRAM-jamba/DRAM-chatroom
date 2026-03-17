@@ -1,63 +1,28 @@
 import { useState } from "react";
-import "./App.css";
-import JoinServerPage from "./pages/JoinServerPage";
-import DashboardPage from "./pages/DashboardPage";
-import { ConnectionData, SessionItem } from "./types/app";
+import ConnectPage from "./pages/ConnectPage";
+import WelcomePage from "./pages/WelcomePage";
 
 function App() {
-  const [connection, setConnection] = useState<ConnectionData | null>(null);
-  const [joinedSessions, setJoinedSessions] = useState<SessionItem[]>([]);
+  const [currentPage, setCurrentPage] = useState<"connect" | "welcome">(
+    "connect"
+  );
+  const [nickname, setNickname] = useState("");
+  const [ipAddress, setIpAddress] = useState("");
 
-  function handleJoinServer(data: ConnectionData) {
-    setConnection(data);
-  }
-
-  function handleBackToJoin() {
-    setConnection(null);
-  }
-
-  function handleChangeUserName(newName: string) {
-    setConnection((previous) => {
-      if (!previous) return previous;
-      return { ...previous, displayName: newName };
-    });
-  }
-
-  function handleCreateSession(sessionName: string) {
-    const newSession: SessionItem = {
-      id: crypto.randomUUID(),
-      name: sessionName,
-      sessionKey: Math.random().toString(36).slice(2, 8).toUpperCase(),
-      role: "Owner",
-    };
-
-    setJoinedSessions((previous) => [newSession, ...previous]);
-  }
-
-  function handleJoinSessionByKey(sessionKey: string) {
-    const newSession: SessionItem = {
-      id: crypto.randomUUID(),
-      name: `Session ${sessionKey}`,
-      sessionKey: sessionKey.toUpperCase(),
-      role: "Member",
-    };
-
-    setJoinedSessions((previous) => [newSession, ...previous]);
-  }
-
-  if (!connection) {
-    return <JoinServerPage onJoinServer={handleJoinServer} />;
-  }
+  const handleConnect = (ip: string, name: string) => {
+    setIpAddress(ip);
+    setNickname(name);
+    setCurrentPage("welcome");
+  };
 
   return (
-    <DashboardPage
-      connection={connection}
-      joinedSessions={joinedSessions}
-      onBackToJoin={handleBackToJoin}
-      onChangeUserName={handleChangeUserName}
-      onCreateSession={handleCreateSession}
-      onJoinSessionByKey={handleJoinSessionByKey}
-    />
+    <>
+      {currentPage === "connect" ? (
+        <ConnectPage onSubmit={handleConnect} />
+      ) : (
+        <WelcomePage nickname={nickname} />
+      )}
+    </>
   );
 }
 
