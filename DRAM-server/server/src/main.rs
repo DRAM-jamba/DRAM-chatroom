@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
-use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
-use serde_json::json;
+use axum::{Json, Router, response::IntoResponse, routing::get};
+use serde_json::{Value, json};
 use tokio::{net::TcpListener, sync::Mutex};
 
-use crate::{api::user_routes::User, modules::state::AppState};
+use crate::{api::{server_routes, session_routes }, modules::{api_error::ApiError, state::AppState, user::User}};
 
 mod api;
 mod modules;
-
-
+mod logic;
+mod data_logic;
 
 #[tokio::main]
 async fn main() {
 
     let initial_users = vec![
-        User {id: 1, name: "holy shit".into() },
-        User {id: 2, name: "oh my god!".into() },
+        User {id: 1, user_key: "holy shit".into(), related_session_keys: [].to_vec(), last_time_seen: 123 },
+        User {id: 2, user_key: "oh my god!".into(), related_session_keys: [].to_vec(), last_time_seen: 3233 },
     ];
     
     let state = AppState {
@@ -27,11 +27,14 @@ async fn main() {
     let state_for_server = state.clone();
 
     
-    let users_router = api::user_routes::router().with_state(state_for_server.clone());
+    let session_router = api::session_routes::router().with_state(state_for_server.clone());
+    let server_router = api::server_routes::router().with_state(state_for_server.clone());
     
     let app = Router::new()
         .route("/", get(server_check))
-        .nest("/api", users_router);
+        .route("/error", get(error_check))
+        .nest("/session", session_router)
+        .nest("/server", server_router);
 
     let addr = "0.0.0.0:3000";
     let listener = TcpListener::bind(addr).await.unwrap();
@@ -45,4 +48,8 @@ async fn server_check() -> impl IntoResponse {
         "status": "ok",
         "message": "server is running",
     }))
+}
+
+async fn error_check() -> Result<Json<Value>, ApiError> {
+    Err(ApiError::NotFound)
 }
