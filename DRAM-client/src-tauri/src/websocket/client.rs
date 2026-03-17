@@ -4,7 +4,6 @@ use tauri::AppHandle;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
-//use crate::{error::AppError, events};
 use crate::error::AppError;
 use crate::events;
 

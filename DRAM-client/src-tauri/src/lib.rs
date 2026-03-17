@@ -16,10 +16,10 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 async fn connect(
     ip: String,
-    state: State<'_, AppState>, // ← was missing entirely
+    state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    let mut conn = state.connection.lock().await; // ← conn not __conn__
+    let mut conn = state.connection.lock().await;
     if let ConnectionState::Connected(_) = &*conn {
         return Err(AppError::Network("Already connected".into()));
     }

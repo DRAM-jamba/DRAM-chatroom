@@ -1,5 +1,5 @@
 use serde::Serialize;
-use tauri::{AppHandle, Emitter}; // ← Emitter trait must be in scope in v2
+use tauri::{AppHandle, Emitter};
 
 #[allow(dead_code)]
 #[derive(Clone, Serialize)]
