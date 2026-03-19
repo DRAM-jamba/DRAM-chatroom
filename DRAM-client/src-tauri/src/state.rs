@@ -16,7 +16,7 @@ pub enum SessionState {
         session_id: String,
         participants: Vec<String>,
     },
-    Recconnecting {
+    Reconnecting {
         attempts: u32,
     },
 }
