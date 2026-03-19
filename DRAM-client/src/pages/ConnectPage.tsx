@@ -1,14 +1,18 @@
+// useState used to store and update data (state)
 import { FormEvent, useState } from "react";
 
 type ConnectPageProps = {
-  onSubmit: (ip: string, nickname: string) => void;
+  onSubmit: (ip: string) => void;
 };
 
 export default function ConnectPage({ onSubmit }: ConnectPageProps) {
+  // State to store the IP address entered by the user
   const [ipAddress, setIpAddress] = useState("");
-  const [nickname, setNickname] = useState("");
+
+  // State to store error messages
   const [error, setError] = useState("");
 
+  // Function to validate if the IP address is correct
   const isValidIpAddress = (ip: string): boolean => {
     const ipv4Regex =
       /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
@@ -16,11 +20,12 @@ export default function ConnectPage({ onSubmit }: ConnectPageProps) {
     return ipv4Regex.test(ip);
   };
 
+  // Function executed when the form is submitted
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    if (!ipAddress.trim() || !nickname.trim()) {
-      setError("Please fill in both fields.");
+    if (!ipAddress.trim()) {
+      setError("Please enter an IP address.");
       return;
     }
 
@@ -30,12 +35,12 @@ export default function ConnectPage({ onSubmit }: ConnectPageProps) {
     }
 
     setError("");
-    onSubmit(ipAddress.trim(), nickname.trim());
+    onSubmit(ipAddress.trim());
   };
 
   return (
     <div>
-      <h1>Join Session</h1>
+      <h1>Connect to the Server</h1>
 
       <form onSubmit={handleSubmit}>
         <div>
@@ -46,19 +51,6 @@ export default function ConnectPage({ onSubmit }: ConnectPageProps) {
             type="text"
             value={ipAddress}
             onChange={(e) => setIpAddress(e.target.value)}
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label htmlFor="nickname">Nickname:</label>
-          <br />
-          <input
-            id="nickname"
-            type="text"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
           />
         </div>
 

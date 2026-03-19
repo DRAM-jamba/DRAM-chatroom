@@ -1,30 +1,27 @@
+// useState used to store and update data (state)
 import { useState } from "react";
 
-type WelcomePageProps = {
-  nickname: string;
-};
-
-export default function WelcomePage({ nickname }: WelcomePageProps) {
+export default function WelcomePage() {
+  // State to store the session key entered by the user
   const [sessionKey, setSessionKey] = useState("");
-  const [newSessionName, setNewSessionName] = useState("");
-  const [newNickname, setNewNickname] = useState("");
 
+  // State to store the name of a new session
+  const [newSessionName, setNewSessionName] = useState("");
+
+  // Function called when user clicks "Join"
   const handleJoin = () => {
     console.log("Join with key:", sessionKey);
   };
 
+  // Function called when user clicks "Create"
   const handleCreate = () => {
     console.log("Create session:", newSessionName);
-  };
-
-  const handleChangeNickname = () => {
-    console.log("New nickname:", newNickname);
   };
 
   return (
     <div>
 
-      {/* Panel 1: Join Session */}
+      {/* Panel to Join Session */}
       <div>
         <h2>Join Session</h2>
         <input
@@ -36,9 +33,7 @@ export default function WelcomePage({ nickname }: WelcomePageProps) {
         <button onClick={handleJoin}>Join</button>
       </div>
 
-      <hr />
-
-      {/* Panel 2: Create Session */}
+      {/* Panel to Create Session */}
       <div>
         <h2>Create Session</h2>
         <input
@@ -50,19 +45,6 @@ export default function WelcomePage({ nickname }: WelcomePageProps) {
         <button onClick={handleCreate}>Create</button>
       </div>
 
-      <hr />
-
-      {/* Panel 3: Change Nickname */}
-      <div>
-        <h2>Change Nickname</h2>
-        <input
-          type="text"
-          value={newNickname}
-          onChange={(e) => setNewNickname(e.target.value)}
-        />
-        <br />
-        <button onClick={handleChangeNickname}>Change</button>
-      </div>
     </div>
   );
 }
