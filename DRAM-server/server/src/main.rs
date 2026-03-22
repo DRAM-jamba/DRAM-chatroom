@@ -15,8 +15,8 @@ mod data_logic;
 async fn main() {
 
     let initial_users = vec![
-        User {id: 1, user_key: "holy shit".into(), related_session_keys: [].to_vec(), last_time_seen: 123 },
-        User {id: 2, user_key: "oh my god!".into(), related_session_keys: [].to_vec(), last_time_seen: 3233 },
+        User {id: 1, user_key: "holy shit".into(), nickname: "ho".into(), related_session_keys: [].to_vec(), last_time_seen: 123 },
+        User {id: 2, user_key: "oh my god!".into(), nickname: "dddOh".into(), related_session_keys: [].to_vec(), last_time_seen: 3233 },
     ];
     
     let state = AppState {
