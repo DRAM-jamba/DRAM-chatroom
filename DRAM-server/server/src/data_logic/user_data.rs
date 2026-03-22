@@ -7,30 +7,6 @@ use crate::modules::{app_error::AppError, user::User};
 const USER_LIST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/user_list.json");
 
 pub fn get_user_list() -> Result<Vec<User>, AppError> {
-    let json_path = USER_LIST_PATH;
-    let data = fs::read_to_string(json_path);
-
-    match data {
-        Ok(data) => {
-            let users: Result<Vec<User>, serde_json::Error> = from_str(&data);
-            match users {
-                Ok(user_list) => {
-                    Ok(user_list)
-                }
-                Err(e) => {
-                    Err(AppError::Json(e))
-                }
-            }
-        }
-        Err(e ) => {
-            Err(AppError::Io(e))
-        }
-    }    
-}
-
-// now this funciton delete user_list for moment, so here may be mistakes.
-// TODO: change later to DB or file blocking. security
-pub fn add_user(user: &User) -> Result<(), AppError> {
     let json_path: &Path = Path::new(USER_LIST_PATH);
     
     let data = match read_to_string(json_path) {
@@ -40,13 +16,52 @@ pub fn add_user(user: &User) -> Result<(), AppError> {
         Err(e) => return Err(e.into()),
     };
 
-    let mut vec: Vec<User> = from_str(&data)?;
-    vec.push(user.clone());
-    let new_json = to_string_pretty(&vec)?;
-    
+    let vec: Vec<User> = match from_str(&data) {
+        Ok(v) => v,
+        Err(e) => return Err(e.into())
+    };
+
+    Ok(vec)
+}
+
+// now this funciton delete user_list for moment, so here may be mistakes.
+// TODO: change later to DB or file blocking. security
+pub fn save_user_list(user_list: Vec<User>) -> Result<(), AppError> {
+    let json_path: &Path = Path::new(USER_LIST_PATH);
+
+    let new_json: String = match to_string_pretty(&user_list) {
+        Ok(v) => v,
+        Err(e) => return Err(e.into())
+    };
+
     let tmp_path = json_path.with_extension("json.tmp");
-    fs::write(&tmp_path, new_json)?;
-    fs::rename(&tmp_path, &json_path)?;
+
+    match fs::write(&tmp_path, new_json) {
+        Ok(()) => (),
+        Err(e) => return Err(e.into())
+    };
+    match fs::rename(&tmp_path, &json_path) {
+        Ok(()) => (),
+        Err(e) => return Err(e.into())
+    };
 
     Ok(())
 }
+
+
+pub fn add_user(user: &User) -> Result<(), AppError> {
+
+    let mut vec = match get_user_list() {
+        Ok(v) => v.to_vec(),
+        Err(e) => return Err(e.into())
+    };
+    
+    vec.push(user.clone());
+    
+    match save_user_list(vec) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(e.into())
+    }
+
+}
+
