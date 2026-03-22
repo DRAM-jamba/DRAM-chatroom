@@ -6,4 +6,7 @@ pub enum AppError {
 
     #[error("json: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("else: {0}")]
+    Else(String),
 }

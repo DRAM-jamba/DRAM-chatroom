@@ -1,4 +1,4 @@
-use crate::{data_logic::user_data::{add_user, get_user_list}, logic::auth_logic::generate_auth_token, modules::{api_error::ApiError, app_error::AppError, user::User}};
+use crate::{data_logic::user_data::{add_user, get_user_list, update_user}, logic::auth_logic::generate_auth_token, modules::{api_error::ApiError, app_error::AppError, user::User}};
 
 pub fn add_user_to_server() -> Result<(String, String), ApiError> {
     let user_list = match get_user_list() {
@@ -11,7 +11,7 @@ pub fn add_user_to_server() -> Result<(String, String), ApiError> {
         Some(u) => u.id + 1
     };
 
-    let new_user: User = User {id: new_id, user_key: generate_user_key(), 
+    let new_user: User = User {id: new_id, user_key: generate_user_key(), nickname: "".into(), 
                                related_session_keys: [].to_vec(), 
                                last_time_seen: chrono::Utc::now().timestamp() };
     match add_user(&new_user) {
@@ -39,11 +39,39 @@ pub fn connect_user_to_server(user_key: String) -> Result<String, ApiError> {
             match e {
                 // TODO: change it later, but how?
                 AppError::Io(msg) => Err(ApiError::InvalidInput(msg.to_string())),
-                AppError::Json(msg) => Err(ApiError::InvalidInput(msg.to_string()))
+                AppError::Json(msg) => Err(ApiError::InvalidInput(msg.to_string())),
+                AppError::Else(msg) => Err(ApiError::InvalidInput(msg.to_string()))
             }
         }
     }
 }
+
+pub fn set_user_nickname(user_key: String, nickname: String) -> Result<(), ApiError> {
+    let user_list = get_user_list();
+
+    match user_list {
+        Ok(user_list) => {
+            let mut user = match user_list.iter().find(|u| u.user_key == user_key).cloned() {
+                None => return Err(ApiError::NotFound),
+                Some(u) => u,
+            };
+            user.nickname = nickname;
+            match update_user(&user) {
+                Ok(()) => Ok(()),
+                Err(msg) => Err(ApiError::InvalidInput(msg.to_string()))
+            }
+        }
+        Err(e) => {
+            match e {
+                // TODO: change it later, but how?
+                AppError::Io(msg) => Err(ApiError::InvalidInput(msg.to_string())),
+                AppError::Json(msg) => Err(ApiError::InvalidInput(msg.to_string())),
+                AppError::Else(msg) => Err(ApiError::InvalidInput(msg.to_string()))
+            }
+        }
+    }
+}
+
 
 fn generate_user_key() -> String {
     // TODO: implement this function

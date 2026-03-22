@@ -1,4 +1,4 @@
-use std::{ fs::{self, read_to_string}, path::Path};
+use std::{ fs::{self, read_to_string}, ops::Index, path::Path};
 
 use serde_json::{from_str, to_string_pretty};
 
@@ -65,3 +65,23 @@ pub fn add_user(user: &User) -> Result<(), AppError> {
 
 }
 
+pub fn update_user(user: &User) -> Result<(), AppError> {
+
+    let mut vec = match get_user_list() {
+        Ok(v) => v.to_vec(),
+        Err(e) => return Err(e.into())
+    };
+    
+    let index= match vec.iter().position(|u| u.id == user.id) {
+        None => return Err(AppError::Else("User not found in the list".into())),
+        Some(u) => u
+    };
+
+    vec[index] = user.clone();
+    
+    match save_user_list(vec) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(e.into())
+    }
+
+}

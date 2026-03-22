@@ -2,6 +2,7 @@
   {
     "id": 1,
     "user_key": "antihypeFOREVER2026",
+    "nickname": "heheh",
     "related_session_keys": [
       "kot"
     ],
@@ -10,6 +11,7 @@
   {
     "id": 2,
     "user_key": "ChaSINGtHeSumMMER",
+    "nickname": "hwhat a he",
     "related_session_keys": [
       "session_number_21",
       "silverstone_2024"
@@ -19,18 +21,21 @@
   {
     "id": 3,
     "user_key": "hhee22HAM***33",
+    "nickname": "just do it!!!!",
     "related_session_keys": [],
     "last_time_seen": 1773753869
   },
   {
     "id": 4,
     "user_key": "1774173924anti",
+    "nickname": "happyWolf",
     "related_session_keys": [],
     "last_time_seen": 1774173924
   },
   {
     "id": 5,
     "user_key": "1774174065anti",
+    "nickname": "BIG GREMLIN",
     "related_session_keys": [],
     "last_time_seen": 1774174065
   }

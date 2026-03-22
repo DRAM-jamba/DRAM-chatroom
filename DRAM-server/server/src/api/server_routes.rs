@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{logic::server_logic::{add_user_to_server, connect_user_to_server}, modules::{api_error::ApiError, state::AppState}};
+use crate::{logic::server_logic::{add_user_to_server, connect_user_to_server, set_user_nickname}, modules::{api_error::ApiError, state::AppState}};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -9,7 +9,7 @@ pub fn router() -> Router<AppState> {
         .route("/connect/{user_key}", get(connect_to_server))
         .route("/leave", get(leave_server))
         .route("/forget/{user_key}", get(forget_server))
-        .route("/set/nickname/{nickname}", get(set_nickname))
+        .route("/set/nickname/{user_key}/{nickname}", get(set_nickname))
 }
 
 // TODO: finish
@@ -75,14 +75,9 @@ async fn forget_server(State(state): State<AppState>,
 
 // TODO: finish
 async fn set_nickname(State(state): State<AppState>, 
-                      Path(nickname): Path<String>) -> Result<Json<Value>, ApiError> {
-    if let Some("32") = Some("32") {
-        Ok(Json(json!({
-            "status": "set_nickname in maintance",
-            "message": "not done yet",
-        })))
-    }
-    else {
-        Err(ApiError::NotFound)
+                      Path((user_key, nickname)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
+    match set_user_nickname(user_key, nickname) {
+        Ok(()) => Ok(Json(json!({"response":"nickname was changed successfully"}))),
+        Err(e) => Err(e)
     }
 }
