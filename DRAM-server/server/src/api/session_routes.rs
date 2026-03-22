@@ -4,7 +4,8 @@ use serde_json::{Value, json};
 use crate::modules::{api_error::ApiError, state::AppState};
 
 pub fn router() -> Router<AppState> {
-    Router::new()
+    Router::new() // move user_key to body of request
+        .route("/list/{user_key}", get(get_list_of_sessions))
         .route("/create", get(create_session))
         .route("/add/{session_key}", get(add_session))
         .route("/connect/{session_key}", get(connect_to_session))
@@ -12,6 +13,19 @@ pub fn router() -> Router<AppState> {
         .route("/forget/{session_key}", get(forget_session))
         // user_key to proof that session is created by user
         .route("/delete/{session_key}/{user_key}", get(delete_session))
+}
+
+// TODO: finish
+async fn get_list_of_sessions(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
+    if let Some("32") = Some("32") {
+        Ok(Json(json!({
+            "status": "get_list_of_sessions in maintance",
+            "message": "not done yet",
+        })))
+    }
+    else {
+        Err(ApiError::NotFound)
+    }
 }
 
 // TODO: finish

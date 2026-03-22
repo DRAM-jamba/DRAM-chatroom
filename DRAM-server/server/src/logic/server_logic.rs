@@ -47,6 +47,7 @@ pub fn connect_user_to_server(user_key: String) -> Result<String, ApiError> {
 
 fn generate_user_key() -> String {
     // TODO: implement this function
-
-    return "hhee22HAM4433".into();
+    let mut key = chrono::Utc::now().timestamp().to_string();
+    key = key + "anti";
+    return key;
 }
