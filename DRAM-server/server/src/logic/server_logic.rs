@@ -1,4 +1,7 @@
-use crate::{data_logic::user_data::{add_user, get_user_list, update_user}, logic::auth_logic::generate_auth_token, modules::{api_error::ApiError, app_error::AppError, user::User}};
+use crate::{data_logic::user_data::{add_user, get_user_list, update_user}, 
+                        errors::{api_error::ApiError, app_error::AppError}, 
+                        logic::auth_logic::generate_auth_token, 
+                        modules::user::User};
 
 pub fn add_user_to_server() -> Result<(String, String), ApiError> {
     let user_list = match get_user_list() {

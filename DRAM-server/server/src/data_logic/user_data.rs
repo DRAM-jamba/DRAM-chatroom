@@ -2,7 +2,7 @@ use std::{ fs::{self, read_to_string}, ops::Index, path::Path};
 
 use serde_json::{from_str, to_string_pretty};
 
-use crate::modules::{app_error::AppError, user::User};
+use crate::{errors::app_error::AppError, modules::user::User};
 
 const USER_LIST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/user_list.json");
 

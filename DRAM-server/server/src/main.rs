@@ -4,12 +4,13 @@ use axum::{Json, Router, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
 use tokio::{net::TcpListener, sync::Mutex};
 
-use crate::{api::{server_routes, session_routes }, modules::{api_error::ApiError, state::AppState, user::User}};
+use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::{state::AppState, user::User}};
 
 mod api;
 mod modules;
 mod logic;
 mod data_logic;
+mod errors;
 
 #[tokio::main]
 async fn main() {

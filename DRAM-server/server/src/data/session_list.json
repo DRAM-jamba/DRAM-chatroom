@@ -1,0 +1,42 @@
+[
+    {
+        "session_id": 1,
+        "session_key": "session_number_21",
+        "session_owner_id": 2,
+        "name": "21 number 676767",
+        "chat_log": [
+            "heheh: What a heck???",
+            "hwhat a he: wow, 10 crashes"
+        ],
+        "current_user_list": [],
+        "black_list": [
+            3
+        ]
+    },
+    {
+        "session_id": 2,
+        "session_key": "kot",
+        "session_owner_id": 1,
+        "name": "kot, a mojet kit",
+        "chat_log": [
+            "heheh: runduck, chesk for runes, runeduck (runechest). AHAHHHAHAH"
+        ],
+        "current_user_list": [
+            1
+        ],
+        "black_list": []
+    },
+    {
+        "session_id": 3,
+        "session_key": "silverstone_2024",
+        "session_owner_id": 2,
+        "name": "last ham win",
+        "chat_log": [
+            "hwhat a he: ....",
+            "hwhat a he: ....",
+            "hwhat a he: ...."
+        ],
+        "current_user_list": [],
+        "black_list": []
+    }
+]
