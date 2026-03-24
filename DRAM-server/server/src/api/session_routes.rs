@@ -1,11 +1,11 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::modules::{api_error::ApiError, state::AppState};
+use crate::{errors::api_error::ApiError, logic::session_logic::get_user_related_session_list, modules::state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new() // move user_key to body of request
-        .route("/list/{user_key}", get(get_list_of_sessions))
+        .route("/list/{user_key}", get(get_session_list))
         .route("/create", get(create_session))
         .route("/add/{session_key}", get(add_session))
         .route("/connect/{session_key}", get(connect_to_session))
@@ -16,15 +16,15 @@ pub fn router() -> Router<AppState> {
 }
 
 // TODO: finish
-async fn get_list_of_sessions(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
-    if let Some("32") = Some("32") {
-        Ok(Json(json!({
-            "status": "get_list_of_sessions in maintance",
-            "message": "not done yet",
-        })))
-    }
-    else {
-        Err(ApiError::NotFound)
+async fn get_session_list(State(state): State<AppState>,
+                          Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
+    match get_user_related_session_list(user_key) {
+        Ok(v) => {
+            Ok(Json(json!({
+                "related_sessions": v
+            })))
+        },
+        Err(e) => Err(e)
     }
 }
 

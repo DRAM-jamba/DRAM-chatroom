@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{logic::server_logic::{add_user_to_server, connect_user_to_server, set_user_nickname}, modules::{api_error::ApiError, state::AppState}};
+use crate::{errors::api_error::ApiError, logic::server_logic::{add_user_to_server, connect_user_to_server, set_user_nickname}, modules::state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new()
