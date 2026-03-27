@@ -1,1 +1,0 @@
-// This file will contain dashboard's join-create session panel's ui design.
