@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::session_logic::{create_session_l, get_user_related_session_list}, modules::state::AppState};
+use crate::{errors::api_error::ApiError, logic::session_logic::{add_session_by_session_key, create_session_l, get_user_related_session_list}, modules::state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new() // move user_key to body of request
@@ -33,24 +33,17 @@ async fn create_session(State(state): State<AppState>,
                         Path((user_key, session_name)): Path<(String, String)>) -> Result<(), ApiError> {
     
     match create_session_l(user_key, session_name) {
-        Ok(()) => {
-            Ok(())
-        },
+        Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
 }
 
 // TODO: finish
 async fn add_session(State(state): State<AppState>,
-                     Path((user_key, session_key)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
-    if let Some("32") = Some("32") {
-        Ok(Json(json!({
-            "status": "add_session in maintance",
-            "message": "not done yet",
-        })))
-    }
-    else {
-        Err(ApiError::NotFound)
+                     Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
+    match add_session_by_session_key(user_key, session_key) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(e)
     }
 }
 

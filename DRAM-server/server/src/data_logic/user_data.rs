@@ -48,6 +48,18 @@ pub fn save_user_list(user_list: Vec<User>) -> Result<(), AppError> {
     Ok(())
 }
 
+pub fn get_user_by_user_key(user_key: String) -> Result<User, AppError> {
+    let user_list = match get_user_list() {
+        Ok(v) => v,
+        Err(e) => return Err(e)
+    };
+    let user = match user_list.iter().find(|u| u.user_key == user_key) {
+        None => return Err(AppError::Else("User not found".into())),
+        Some(u) => u
+    };
+    Ok(user.clone())
+}
+
 
 pub fn add_user(user: &User) -> Result<(), AppError> {
 

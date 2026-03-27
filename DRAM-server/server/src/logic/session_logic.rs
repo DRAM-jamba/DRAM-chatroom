@@ -1,13 +1,9 @@
-use crate::{data_logic::{session_data::{add_session, get_session_list}, user_data::{add_user, get_user_list, update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
+use crate::{data_logic::{session_data::{add_session, get_session_list}, user_data::{add_user, get_user_by_user_key, get_user_list, update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
 
 pub fn get_user_related_session_list(user_key: String) -> Result<Vec<Session>, ApiError> {
-    let user_list = match get_user_list() {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string())) // TODO: change it later
-    };
-    let user = match user_list.iter().find(|u| u.user_key == user_key) {
-        None => return Err(ApiError::NotFound),
-        Some(u) => u
+    let user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
     };
     let session_list = match get_session_list() {
         Ok(v) => v,
@@ -20,13 +16,9 @@ pub fn get_user_related_session_list(user_key: String) -> Result<Vec<Session>, A
 }
 
 pub fn create_session_l(user_key: String, session_name: String) -> Result<(), ApiError> {
-    let user_list = match get_user_list() {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    let user = match user_list.iter().find(|u| u.user_key == user_key) {
-        None => return Err(ApiError::NotFound),
-        Some(u) => u
+    let user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
     };
     let session_list = match get_session_list() {
         Ok(v) => v,
@@ -37,7 +29,6 @@ pub fn create_session_l(user_key: String, session_name: String) -> Result<(), Ap
         Some(i) => i.session_id + 1
     };
 
-
     let new_session: Session = Session { session_id: new_id, session_key: generate_session_key(), 
                                          session_owner_id: user.id, 
                                          name: session_name, chat_log: [].to_vec(), 
@@ -46,20 +37,16 @@ pub fn create_session_l(user_key: String, session_name: String) -> Result<(), Ap
         Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    match add_session_by_session_key(user_key, new_session.session_key) {
+    match add_session_by_session_key(user.user_key, new_session.session_key) {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
 }
 
 pub fn add_session_by_session_key(user_key: String, session_key: String) -> Result<(), ApiError> {
-    let user_list = match get_user_list() {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    let mut user = match user_list.iter().find(|u| u.user_key == user_key).cloned() {
-        None => return Err(ApiError::NotFound),
-        Some(u) => u
+    let mut user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
     };
     let session_list = match get_session_list() {
         Ok(v) => v,
