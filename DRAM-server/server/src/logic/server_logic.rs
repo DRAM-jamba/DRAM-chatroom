@@ -64,14 +64,7 @@ pub fn set_user_nickname(user_key: String, nickname: String) -> Result<(), ApiEr
                 Err(msg) => Err(ApiError::InvalidInput(msg.to_string()))
             }
         }
-        Err(e) => {
-            match e {
-                // TODO: change it later, but how?
-                AppError::Io(msg) => Err(ApiError::InvalidInput(msg.to_string())),
-                AppError::Json(msg) => Err(ApiError::InvalidInput(msg.to_string())),
-                AppError::Else(msg) => Err(ApiError::InvalidInput(msg.to_string()))
-            }
-        }
+        Err(e) => Err(ApiError::InvalidInput(e.to_string()))
     }
 }
 

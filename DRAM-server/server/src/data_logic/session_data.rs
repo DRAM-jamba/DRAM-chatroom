@@ -48,3 +48,17 @@ pub fn save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
 
     Ok(())
 }
+
+pub fn add_session(session: &Session) -> Result<(), AppError> {
+    let mut vec = match get_session_list() {
+        Ok(v) => v,
+        Err(e) => return Err(e)
+    };
+
+    vec.push(session.clone());
+
+    match save_session_list(vec) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(e)
+    }
+}
