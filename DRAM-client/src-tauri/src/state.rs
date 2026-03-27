@@ -5,6 +5,9 @@ use tokio::sync::Mutex;
 #[derive(Debug)]
 pub enum ConnectionState {
     Disconnected,
+    JoinedServer {
+        ip: String,
+    },
     Connected(WsClient),
 }
 

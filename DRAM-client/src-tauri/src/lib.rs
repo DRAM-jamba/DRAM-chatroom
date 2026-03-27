@@ -14,6 +14,22 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
+async fn add(
+    ip: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), AppError> {
+    // Validate IP address format
+    ip.parse::<std::net::Ipv4Addr>()
+        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
+
+    let client = reqwest::Client::new();
+    let url = format!("http://{}/add", ip);
+    
+    Ok(())
+}
+
+#[tauri::command]
 async fn connect(
     ip: String,
     state: State<'_, AppState>,
