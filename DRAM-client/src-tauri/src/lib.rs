@@ -24,8 +24,12 @@ async fn connect(
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
     // Send connect request
+    let user_key = state.current_user_key.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Auth("No user key — use add first".into()))?;
     let client = reqwest::Client::new();
-    let url = format!("http://{}/connect", ip);
+    let url = format!("http://{}/connect/{}", ip, user_key);
     client
         .get(&url)
         .send()
@@ -33,6 +37,9 @@ async fn connect(
         .map_err(|e| AppError::Network(format!("Failed to connect: {}", e)))?
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
+
+    // Emit event to frontend | will be used to change UI state
+    // events::emit_connected(&app);
     Ok(())
 }
 
