@@ -53,14 +53,14 @@ pub fn add_user(user: &User) -> Result<(), AppError> {
 
     let mut vec = match get_user_list() {
         Ok(v) => v.to_vec(),
-        Err(e) => return Err(e.into())
+        Err(e) => return Err(e)
     };
     
     vec.push(user.clone());
     
     match save_user_list(vec) {
         Ok(()) => Ok(()),
-        Err(e) => return Err(e.into())
+        Err(e) => return Err(e)
     }
 
 }
