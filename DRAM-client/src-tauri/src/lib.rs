@@ -19,14 +19,27 @@ async fn connect(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    let mut conn = state.connection.lock().await;
-    if let ConnectionState::Connected(_) = &*conn {
-        return Err(AppError::Network("Already connected".into()));
-    }
-    let client = WsClient::connect(ip, app).await?;
-    *conn = ConnectionState::Connected(client);
-    drop(conn);
-    websocket::start_heartbeat(&state).await;
+    // Validate IP address format
+    ip.parse::<std::net::Ipv4Addr>()
+        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
+    
+    // Send connect request
+    let user_key = state.current_user_key.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Auth("No user key — use add first".into()))?;
+    let client = reqwest::Client::new();
+    let url = format!("http://{}/connect/{}", ip, user_key);
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to connect: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
+
+    // Emit event to frontend | will be used to change UI state
+    // events::emit_connected(&app);
     Ok(())
 }
 

@@ -27,3 +27,7 @@ pub fn emit_session_update(app: &AppHandle, payload: SessionPayload) {
 pub fn emit_disconnected(app: &AppHandle) {
     let _ = app.emit("disconnected", ());
 }
+
+pub fn emit_connected(app: &AppHandle) {
+    let _ = app.emit("connected", ());
+}
