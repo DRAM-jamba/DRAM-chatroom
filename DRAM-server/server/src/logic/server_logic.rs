@@ -1,5 +1,5 @@
-use crate::{data_logic::user_data::{add_user, get_user_list, update_user}, 
-                        errors::{api_error::ApiError, app_error::AppError}, 
+use crate::{data_logic::user_data::{add_user, get_user_by_user_key, get_user_list, update_user}, 
+                        errors::{api_error::ApiError}, 
                         logic::auth_logic::generate_auth_token, 
                         modules::user::User};
 
@@ -19,51 +19,29 @@ pub fn add_user_to_server() -> Result<(String, String), ApiError> {
                                last_time_seen: chrono::Utc::now().timestamp() };
     match add_user(&new_user) {
         Ok(()) => (),
-        Err(e) => {
-            return Err(ApiError::InternalError) // TODO: change it later
-        }
-    }
+        Err(e) => return Err(ApiError::InternalError) // TODO: change it later
+    };
 
     Ok((generate_auth_token(), new_user.user_key))
 }
 
 
 pub fn connect_user_to_server(user_key: String) -> Result<String, ApiError> {
-    let user_list = get_user_list();
-
-    match user_list {
-        Ok(user_list) => {
-            match user_list.iter().find(|u| u.user_key == user_key).cloned() {
-                None => Err(ApiError::NotFound),
-                Some(u) => Ok(generate_auth_token())
-            }
-        }
-        Err(e) => {
-            match e {
-                // TODO: change it later, but how?
-                AppError::Io(msg) => Err(ApiError::InvalidInput(msg.to_string())),
-                AppError::Json(msg) => Err(ApiError::InvalidInput(msg.to_string())),
-                AppError::Else(msg) => Err(ApiError::InvalidInput(msg.to_string()))
-            }
-        }
-    }
+    let user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
+    };
+    Ok(generate_auth_token())
 }
 
 pub fn set_user_nickname(user_key: String, nickname: String) -> Result<(), ApiError> {
-    let user_list = get_user_list();
-
-    match user_list {
-        Ok(user_list) => {
-            let mut user = match user_list.iter().find(|u| u.user_key == user_key).cloned() {
-                None => return Err(ApiError::NotFound),
-                Some(u) => u,
-            };
-            user.nickname = nickname;
-            match update_user(&user) {
-                Ok(()) => Ok(()),
-                Err(msg) => Err(ApiError::InvalidInput(msg.to_string()))
-            }
-        }
+    let mut user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
+    };
+    user.nickname = nickname;
+    match update_user(&user) {
+        Ok(()) => Ok(()),
         Err(e) => Err(ApiError::InvalidInput(e.to_string()))
     }
 }
