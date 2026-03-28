@@ -1,0 +1,1 @@
+// it helps React know what a server, session, or message should look like.
