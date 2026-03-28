@@ -71,6 +71,37 @@ pub fn add_session_by_session_key(user_key: String, session_key: String) -> Resu
 
 }
 
+pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(), ApiError> {
+    let mut user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
+    };
+    let session_list = match get_session_list() {
+        Ok(v) => v,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+    match session_list.iter().position(|s| s.session_key == session_key) {
+        None => return Err(ApiError::NotFound),
+        Some(s_i) => {
+            match user.related_session_keys.iter().find(|s| **s == session_key) { // TODO: find how works '*'
+                None => Err(ApiError::InvalidInput("User does not have this session".into())),
+                Some(s) => {
+                    if session_list[s_i].session_owner_id == user.id {
+                        return Err(ApiError::InvalidInput("User is owner of session. He can delete session, but not forget".into()))
+                    }
+                    user.related_session_keys.remove(s_i);
+                    match update_user(&user) {
+                        Ok(()) => Ok(()),
+                        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+                    }
+                }
+            }
+            
+        }
+    }
+
+}
+
 fn generate_session_key() -> String {
     let mut key = chrono::Utc::now().timestamp().to_string();
     key = key + "sysING";
