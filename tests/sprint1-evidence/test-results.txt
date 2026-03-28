@@ -1,0 +1,18 @@
+Test Results:
+
+Microsoft Windows [Version 10.0.26200.8037]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\ASUS>cd C:\Users\ASUS\OneDrive\Desktop\DRAM-chatroom
+
+C:\Users\ASUS\OneDrive\Desktop\DRAM-chatroom>node test-dram-server.js
+health check - 200 { message: 'server is running', status: 'ok' }
+all users - 200 [ { id: 1, name: 'holy shit' }, { id: 2, name: 'oh my god!' } ]
+user count: 2
+user 1 - 200 { id: 1, name: 'holy shit' }
+user 2 - 200 { id: 2, name: 'oh my god!' }
+missing user (999) - 404
+bad id type (abc) - 400
+unknown route - 404
+POST /api/users - 405
+
