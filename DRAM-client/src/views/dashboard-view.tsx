@@ -1,1 +1,0 @@
-// This file aggregates the various components that make up the dashboard view, such as the join/create session panel, recent sessions list, and any other relevant UI elements. It will also handle any necessary state management for the dashboard.
