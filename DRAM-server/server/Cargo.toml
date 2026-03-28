@@ -12,3 +12,10 @@ serde_json = "1"
 thiserror = "2.0.18"
 tokio = { version = "1.50.0", features = ["full"] }
 tower = "0.5.3"
+
+[dependencies.uuid]
+version = "1.23.0"
+# Lets you generate random UUIDs
+features = [
+    "v4",
+]

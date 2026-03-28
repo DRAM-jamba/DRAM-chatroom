@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::{data_logic::{session_data::{add_session, get_session_list}, user_data::{add_user, get_user_by_user_key, get_user_list, update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
 
 pub fn get_user_related_session_list(user_key: String) -> Result<Vec<Session>, ApiError> {
@@ -29,7 +31,7 @@ pub fn create_session_l(user_key: String, session_name: String) -> Result<(), Ap
         Some(i) => i.session_id + 1
     };
 
-    let new_session: Session = Session { session_id: new_id, session_key: generate_session_key(), 
+    let new_session: Session = Session { session_id: new_id, session_key: generate_session_key(&session_list), 
                                          session_owner_id: user.id, 
                                          name: session_name, chat_log: [].to_vec(), 
                                          current_user_list: [].to_vec(), black_list: [].to_vec() };
@@ -102,8 +104,16 @@ pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(
 
 }
 
-fn generate_session_key() -> String {
-    let mut key = chrono::Utc::now().timestamp().to_string();
-    key = key + "sysING";
-    return key;
+// TODO: check it for security. for now it should be ok, but it is not ideal.
+fn generate_session_key(session_list: &Vec<Session>) -> String {
+    let mut s_key: String;
+    loop {
+        s_key = Uuid::new_v4().to_string();
+        match session_list.iter().find(|s| s.session_key == s_key) {
+            None => break,
+            Some(s) => continue
+        } 
+    };
+
+    return s_key;
 }
