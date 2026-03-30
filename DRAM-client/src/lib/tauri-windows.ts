@@ -1,1 +1,0 @@
-// Here will be the code for managing window sizes and positions in Tauri. This will include functions to save and restore window states, as well as any necessary event listeners to handle window resizing and movement.

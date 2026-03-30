@@ -65,5 +65,23 @@
     "chat_log": [],
     "current_user_list": [],
     "black_list": []
+  },
+  {
+    "session_id": 7,
+    "session_key": "724cda56-daa7-4751-b8f0-ecff094609cc",
+    "session_owner_id": 1,
+    "name": "new id check anti anti anti",
+    "chat_log": [],
+    "current_user_list": [],
+    "black_list": []
+  },
+  {
+    "session_id": 8,
+    "session_key": "06c3b3e9-5574-48d2-a910-1b68cbebe020",
+    "session_owner_id": 1,
+    "name": "one more time",
+    "chat_log": [],
+    "current_user_list": [],
+    "black_list": []
   }
 ]
