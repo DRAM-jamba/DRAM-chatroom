@@ -93,34 +93,51 @@ async fn disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
 }
 
 #[tauri::command]
+async fn create_session(
+    name: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let user_key = state.known_servers.lock().await
+        .get(&ip)
+        .cloned()
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+    
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.create_session(&user_key, &name);
+    let response = state.client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to create session: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected creation: {}", e)))?;
+
+    let session_key: String = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to parse response: {}", e)))?
+        .get("session_key")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::Network("Missing session_key in response".into()))?
+        .to_string();
+
+    join_session(session_key, state, app);
+    Ok(())
+}
+
+#[tauri::command]
 async fn join_session(
     session_id: String,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    let conn = state.connection.lock().await;
-    if let ConnectionState::Connected(client) = &*conn {
-        let msg = serde_json::json!({
-            "action": "join",
-            "session_id": session_id
-        });
-        client.send(&msg.to_string()).await?;
-        *state.session.lock().await = SessionState::JoinedSession {
-            session_id: session_id.clone(),
-            participants: vec![],
-        };
-        events::emit_session_update(
-            &app,
-            events::SessionPayload {
-                session_id,
-                participants: vec![],
-                chat_log: vec![],
-            },
-        );
-        Ok(())
-    } else {
-        Err(AppError::Network("Not connected".into()))
-    }
+    Ok(())
 }
 
 #[tauri::command]
