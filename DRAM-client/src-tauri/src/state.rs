@@ -1,6 +1,7 @@
 use crate::websocket::WsClient;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum ConnectionState {
@@ -28,8 +29,11 @@ pub struct AppState {
     pub connection: Arc<Mutex<ConnectionState>>,
     pub session: Arc<Mutex<SessionState>>,
     pub heartbeat: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
-    pub current_user_key: Arc<Mutex<Option<String>>>,
-    pub current_ip: String,
+    /// Maps IP -> user_key for each known server
+    pub known_servers: Arc<Mutex<HashMap<String, String>>>,
+    /// The IP of the currently active connection
+    pub current_ip: Arc<Mutex<Option<String>>>,
+    pub client: reqwest::Client,
 }
 
 impl AppState {
@@ -38,8 +42,9 @@ impl AppState {
             connection: Arc::new(Mutex::new(ConnectionState::Disconnected)),
             session: Arc::new(Mutex::new(SessionState::Idle)),
             heartbeat: Arc::new(Mutex::new(None)),
-            current_user_key: Arc::new(Mutex::new(None)),
-            current_ip: String::new(),
+            known_servers: Arc::new(Mutex::new(HashMap::new())),
+            current_ip: Arc::new(Mutex::new(None)),
+            client: reqwest::Client::new(),
         }
     }
 }

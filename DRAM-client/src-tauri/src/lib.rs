@@ -1,11 +1,14 @@
 use crate::error::AppError;
 use crate::state::{AppState, ConnectionState, SessionState};
+use crate::api::ServerApi;
 use crate::websocket::WsClient;
 use tauri::{AppHandle, State};
+use tokio_tungstenite::tungstenite::client;
 
 mod error;
 mod events;
 mod state;
+mod api;
 pub mod websocket;
 
 #[tauri::command]
@@ -23,9 +26,29 @@ async fn add(
     ip.parse::<std::net::Ipv4Addr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.add();
+
     let client = reqwest::Client::new();
-    let url = format!("http://{}/add", ip);
-    
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to connect: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
+
+    let user_key: String = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to parse response: {}", e)))?
+        .get("user_key")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::Network("Missing user_key in response".into()))?
+        .to_string();
+
+    state.known_servers.lock().await.insert(ip.clone(), user_key);
+    events::emit_connected(&app);
     Ok(())
 }
 
@@ -40,12 +63,14 @@ async fn connect(
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
     // Send connect request
-    let user_key = state.current_user_key.lock().await
-        .as_ref()
+    let user_key = state.known_servers.lock().await
+        .get(&ip)
         .cloned()
-        .ok_or_else(|| AppError::Auth("No user key — use add first".into()))?;
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — use add first", ip)))?;
+    
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.connect(&user_key);
     let client = reqwest::Client::new();
-    let url = format!("http://{}/connect/{}", ip, user_key);
     client
         .get(&url)
         .send()
@@ -54,8 +79,8 @@ async fn connect(
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
 
-    // Emit event to frontend | will be used to change UI state
-    // events::emit_connected(&app);
+    *state.connection.lock().await = ConnectionState::JoinedServer { ip: ip.clone() };
+    events::emit_connected(&app);
     Ok(())
 }
 
