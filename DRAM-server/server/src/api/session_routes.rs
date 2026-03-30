@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::session_logic::{add_session_by_session_key, create_session_l, get_user_related_session_list}, modules::state::AppState};
+use crate::{errors::api_error::ApiError, logic::session_logic::{add_session_by_session_key, create_session_l, forget_session_by_user, get_user_related_session_list}, modules::state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new() // move user_key to body of request
@@ -10,9 +10,9 @@ pub fn router() -> Router<AppState> {
         .route("/add/{user_key}/{session_key}", get(add_session))
         .route("/connect/{session_key}", get(connect_to_session))
         .route("/leave", get(leave_session))
-        .route("/forget/{session_key}", get(forget_session))
+        .route("/forget/{user_key}/{session_key}", get(forget_session))
         // user_key to proof that session is created by user
-        .route("/delete/{session_key}/{user_key}", get(delete_session))
+        .route("/delete/{user_key}/{session_key}", get(delete_session))
 }
 
 // TODO: finish
@@ -76,15 +76,10 @@ async fn leave_session(State(state): State<AppState>) -> Result<Json<Value>, Api
 
 // TODO: finish
 async fn forget_session(State(state): State<AppState>,
-                       Path(session_key): Path<String>) -> Result<Json<Value>, ApiError> {
-    if let Some("32") = Some("32") {
-        Ok(Json(json!({
-            "status": "forget_session in maintance",
-            "message": "not done yet",
-        })))
-    }
-    else {
-        Err(ApiError::NotFound)
+                       Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
+    match forget_session_by_user(user_key, session_key) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(e)
     }
 }
 

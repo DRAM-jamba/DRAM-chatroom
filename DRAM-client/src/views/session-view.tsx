@@ -1,1 +1,0 @@
-// This file aggregates the various components that make up the session view, such as the message list, input area, and any other relevant UI elements.
