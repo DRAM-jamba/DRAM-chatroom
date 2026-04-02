@@ -1,0 +1,17 @@
+Microsoft Windows [Version 10.0.26200.8037]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\ASUS>cd C:\Users\ASUS\OneDrive\Desktop\DRAM-chatroom
+
+C:\Users\ASUS\OneDrive\Desktop\DRAM-chatroom>node test-dram-server.js
+health check - 200 { message: 'server is running', status: 'ok' }
+error route - 404
+add user - 200 {
+  auth_token: '^se_Sp##RoJec(t_33-anqt1hyp3_wh0lqe_1o77a_re|)d*',
+  user_key: 'hhee22HAM4433'
+}
+connect valid key - 200 { auth_token: '^se_Sp##RoJec(t_33-anqt1hyp3_wh0lqe_1o77a_re|)d*' }
+connect bad key - 404
+server leave - 200 { message: 'not done yet', status: 'leave_server in maintance' }
+session create - 200 { message: 'not done yet', status: 'create_session in maintance' }
+old /api/users route - 404
