@@ -1,1 +1,5 @@
-// it helps React know what a server, session, or message should look like.
+export type Server = {
+  id: string;
+  name: string;
+  ipAddress: string;
+};

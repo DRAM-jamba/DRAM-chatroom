@@ -60,6 +60,7 @@ async fn test_add_user() {
 async fn test_connect_valid_key() {
     let client = Client::new();
 
+    // add a user first to get a real key
     let add = client
         .get(format!("{}/server/add", BASE))
         .send()
@@ -95,6 +96,7 @@ async fn test_connect_bad_key() {
         .unwrap();
 
     // no user created here so no cleanup needed
+    // random key shouldnt exist, expecting 404
     assert_eq!(res.status().as_u16(), 404);
 }
 

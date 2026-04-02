@@ -1,1 +1,13 @@
-// it helps React know what a server, session, or message should look like.
+export type Message = {
+  id: string;
+  authorUsername: string;
+  content: string;
+  timestamp: string; // e.g. "14:08"
+  date: string;      // e.g. "28/03/2026" — used for date separators
+};
+
+export type Member = {
+  username: string;
+  online: boolean;
+};
+
