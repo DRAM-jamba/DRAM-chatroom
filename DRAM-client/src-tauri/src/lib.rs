@@ -1,9 +1,11 @@
 use crate::error::AppError;
+use crate::events::{emit_joined_session, emit_session_update};
 use crate::state::{AppState, ConnectionState, SessionState};
 use crate::api::ServerApi;
 use crate::websocket::WsClient;
 use tauri::{AppHandle, State};
 use tokio_tungstenite::tungstenite::client;
+use serde::{Deserialize, Serialize};
 
 mod error;
 mod events;
@@ -79,6 +81,7 @@ async fn connect(
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
 
+    *state.current_ip.lock().await = Some(ip.clone());
     *state.connection.lock().await = ConnectionState::JoinedServer { ip: ip.clone() };
     events::emit_connected(&app);
     Ok(())
@@ -127,7 +130,7 @@ async fn create_session(
         .ok_or_else(|| AppError::Network("Missing session_key in response".into()))?
         .to_string();
 
-    join_session(session_key, state, app);
+    
     Ok(())
 }
 
@@ -137,6 +140,54 @@ async fn join_session(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let user_key = state.known_servers.lock().await
+        .get(&ip)
+        .cloned()
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+    
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.join_session(&user_key, &session_id);
+    let response = state.client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to join session: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected join: {}", e)))?;
+
+    let response_value: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to parse response: {}", e)))?;
+
+    let payload: events::SessionPayload = if let Some(inner) = response_value.get("payload") {
+        serde_json::from_value(inner.clone())
+            .map_err(|e| AppError::Network(format!("Failed to parse session payload: {}", e)))?
+    } else {
+        serde_json::from_value(response_value)
+            .map_err(|e| AppError::Network(format!("Failed to parse session payload: {}", e)))?
+    };
+
+    *state.session.lock().await = SessionState::JoinedSession {
+        session_id: payload.session_id.clone(),
+        participants: payload.participants.clone(),
+    };
+
+    //let ws_url = api.ws(&user_key);
+    //let ws_client = websocket::WsClient::connect(&ws_url, app.clone())
+    //    .await
+    //    .map_err(|e| AppError::Network(format!("Failed to open websocket: {}", e)))?;
+
+    //*state.connection.lock().await = ConnectionState::Connected(ws_client);
+    //websocket::start_heartbeat(&state).await;
+
+    emit_joined_session(&app);
+    emit_session_update(&app, payload);
     Ok(())
 }
 
