@@ -1,15 +1,15 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
 #[allow(dead_code)]
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MessagePayload {
     pub from: String,
     pub body: String,
     pub ts: u64,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SessionPayload {
     pub session_id: String,
     pub participants: Vec<String>,
@@ -18,6 +18,10 @@ pub struct SessionPayload {
 
 pub fn emit_message(app: &AppHandle, raw: &str) {
     let _ = app.emit("message", raw);
+}
+
+pub fn emit_joined_session(app: &AppHandle) {
+    let _ = app.emit("joined_session", ());
 }
 
 pub fn emit_session_update(app: &AppHandle, payload: SessionPayload) {

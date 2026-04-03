@@ -15,8 +15,7 @@ pub struct WsClient {
 }
 
 impl WsClient {
-    pub async fn connect(ip: String, app: AppHandle) -> Result<Self, AppError> {
-        let url = format!("ws://{}", ip);
+    pub async fn connect(url: &str, app: AppHandle) -> Result<Self, AppError> {
         let (ws_stream, _) = connect_async(url)
             .await
             .map_err(|e| AppError::Network(e.to_string()))?;
