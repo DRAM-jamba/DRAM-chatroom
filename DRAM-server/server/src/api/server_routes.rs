@@ -12,7 +12,6 @@ pub fn router() -> Router<AppState> {
         .route("/set/nickname/{user_key}/{nickname}", get(set_nickname))
 }
 
-// TODO: finish
 async fn add_server(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
     match add_user_to_server() {
         Ok(response) => {
@@ -28,7 +27,6 @@ async fn add_server(State(state): State<AppState>) -> Result<Json<Value>, ApiErr
     }
 }
 
-// TODO: finish
 async fn connect_to_server(State(state): State<AppState>, 
                            Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
     
@@ -73,7 +71,6 @@ async fn forget_server(State(state): State<AppState>,
     }
 }
 
-// TODO: finish
 async fn set_nickname(State(state): State<AppState>, 
                       Path((user_key, nickname)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
     match set_user_nickname(user_key, nickname) {

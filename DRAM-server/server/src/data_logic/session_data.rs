@@ -49,6 +49,18 @@ pub fn save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
     Ok(())
 }
 
+pub fn get_session_by_session_key(session_key: String) -> Result<Session, AppError> {
+    let session_list = match get_session_list() {
+        Ok(v) => v,
+        Err(e) => return Err(e)
+    };
+    let session = match session_list.iter().find(|s| s.session_key == session_key) {
+        None => return Err(AppError::Else("Session not found".into())),
+        Some(s) => s
+    };
+    Ok(session.clone())
+}
+
 pub fn add_session(session: &Session) -> Result<(), AppError> {
     let mut vec = match get_session_list() {
         Ok(v) => v,
@@ -56,6 +68,25 @@ pub fn add_session(session: &Session) -> Result<(), AppError> {
     };
 
     vec.push(session.clone());
+
+    match save_session_list(vec) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(e)
+    }
+}
+
+pub fn remove_session(session: &Session) -> Result<(), AppError> {
+    let mut vec = match get_session_list() {
+        Ok(v) => v,
+        Err(e) => return Err(e)
+    };
+
+    let s_i = match vec.iter().position(|s| s.session_id == session.session_id) {
+        None => return Err(AppError::Else("Session not found in session list".into())),
+        Some(i) => i
+    };
+
+    vec.remove(s_i);
 
     match save_session_list(vec) {
         Ok(()) => Ok(()),
