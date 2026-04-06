@@ -24,7 +24,6 @@ async fn add(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    // Validate IP address format
     ip.parse::<std::net::Ipv4Addr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
@@ -60,11 +59,9 @@ async fn connect(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    // Validate IP address format
     ip.parse::<std::net::Ipv4Addr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
-    // Send connect request
     let user_key = state.known_servers.lock().await
         .get(&ip)
         .cloned()
@@ -209,12 +206,16 @@ async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_keyring::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             greet,
+            add,
             connect,
             disconnect,
+            create_session,
             join_session,
             leave_session,
             send_message,
