@@ -103,17 +103,17 @@ pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(
     }
 }
 
-pub fn delete_session_by_owner(user_key: String, session_key: String) -> Result<(), ApiError> {
+pub fn delete_session_by_owner(user_key: &String, session_key: &String) -> Result<(), ApiError> {
     let mut user_list = match get_user_list() {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    let session = match get_session_by_session_key(session_key) {
+    let session = match get_session_by_session_key(&session_key) {
         Ok(s) => s,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
 
-    match user_list.iter().find(|u| u.id == session.session_owner_id && u.user_key == user_key) {
+    match user_list.iter().find(|u| u.id == session.session_owner_id && u.user_key == *user_key) {
         None => return Err(ApiError::NotFound),
         Some(u) => ()
     };

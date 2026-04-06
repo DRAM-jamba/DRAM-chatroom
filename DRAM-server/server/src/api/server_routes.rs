@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::server_logic::{add_user_to_server, connect_user_to_server, set_user_nickname}, modules::state::AppState};
+use crate::{errors::api_error::ApiError, logic::server_logic::{add_user_to_server, connect_user_to_server, delete_user_from_server, set_user_nickname}, modules::state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -59,15 +59,10 @@ async fn leave_server(State(state): State<AppState>) -> Result<Json<Value>, ApiE
 
 // TODO: finish
 async fn forget_server(State(state): State<AppState>, 
-                       Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
-    if let Some("32") = Some("32") {
-        Ok(Json(json!({
-            "status": "leave_server in maintance",
-            "message": "not done yet",
-        })))
-    }
-    else {
-        Err(ApiError::NotFound)
+                       Path(user_key): Path<String>) -> Result<(), ApiError> {
+    match delete_user_from_server(user_key) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(e)
     }
 }
 

@@ -49,12 +49,12 @@ pub fn save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
     Ok(())
 }
 
-pub fn get_session_by_session_key(session_key: String) -> Result<Session, AppError> {
+pub fn get_session_by_session_key(session_key: &String) -> Result<Session, AppError> {
     let session_list = match get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(e)
     };
-    let session = match session_list.iter().find(|s| s.session_key == session_key) {
+    let session = match session_list.iter().find(|s| s.session_key == *session_key) {
         None => return Err(AppError::Else("Session not found".into())),
         Some(s) => s
     };

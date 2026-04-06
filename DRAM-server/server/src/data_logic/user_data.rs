@@ -97,3 +97,22 @@ pub fn update_user(user: &User) -> Result<(), AppError> {
     }
 
 }
+
+pub fn remove_user(user: &User) -> Result<(), AppError> {
+    let mut vec = match get_user_list() {
+        Ok(v) => v,
+        Err(e) => return Err(e)
+    };
+
+    let u_i = match vec.iter().position(|u| u.id == user.id) {
+        None => return Err(AppError::Else("User not found in user list".into())),
+        Some(i) => i
+    };
+
+    vec.remove(u_i);
+
+    match save_user_list(vec) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(e)
+    }
+}

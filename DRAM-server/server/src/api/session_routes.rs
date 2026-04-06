@@ -81,7 +81,7 @@ async fn forget_session(State(state): State<AppState>,
 
 async fn delete_session(State(state): State<AppState>,
                         Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
-    match delete_session_by_owner(user_key, session_key) {
+    match delete_session_by_owner(&user_key, &session_key) {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
