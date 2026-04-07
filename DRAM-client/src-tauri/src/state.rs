@@ -1,7 +1,8 @@
 use tauri::AppHandle;
-use std::collections::HashMap;
 use tauri_plugin_store::StoreExt;
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersistedServer {
@@ -25,59 +26,64 @@ pub enum SessionState {
 }
 
 pub struct AppState {
-    pub servers: Vec<PersistedServer>,
-    pub current_ip: Option<String>,
-    pub connection: ConnectionState,
-    pub session: SessionState,
+    pub servers: Arc<Mutex<Vec<PersistedServer>>>,
+    pub current_ip: Arc<Mutex<Option<String>>>,
+    pub connection: Arc<Mutex<ConnectionState>>,
+    pub session: Arc<Mutex<SessionState>>,
+    pub heartbeat: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     app_handle: AppHandle,
 }
 
 impl AppState {
     pub fn new(app_handle: AppHandle) -> Self {
-        let mut state = Self {
-            servers: Vec::new(),
-            current_ip: None,
-            connection: ConnectionState::Disconnected,
-            session: SessionState::Idle,
+        Self {
+            servers: Arc::new(Mutex::new(Vec::new())),
+            current_ip: Arc::new(Mutex::new(None)),
+            connection: Arc::new(Mutex::new(ConnectionState::Disconnected)),
+            session: Arc::new(Mutex::new(SessionState::Idle)),
+            heartbeat: Arc::new(Mutex::new(None)),
             app_handle,
-        };
-        state.load_persisted_data();
-        state
+        }
     }
 
-    fn load_persisted_data(&mut self) {
+    pub async fn load_persisted_data(&self) {
         if let Ok(store) = self.app_handle.store("servers.json") {
             if let Some(servers) = store.get("servers") {
                 if let Ok(servers_vec) = serde_json::from_value::<Vec<PersistedServer>>(servers) {
-                    self.servers = servers_vec;
+                    *self.servers.lock().await = servers_vec;
                 }
             }
         }
     }
 
-    pub fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let servers = self.servers.lock().await.clone();
         let store = self.app_handle.store("servers.json")?;
-        store.set("servers", serde_json::to_value(&self.servers)?);
+        store.set("servers", serde_json::to_value(&servers)?);
         store.save()?;
         Ok(())
     }
 
-    pub fn add_server(&mut self, ip: String, nickname: String, user_key: String) -> Result<(), Box<dyn std::error::Error>> {
-        if self.servers.iter().any(|s| s.ip == ip) {
+    pub async fn add_server(&self, ip: String, nickname: String, user_key: String) -> Result<(), Box<dyn std::error::Error>> {
+        let mut servers = self.servers.lock().await;
+        if servers.iter().any(|s| s.ip == ip) {
             return Err("Server already exists".into());
         }
-        self.servers.push(PersistedServer { ip, nickname, user_key });
-        self.save_servers()?;
+        servers.push(PersistedServer { ip, nickname, user_key });
+        drop(servers);
+        self.save_servers().await?;
         Ok(())
     }
 
-    pub fn remove_server(&mut self, ip: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.servers.retain(|s| s.ip != ip);
-        self.save_servers()?;
+    pub async fn remove_server(&self, ip: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut servers = self.servers.lock().await;
+        servers.retain(|s| s.ip != ip);
+        drop(servers);
+        self.save_servers().await?;
         Ok(())
     }
 
-    pub fn get_server(&self, ip: &str) -> Option<&PersistedServer> {
-        self.servers.iter().find(|s| s.ip == ip)
+    pub async fn get_server(&self, ip: &str) -> Option<PersistedServer> {
+        self.servers.lock().await.iter().find(|s| s.ip == ip).cloned()
     }
 }

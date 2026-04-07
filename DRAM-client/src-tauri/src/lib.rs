@@ -6,6 +6,7 @@ use crate::websocket::WsClient;
 use tauri::{AppHandle, State};
 use tokio_tungstenite::tungstenite::client;
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 mod error;
 mod events;
@@ -21,6 +22,7 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 async fn add(
     ip: String,
+    nickname: String,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
@@ -48,7 +50,8 @@ async fn add(
         .ok_or_else(|| AppError::Network("Missing user_key in response".into()))?
         .to_string();
 
-    state.known_servers.lock().await.insert(ip.clone(), user_key);
+    state.add_server(ip.clone(), nickname, user_key).await
+        .map_err(|e| AppError::Network(format!("Failed to save server: {}", e)))?;
     events::emit_connected(&app);
     Ok(())
 }
@@ -62,13 +65,12 @@ async fn connect(
     ip.parse::<std::net::Ipv4Addr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
-    let user_key = state.known_servers.lock().await
-        .get(&ip)
-        .cloned()
+    let server = state.get_server(&ip)
+        .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — use add first", ip)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
-    let url = api.connect(&user_key);
+    let url = api.connect(&server.user_key);
     let client = reqwest::Client::new();
     client
         .get(&url)
@@ -79,7 +81,7 @@ async fn connect(
         .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
 
     *state.current_ip.lock().await = Some(ip.clone());
-    *state.connection.lock().await = ConnectionState::JoinedServer { ip: ip.clone() };
+    *state.connection.lock().await = ConnectionState::JoinedServer;
     events::emit_connected(&app);
     Ok(())
 }
@@ -103,22 +105,22 @@ async fn create_session(
         .cloned()
         .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
 
-    let user_key = state.known_servers.lock().await
-        .get(&ip)
-        .cloned()
+    let server = state.get_server(&ip)
+        .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
-    let url = api.create_session(&user_key, &name);
-    let response = state.client
+    let url = api.create_session(&server.user_key, &name);
+    let client = reqwest::Client::new();
+    let response = client
         .get(&url)
         .send()
         .await
         .map_err(|e| AppError::Network(format!("Failed to create session: {}", e)))?
         .error_for_status()
-        .map_err(|e| AppError::Auth(format!("Server rejected creation: {}", e)))?;
+        .map_err(|e| AppError::Auth(format!("Server rejected session creation: {}", e)))?;
 
-    let session_key: String = response
+    let _session_key: String = response
         .json::<serde_json::Value>()
         .await
         .map_err(|e| AppError::Network(format!("Failed to parse response: {}", e)))?
@@ -126,8 +128,6 @@ async fn create_session(
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::Network("Missing session_key in response".into()))?
         .to_string();
-
-    
     Ok(())
 }
 
@@ -142,14 +142,14 @@ async fn join_session(
         .cloned()
         .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
 
-    let user_key = state.known_servers.lock().await
-        .get(&ip)
-        .cloned()
+    let server = state.get_server(&ip)
+        .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
-    let url = api.join_session(&user_key, &session_id);
-    let response = state.client
+    let url = api.join_session(&server.user_key, &session_id);
+    let client = reqwest::Client::new();
+    let response = client
         .get(&url)
         .send()
         .await
@@ -170,10 +170,7 @@ async fn join_session(
             .map_err(|e| AppError::Network(format!("Failed to parse session payload: {}", e)))?
     };
 
-    *state.session.lock().await = SessionState::JoinedSession {
-        session_id: payload.session_id.clone(),
-        participants: payload.participants.clone(),
-    };
+    *state.session.lock().await = SessionState::JoinedSession;
 
     //let ws_url = api.ws(&user_key);
     //let ws_client = websocket::WsClient::connect(&ws_url, app.clone())
@@ -192,7 +189,10 @@ async fn join_session(
 async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let conn = state.connection.lock().await;
     match &*conn {
-        ConnectionState::Connected(client) => client.send(&body).await,
+        ConnectionState::Connected => {
+            // TODO: Send via WebSocket client
+            Ok(())
+        },
         _ => Err(AppError::Network("Not connected".into())),
     }
 }
@@ -203,13 +203,29 @@ async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
     Ok(())
 }
 
+#[tauri::command]
+async fn get_servers(state: State<'_, AppState>) -> Result<Vec<state::PersistedServer>, AppError> {
+    Ok(state.servers.lock().await.clone())
+}
+
+#[tauri::command]
+async fn remove_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
+    state.remove_server(&ip).await
+        .map_err(|e| AppError::Network(format!("Failed to remove server: {}", e)))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_keyring::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
-        .manage(AppState::new())
+        .setup(|app| {
+            let app_handle = app.handle().clone();
+            let app_state = AppState::new(app_handle);
+            app.manage(app_state);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             add,
@@ -219,6 +235,8 @@ pub fn run() {
             join_session,
             leave_session,
             send_message,
+            get_servers,
+            remove_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
