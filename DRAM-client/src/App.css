@@ -1024,3 +1024,19 @@ button {
   border-color: #00aaff;
   box-shadow: 0 0 8px rgba(0, 170, 255, 0.2);
 }
+
+@font-face {
+  font-family: "Monocraft";
+  src: url("./assets/fonts/Monocraft.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  font-family: "Monocraft", monospace;
+}
+
+* {
+  font-family: "Monocraft", monospace;
+}
