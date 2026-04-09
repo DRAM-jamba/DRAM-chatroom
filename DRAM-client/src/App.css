@@ -1024,3 +1024,119 @@ button {
   border-color: #00aaff;
   box-shadow: 0 0 8px rgba(0, 170, 255, 0.2);
 }
+
+/* ── Nickname Page ───────────────────────────────────────── */
+
+.nickname-main-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nickname-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 320px;
+}
+
+.nickname-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e5e5e5;
+  margin: 0 0 2px 0;
+}
+
+.nickname-subtitle {
+  font-size: 13px;
+  color: #7a7a7a;
+  margin: 0 0 8px 0;
+}
+
+.nickname-input {
+  width: 100%;
+}
+
+.nickname-error {
+  font-size: 12px;
+  color: #ff4f4f;
+  margin: 0;
+}
+
+.nickname-confirm-btn {
+  margin-top: 4px;
+}
+
+/* ── Editable nickname in SessionsPage ───────────────────── */
+
+.session-user-box-btn {
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.session-user-box-btn:hover {
+  border-color: #00aaff;
+  color: #d6d6d6;
+}
+
+.nickname-edit-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nickname-edit-input {
+  flex: 1;
+  height: 38px;
+  margin: 0;
+}
+
+.nickname-confirm-inline-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 38px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #151515;
+  color: #00aaff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.nickname-confirm-inline-btn:hover {
+  border-color: #00aaff;
+  background: #1a2a3a;
+}
+
+/* ── Disconnect button ───────────────────────────────────── */
+
+.disconnect-btn {
+  border-color: #3a1a1a;
+  color: #cc6666;
+}
+
+.disconnect-btn:hover {
+  border-color: #ff4444;
+  color: #ff6666;
+  box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
+}
+
+
+@font-face {
+  font-family: "Monocraft";
+  src: url("./assets/fonts/Monocraft.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  font-family: "Monocraft", monospace;
+}
+
+* {
+  font-family: "Monocraft", monospace;
+}

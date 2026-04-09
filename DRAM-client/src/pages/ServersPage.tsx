@@ -24,12 +24,6 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
 
   const loadServers = async () => {
     const data = await getServers();
-
-    // Example later when fetching directly from Rust/Tauri here:
-    // import { invoke } from "@tauri-apps/api/core";
-    // const data = await invoke<Server[]>("get_servers");
-    // setServers(data);
-
     setServers(data);
   };
 
