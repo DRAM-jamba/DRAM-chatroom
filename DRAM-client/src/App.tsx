@@ -1,13 +1,15 @@
 import { useState } from "react";
 import ServersPage from "./pages/ServersPage";
+import NicknamePage from "./pages/NicknamePage";
 import SessionsPage from "./pages/SessionsPage";
 import ChatPage from "./pages/ChatPage";
 import "./App.css";
 
 type Page =
   | { name: "servers" }
-  | { name: "sessions" }
-  | { name: "chat"; sessionName: string };
+  | { name: "nickname" }
+  | { name: "sessions"; nickname: string }
+  | { name: "chat"; sessionName: string; nickname: string };
 
 function App() {
   const [page, setPage] = useState<Page>({ name: "servers" });
@@ -16,7 +18,9 @@ function App() {
     return (
       <ChatPage
         sessionName={page.sessionName}
-        onLeaveSession={() => setPage({ name: "sessions" })}
+        onLeaveSession={() =>
+          setPage({ name: "sessions", nickname: page.nickname })
+        }
       />
     );
   }
@@ -24,15 +28,27 @@ function App() {
   if (page.name === "sessions") {
     return (
       <SessionsPage
-        onBackToServers={() => setPage({ name: "servers" })}
+        nickname={page.nickname}
+        onDisconnect={() => setPage({ name: "servers" })}
+        onNicknameChange={(newNickname) =>
+          setPage({ name: "sessions", nickname: newNickname })
+        }
         onConnectToSession={(sessionName) =>
-          setPage({ name: "chat", sessionName })
+          setPage({ name: "chat", sessionName, nickname: page.nickname })
         }
       />
     );
   }
 
-  return <ServersPage onOpenSessions={() => setPage({ name: "sessions" })} />;
+  if (page.name === "nickname") {
+    return (
+      <NicknamePage
+        onNicknameSet={(nickname) => setPage({ name: "sessions", nickname })}
+      />
+    );
+  }
+
+  return <ServersPage onOpenSessions={() => setPage({ name: "nickname" })} />;
 }
 
 export default App;

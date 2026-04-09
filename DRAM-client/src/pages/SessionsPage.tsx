@@ -6,20 +6,26 @@ import {
   removeSession,
   updateSession,
 } from "../services/sessionService";
+import { updateNickname } from "../services/nicknameService";
 import type { Session } from "../types/session";
 
 type SessionsPageProps = {
-  onBackToServers?: () => void;
+  nickname: string;
+  onDisconnect?: () => void;
+  onNicknameChange?: (newNickname: string) => void;
   onConnectToSession?: (sessionName: string) => void;
 };
 
 type View = "list" | "create" | "generated";
 
-function SessionsPage({ onBackToServers, onConnectToSession }: SessionsPageProps) {
+function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSession }: SessionsPageProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showHelpPopup, setShowHelpPopup] = useState(false);
   const [view, setView] = useState<View>("list");
+
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState(nickname);
 
   const [sessionNameInput, setSessionNameInput] = useState("");
   const [sessionKeyInput, setSessionKeyInput] = useState("");
@@ -56,6 +62,25 @@ function SessionsPage({ onBackToServers, onConnectToSession }: SessionsPageProps
 
     if (onConnectToSession) {
       onConnectToSession(selectedSession.name);
+    }
+  };
+
+  const handleNicknameConfirm = async () => {
+    const trimmed = nicknameInput.trim();
+    if (!trimmed) return;
+
+    await updateNickname(trimmed);
+    setIsEditingNickname(false);
+    if (onNicknameChange) {
+      onNicknameChange(trimmed);
+    }
+  };
+
+  const handleNicknameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleNicknameConfirm();
+    if (e.key === "Escape") {
+      setNicknameInput(nickname);
+      setIsEditingNickname(false);
     }
   };
 
@@ -112,7 +137,38 @@ function SessionsPage({ onBackToServers, onConnectToSession }: SessionsPageProps
         <div className="sidebar-line" />
 
         <div className="session-top-row">
-          <div className="session-user-box">hello. userdolboeb</div>
+          {isEditingNickname ? (
+            <div className="nickname-edit-row">
+              <input
+                className="server-input nickname-edit-input"
+                value={nicknameInput}
+                onChange={(e) => setNicknameInput(e.target.value)}
+                onKeyDown={handleNicknameKeyDown}
+                autoFocus
+                maxLength={32}
+              />
+              <button
+                className="nickname-confirm-inline-btn"
+                type="button"
+                onClick={handleNicknameConfirm}
+                title="Confirm nickname"
+              >
+                ✓
+              </button>
+            </div>
+          ) : (
+            <button
+              className="session-user-box session-user-box-btn"
+              type="button"
+              onClick={() => {
+                setNicknameInput(nickname);
+                setIsEditingNickname(true);
+              }}
+              title="Click to edit nickname"
+            >
+              Hello {nickname}!
+            </button>
+          )}
 
           <div className="session-plus-wrapper">
             {!showPlusMenu ? (
@@ -255,13 +311,13 @@ function SessionsPage({ onBackToServers, onConnectToSession }: SessionsPageProps
           <p className="version-text">ver. 0.2</p>
         </div>
 
-        {onBackToServers && (
+        {onDisconnect && (
           <button
-            className="back-to-servers-btn"
+            className="back-to-servers-btn disconnect-btn"
             type="button"
-            onClick={onBackToServers}
+            onClick={onDisconnect}
           >
-            back to servers
+            disconnect
           </button>
         )}
       </aside>
