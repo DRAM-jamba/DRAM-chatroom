@@ -85,10 +85,10 @@ impl AppState {
 
     pub async fn get_server(&self, ip: &str) -> Option<PersistedServer> {
         self.servers.lock().await.iter().find(|s| s.ip == ip).cloned()
-}
+    }
 
-#[cfg(test)]
-mod tests {
+    #[cfg(test)]
+    mod tests {
     use super::*;
 
     // basic check - when app starts everything should be empty/disconnected
@@ -215,5 +215,6 @@ mod tests {
         s.known_servers.lock().await.insert("192.168.1.2".into(), "k2".into());
         let n = s.known_servers.lock().await.len();
         assert_eq!(n, 2);
+    }
     }
 }
