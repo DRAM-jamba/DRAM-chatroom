@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{data_logic::{session_data::{add_session, get_session_list}, user_data::{add_user, get_user_by_user_key, get_user_list, update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
+use crate::{data_logic::{session_data::{add_session, get_session_by_session_key, get_session_list, remove_session}, user_data::{add_user, get_user_by_user_key, get_user_list, save_user_list, update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
 
 pub fn get_user_related_session_list(user_key: String) -> Result<Vec<Session>, ApiError> {
     let user = match get_user_by_user_key(user_key) {
@@ -101,7 +101,38 @@ pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(
             
         }
     }
+}
 
+pub fn delete_session_by_owner(user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    let mut user_list = match get_user_list() {
+        Ok(v) => v,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+    let session = match get_session_by_session_key(&session_key) {
+        Ok(s) => s,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match user_list.iter().find(|u| u.id == session.session_owner_id && u.user_key == *user_key) {
+        None => return Err(ApiError::NotFound),
+        Some(u) => ()
+    };
+
+    for u in user_list.iter_mut() {
+        let s_i = match u.related_session_keys.iter().position(|s_k| **s_k == session.session_key) {
+            None => continue,
+            Some(i) => i
+        };
+        u.related_session_keys.remove(s_i);
+    };
+    match save_user_list(user_list) {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+    match remove_session(&session) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    }
 }
 
 // TODO: check it for security. for now it should be ok, but it is not ideal.

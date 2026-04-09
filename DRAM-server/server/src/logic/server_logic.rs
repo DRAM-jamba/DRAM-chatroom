@@ -1,8 +1,8 @@
 use uuid::Uuid;
 
-use crate::{data_logic::user_data::{add_user, get_user_by_user_key, get_user_list, update_user}, 
-                        errors::{api_error::ApiError}, 
-                        logic::auth_logic::generate_auth_token, 
+use crate::{data_logic::{session_data::get_session_list, user_data::{add_user, get_user_by_user_key, get_user_list, remove_user, update_user}}, 
+                        errors::api_error::ApiError, 
+                        logic::{auth_logic::generate_auth_token, session_logic::delete_session_by_owner}, 
                         modules::user::User};
 
 pub fn add_user_to_server() -> Result<(String, String), ApiError> {
@@ -34,6 +34,32 @@ pub fn connect_user_to_server(user_key: String) -> Result<String, ApiError> {
         Err(e) => return Err(ApiError::NotFound)
     };
     Ok(generate_auth_token())
+}
+
+pub fn delete_user_from_server(user_key: String) -> Result<(), ApiError> {
+    let user = match get_user_by_user_key(user_key) {
+        Ok(u) => u,
+        Err(e) => return Err(ApiError::NotFound)
+    };
+    let session_list = match get_session_list() {
+        Ok(v) => v,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    for s in session_list.iter() {
+        if s.session_owner_id == user.id {
+            match delete_session_by_owner(&user.user_key, &s.session_key) {
+                Ok(()) => (),
+                Err(e) => return Err(e)
+            }
+        }
+    };
+
+    match remove_user(&user) {
+        Ok(()) => Ok(()),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    }
+
 }
 
 pub fn set_user_nickname(user_key: String, nickname: String) -> Result<(), ApiError> {
