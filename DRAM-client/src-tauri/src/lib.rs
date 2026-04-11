@@ -26,7 +26,7 @@ async fn add(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    ip.parse::<std::net::Ipv4Addr>()
+    ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     let api = ServerApi::new(&format!("http://{}", ip));
@@ -59,10 +59,11 @@ async fn add(
 #[tauri::command]
 async fn connect(
     ip: String,
+    nickname: Option<String>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    ip.parse::<std::net::Ipv4Addr>()
+    ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
     let server = state.get_server(&ip)
@@ -82,6 +83,19 @@ async fn connect(
 
     *state.current_ip.lock().await = Some(ip.clone());
     *state.connection.lock().await = ConnectionState::JoinedServer;
+
+    if let Some(nick) = nickname {
+        let url = api.set_nickname(&server.user_key, &nick);
+        let client = reqwest::Client::new();
+        client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
+            .error_for_status()
+            .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+    }
+
     events::emit_connected(&app);
     Ok(())
 }
@@ -132,8 +146,8 @@ async fn create_session(
 }
 
 #[tauri::command]
-async fn join_session(
-    session_id: String,
+async fn connect_session(
+    session_key: String,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
@@ -147,7 +161,7 @@ async fn join_session(
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
-    let url = api.join_session(&server.user_key, &session_id);
+    let url = api.connect_session(&session_key);
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
@@ -209,6 +223,34 @@ async fn get_servers(state: State<'_, AppState>) -> Result<Vec<state::PersistedS
 }
 
 #[tauri::command]
+async fn set_nickname(
+    new_nickname: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let server = state.get_server(&ip)
+        .await
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.set_nickname(&server.user_key, &new_nickname);
+    let client = reqwest::Client::new();
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
 async fn remove_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
     state.remove_server(&ip).await
         .map_err(|e| AppError::Network(format!("Failed to remove server: {}", e)))
@@ -232,10 +274,11 @@ pub fn run() {
             connect,
             disconnect,
             create_session,
-            join_session,
+            connect_session,
             leave_session,
             send_message,
             get_servers,
+            set_nickname,
             remove_server,
         ])
         .run(tauri::generate_context!())

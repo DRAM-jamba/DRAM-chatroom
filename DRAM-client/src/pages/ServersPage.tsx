@@ -7,6 +7,8 @@ import {
   updateServer,
 } from "../services/serverService";
 import type { Server } from "../types/server";
+import { invoke } from "@tauri-apps/api/core";
+import { getNickname } from "../services/nicknameService";
 
 type ServersPageProps = {
   onOpenSessions?: () => void;
@@ -69,13 +71,19 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
 
     console.log("Connect to:", selectedServer);
 
-    // Example later when connecting through Rust/Tauri:
-    // import { invoke } from "@tauri-apps/api/core";
-    // await invoke("connect_to_server", { id });
-
+    try {
+      const nickname = getNickname();
+    await invoke<void>("connect", {
+      ip: selectedServer.ipAddress, 
+      nickname: nickname || undefined,
+    });
+    
     if (onOpenSessions) {
       onOpenSessions();
     }
+  } catch (error) {
+    console.error("Failed to connect to server:", error);
+  }
   };
 
   return (

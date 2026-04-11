@@ -1,4 +1,5 @@
 import type { Server } from "../types/server";
+import { invoke } from "@tauri-apps/api/core";
 
 // Temporary data for testing before connecting to Rust
 let temporaryServers: Server[] = [
@@ -21,30 +22,57 @@ let temporaryServers: Server[] = [
 
 export async function getServers(): Promise<Server[]> {
   // Example later when fetching from Rust/Tauri:
-  // import { invoke } from "@tauri-apps/api/core";
-  // const servers = await invoke<Server[]>("get_servers");
+  const servers = await invoke<Server[]>("get_servers");
   // return servers;
 
-  return Promise.resolve([...temporaryServers]);
+  return servers;
 }
 
 export async function addServer(data: {
   name: string;
   ipAddress: string;
 }): Promise<Server> {
-  // Example later when sending to Rust/Tauri:
-  // import { invoke } from "@tauri-apps/api/core";
-  // const newServer = await invoke<Server>("add_server", { data });
-  // return newServer;
+  // Call the Rust add command with correct parameter names
+  // The Rust backend expects: ip and nickname
+  try {
+    await invoke<void>("add", { 
+      ip: data.ipAddress, 
+      nickname: data.name 
+    });
 
-  const newServer: Server = {
-    id: Date.now().toString(),
-    name: data.name,
-    ipAddress: data.ipAddress,
-  };
+    // Return the server object after successful command execution
+    const newServer: Server = {
+      id: Date.now().toString(),
+      name: data.name,
+      ipAddress: data.ipAddress,
+    };
 
-  temporaryServers.push(newServer);
-  return Promise.resolve(newServer);
+    return Promise.resolve(newServer);
+  } catch (error) {
+    console.error("Failed to add server:", error);
+    throw error;
+  }
+}
+
+export async function connectToServer(data: {
+  ipAddress: string;
+}): Promise<Server> {
+  try {
+    await invoke<void>("connect_to_server", {
+      ip: data.ipAddress,
+    });
+
+    const connectedServer: Server = {
+      id: Date.now().toString(),
+      name: "Connected Server",
+      ipAddress: data.ipAddress,
+    };
+
+    return Promise.resolve(connectedServer);
+  } catch (error) {
+    console.error("Failed to connect to server:", error);
+    throw error;
+  }
 }
 
 export async function updateServer(
