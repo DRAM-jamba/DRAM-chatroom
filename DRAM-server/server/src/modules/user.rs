@@ -7,7 +7,8 @@ pub struct User {
     pub user_key: String,
     pub nickname: String,
     pub related_session_keys: Vec<String>,
-    pub last_time_seen: i64 // timestamp,
+    pub last_time_seen: i64, // timestamp,
+    pub in_session: bool
 }
 
 // TODO: make methods 

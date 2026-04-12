@@ -8,7 +8,7 @@ pub fn router() -> Router<SessionMap> {
         .route("/list/{user_key}", get(get_session_list))
         .route("/create/{user_key}/{session_name}", get(create_session))
         .route("/add/{user_key}/{session_key}", get(add_session))
-        .route("/connect/{session_key}", get(connect_to_session))
+        .route("/connect/{user_key}/{session_key}", get(connect_to_session))
         .route("/leave", get(leave_session))
         .route("/forget/{user_key}/{session_key}", get(forget_session))
         // user_key to proof that session is created by user
@@ -44,13 +44,13 @@ async fn add_session(State(_): State<SessionMap>,
     }
 }
 
-// TODO: finish
 async fn connect_to_session(State(active_sessions): State<SessionMap>, 
-                            Path(session_key): Path<String>, ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
-    connection_handler(active_sessions, session_key, ws).await
+                            Path((user_key, session_key)): Path<(String, String)>, 
+                            ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
+    connection_handler(active_sessions, user_key, session_key, ws).await
 }
 
-// TODO: finish
+// TODO: we don't need it. finish websocketing is just make close request to websocket
 async fn leave_session(State(_): State<SessionMap>) -> Result<Json<Value>, ApiError> {
     if let Some("32") = Some("32") {
         Ok(Json(json!({
