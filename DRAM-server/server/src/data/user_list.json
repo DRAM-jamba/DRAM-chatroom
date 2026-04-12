@@ -2,53 +2,59 @@
   {
     "id": 1,
     "user_key": "antihypeFOREVER2026",
-    "nickname": "heheh",
+    "nickname": "antiFor",
     "related_session_keys": [
       "kot",
       "1774597714sysING",
       "1774597766sysING",
       "session_number_21"
     ],
-    "last_time_seen": 322
+    "last_time_seen": 322,
+    "in_session": false
   },
   {
     "id": 2,
     "user_key": "ChaSINGtHeSumMMER",
-    "nickname": "hwhat a he",
+    "nickname": "summar",
     "related_session_keys": [
       "session_number_21",
       "silverstone_2024",
       "1774597584sysING",
       "1774597766sysING"
     ],
-    "last_time_seen": 676767676767
+    "last_time_seen": 676767676767,
+    "in_session": false
   },
   {
     "id": 3,
     "user_key": "hhee22HAM***33",
-    "nickname": "just do it!!!!",
+    "nickname": "HAM44",
     "related_session_keys": [],
-    "last_time_seen": 1773753869
+    "last_time_seen": 1773753869,
+    "in_session": false
   },
   {
     "id": 4,
     "user_key": "1774173924anti",
     "nickname": "happyWolf",
     "related_session_keys": [],
-    "last_time_seen": 1774173924
+    "last_time_seen": 1774173924,
+    "in_session": false
   },
   {
     "id": 5,
     "user_key": "1774174065anti",
     "nickname": "BIG GREMLIN",
     "related_session_keys": [],
-    "last_time_seen": 1774174065
+    "last_time_seen": 1774174065,
+    "in_session": false
   },
   {
     "id": 6,
     "user_key": "40b788f0-6985-47db-9967-66a946bf5b58",
     "nickname": "Big Smoke",
     "related_session_keys": [],
-    "last_time_seen": 1774705864
+    "last_time_seen": 1774705864,
+    "in_session": false
   }
 ]

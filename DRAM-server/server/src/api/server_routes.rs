@@ -1,9 +1,9 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::server_logic::{add_user_to_server, connect_user_to_server, delete_user_from_server, set_user_nickname}, modules::state::AppState};
+use crate::{errors::api_error::ApiError, logic::server_logic::{add_user_to_server, connect_user_to_server, delete_user_from_server, set_user_nickname}};
 
-pub fn router() -> Router<AppState> {
+pub fn router() -> Router<()> {
     Router::new()
         .route("/add", get(add_server))
         .route("/connect/{user_key}", get(connect_to_server))
@@ -12,7 +12,7 @@ pub fn router() -> Router<AppState> {
         .route("/set/nickname/{user_key}/{nickname}", get(set_nickname))
 }
 
-async fn add_server(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
+async fn add_server() -> Result<Json<Value>, ApiError> {
     match add_user_to_server() {
         Ok(response) => {
             let (auth_token, user_key) = response;
@@ -27,8 +27,7 @@ async fn add_server(State(state): State<AppState>) -> Result<Json<Value>, ApiErr
     }
 }
 
-async fn connect_to_server(State(state): State<AppState>, 
-                           Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
+async fn connect_to_server(Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
     
     let response = connect_user_to_server(user_key);
     match response {
@@ -45,7 +44,7 @@ async fn connect_to_server(State(state): State<AppState>,
 
 
 // TODO: finish
-async fn leave_server(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
+async fn leave_server() -> Result<Json<Value>, ApiError> {
     if let Some("32") = Some("32") {
         Ok(Json(json!({
             "status": "leave_server in maintance",
@@ -58,16 +57,14 @@ async fn leave_server(State(state): State<AppState>) -> Result<Json<Value>, ApiE
 }
 
 // TODO: finish
-async fn forget_server(State(state): State<AppState>, 
-                       Path(user_key): Path<String>) -> Result<(), ApiError> {
+async fn forget_server(Path(user_key): Path<String>) -> Result<(), ApiError> {
     match delete_user_from_server(user_key) {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
 }
 
-async fn set_nickname(State(state): State<AppState>, 
-                      Path((user_key, nickname)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
+async fn set_nickname(Path((user_key, nickname)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
     match set_user_nickname(user_key, nickname) {
         Ok(()) => Ok(Json(json!({"response":"nickname was changed successfully"}))),
         Err(e) => Err(e)
