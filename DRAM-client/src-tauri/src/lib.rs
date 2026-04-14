@@ -65,7 +65,7 @@ async fn connect(
 ) -> Result<(), AppError> {
     ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
-    
+    println!("Attempting to connect to server at {}", ip);
     let server = state.get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — use add first", ip)))?;
@@ -82,6 +82,7 @@ async fn connect(
         .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
 
     *state.current_ip.lock().await = Some(ip.clone());
+    println!("State ip updated to {}", state.current_ip.lock().await.as_ref().unwrap());
     *state.connection.lock().await = ConnectionState::JoinedServer;
 
     if let Some(nick) = nickname {
@@ -231,7 +232,8 @@ async fn set_nickname(
         .as_ref()
         .cloned()
         .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
-
+    println!("Attempting to set nickname to '{}' for server at {}", new_nickname, ip);
+    println!("Current state IP: {}", state.current_ip.lock().await.as_ref().unwrap());
     let server = state.get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;

@@ -19,4 +19,6 @@ export function getNickname(): string {
 
 export async function sendNickname(nickname: string): Promise<void> {
   await invoke("set_nickname", { new_nickname: nickname });
+  currentNickname = nickname;
+  return Promise.resolve();
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { submitNickname } from "../services/nicknameService";
+import { sendNickname, submitNickname } from "../services/nicknameService";
 
 type NicknamePageProps = {
   onNicknameSet: (nickname: string) => void;
@@ -21,7 +21,7 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
     setError("");
 
     try {
-      await submitNickname(trimmed);
+      await sendNickname(trimmed);
       onNicknameSet(trimmed);
     } catch {
       setError("Failed to set nickname. Please try again.");

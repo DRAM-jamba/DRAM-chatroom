@@ -1,5 +1,6 @@
 import type { Server } from "../types/server";
 import { invoke } from "@tauri-apps/api/core";
+import { getNickname } from "./nicknameService";
 
 // Temporary data for testing before connecting to Rust
 let temporaryServers: Server[] = [
@@ -58,8 +59,9 @@ export async function connectToServer(data: {
   ipAddress: string;
 }): Promise<Server> {
   try {
-    await invoke<void>("connect_to_server", {
+    await invoke<void>("connect", {
       ip: data.ipAddress,
+      nickname: getNickname(),
     });
 
     const connectedServer: Server = {
