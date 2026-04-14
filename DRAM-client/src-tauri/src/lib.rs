@@ -228,11 +228,11 @@ async fn set_nickname(
     new_nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
+    println!("Attempting to set nickname to '{}' for server at {}", new_nickname, state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
     let ip = state.current_ip.lock().await
         .as_ref()
         .cloned()
         .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
-    println!("Attempting to set nickname to '{}' for server at {}", new_nickname, ip);
     println!("Current state IP: {}", state.current_ip.lock().await.as_ref().unwrap());
     let server = state.get_server(&ip)
         .await

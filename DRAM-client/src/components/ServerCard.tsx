@@ -87,7 +87,10 @@ function ServerCard({
             <button
               className="small-btn connect-btn"
               type="button"
-              onClick={() => onConnect(server.id)}
+              onClick={() => {
+                onConnect(server.id);
+                console.log("Connect to:", server);
+              }}
             >
               connect
             </button>

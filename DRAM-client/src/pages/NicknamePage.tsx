@@ -10,20 +10,23 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     const trimmed = nickname.trim();
     if (!trimmed) {
       setError("Please enter a nickname.");
       return;
     }
 
+    console.log("Frontend: Sending nickname...", trimmed); // Add this
     setLoading(true);
     setError("");
-
+    
     try {
       await sendNickname(trimmed);
+      console.log("Frontend: Success!");
       onNicknameSet(trimmed);
-    } catch {
+    } catch (err) {
+      console.error("Frontend Error:", err); // Log the actual error
       setError("Failed to set nickname. Please try again.");
     } finally {
       setLoading(false);

@@ -17,8 +17,9 @@ export function getNickname(): string {
   return currentNickname;
 }
 
-export async function sendNickname(nickname: string): Promise<void> {
-  await invoke("set_nickname", { new_nickname: nickname });
-  currentNickname = nickname;
+export async function sendNickname(new_nickname: string): Promise<void> {
+  console.log("Sending nickname to Rust:", new_nickname);
+  await invoke("set_nickname", { newNickname: new_nickname });
+  currentNickname = new_nickname;
   return Promise.resolve();
 }
