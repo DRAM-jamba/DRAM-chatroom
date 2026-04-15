@@ -255,9 +255,30 @@ async fn set_nickname(
 }
 
 #[tauri::command]
-async fn remove_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
-    state.remove_server(&ip).await
-        .map_err(|e| AppError::Network(format!("Failed to remove server: {}", e)))
+async fn remove_server(
+    id: String, 
+    state: State<'_, AppState>
+) -> Result<(), AppError> {
+    println!("Attempting to forget server with ID '{}'", &id);
+    let server = state.get_server_by_id(&id)
+        .await
+        .ok_or_else(|| AppError::Auth(format!("Server does not exist: {}", &id)))?;
+
+    let api = ServerApi::new(&format!("http://{}", server.ip));
+    let url = api.forget(&server.user_key);
+    let client = reqwest::Client::new();
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to forget server: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected forget: {}", e)))?;
+
+    state.remove_server(&server.ip).await
+        .map_err(|e| AppError::Network(format!("Failed to remove server: {}", e)))?;
+
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

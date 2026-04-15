@@ -106,6 +106,10 @@ impl AppState {
         self.servers.lock().await.iter().find(|s| s.ip == ip).cloned()
     }
 
+    pub async fn get_server_by_id(&self, id: &str) -> Option<PersistedServer> {
+        self.servers.lock().await.iter().find(|s| s.id == id).cloned()
+    }
+
     #[cfg(test)]
     pub fn new_test() -> Self {
         Self {

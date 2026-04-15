@@ -98,8 +98,6 @@ export async function updateServer(
 export async function removeServer(id: string): Promise<void> {
   // Example later when deleting in Rust/Tauri:
   // import { invoke } from "@tauri-apps/api/core";
-  // await invoke("remove_server", { id });
-
-  temporaryServers = temporaryServers.filter((item) => item.id !== id);
+  await invoke("remove_server", { id });
   return Promise.resolve();
 }
