@@ -3,15 +3,19 @@ use tauri_plugin_store::StoreExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersistedServer {
+    pub id: String,
+    #[serde(rename = "ipAddress")]
     pub ip: String,
+    #[serde(rename = "name")]
     pub nickname: String,
     pub user_key: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnectionState {
     Disconnected,
     JoinedServer,
@@ -25,6 +29,7 @@ pub enum SessionState {
     Reconnecting,
 }
 
+#[derive(Clone)]
 pub struct AppState {
     pub servers: Arc<Mutex<Vec<PersistedServer>>>,
     pub current_ip: Arc<Mutex<Option<String>>>,
@@ -68,15 +73,25 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn add_server(&self, ip: String, nickname: String, user_key: String) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn add_server(&self, ip: String, nickname: String, user_key: String) -> Result<String, Box<dyn std::error::Error>> {
         let mut servers = self.servers.lock().await;
+
+        let new_id = Uuid::new_v4().to_string();
+
         if servers.iter().any(|s| s.ip == ip) {
             return Err("Server already exists".into());
         }
-        servers.push(PersistedServer { ip, nickname, user_key });
+
+        let new_server = PersistedServer { 
+            id: new_id.clone(), 
+            ip, 
+            nickname, 
+            user_key 
+        };
+        servers.push(new_server);
         drop(servers);
         self.save_servers().await?;
-        Ok(())
+        Ok(new_id)
     }
 
     pub async fn remove_server(&self, ip: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -89,6 +104,10 @@ impl AppState {
 
     pub async fn get_server(&self, ip: &str) -> Option<PersistedServer> {
         self.servers.lock().await.iter().find(|s| s.ip == ip).cloned()
+    }
+
+    pub async fn get_server_by_id(&self, id: &str) -> Option<PersistedServer> {
+        self.servers.lock().await.iter().find(|s| s.id == id).cloned()
     }
 
     #[cfg(test)]
@@ -146,6 +165,7 @@ mod tests {
     {
         let mut servers = s.servers.lock().await;
         servers.push(PersistedServer {
+            id: "1".to_string(),
             ip: "127.0.0.1".to_string(),
             nickname: "test".to_string(),  // Add a dummy nickname since it's required
             user_key: "abc123".to_string(),
@@ -228,11 +248,13 @@ mod tests {
     {
         let mut servers = s.servers.lock().await;
         servers.push(PersistedServer {
+            id: "1".to_string(),
             ip: "192.168.1.1".to_string(),
             nickname: "srv1".to_string(),
             user_key: "k1".to_string(),
         });
         servers.push(PersistedServer {
+            id: "2".to_string(),
             ip: "192.168.1.2".to_string(),
             nickname: "srv2".to_string(),
             user_key: "k2".to_string(),
