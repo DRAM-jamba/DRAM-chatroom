@@ -88,9 +88,10 @@ async fn connect(
 
 #[tauri::command]
 async fn disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
-    websocket::stop_heartbeat(&state).await;
+    println!("Attempting to leave server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
     *state.connection.lock().await = ConnectionState::Disconnected;
     *state.session.lock().await = SessionState::Idle;
+    println!("Left server");
     Ok(())
 }
 
