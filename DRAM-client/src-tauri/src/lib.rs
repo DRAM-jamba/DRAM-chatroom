@@ -50,7 +50,8 @@ async fn add(
         .ok_or_else(|| AppError::Network("Missing user_key in response".into()))?
         .to_string();
 
-    state.add_server(ip.clone(), nickname, user_key).await
+    state.add_server(ip.clone(), nickname, user_key)
+        .await
         .map_err(|e| AppError::Network(format!("Failed to save server: {}", e)))?;
     events::emit_connected(&app);
     Ok(())
@@ -103,9 +104,10 @@ async fn connect(
 
 #[tauri::command]
 async fn disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
-    websocket::stop_heartbeat(&state).await;
+    println!("Attempting to disconnect from server");
     *state.connection.lock().await = ConnectionState::Disconnected;
     *state.session.lock().await = SessionState::Idle;
+    println!("Disconnected from server");
     Ok(())
 }
 
@@ -267,6 +269,10 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             let app_state = AppState::new(app_handle);
+            let state_for_load = app_state.clone(); 
+            tauri::async_runtime::block_on(async move {
+                state_for_load.load_persisted_data().await;
+            });
             app.manage(app_state);
             Ok(())
         })

@@ -64,25 +64,19 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
 
   const handleConnect = async (id: string) => {
     const selectedServer = servers.find((server) => server.id === id);
+  if (!selectedServer) return;
 
-    if (!selectedServer) {
-      return;
-    }
-
-    console.log("Connect to:", selectedServer);
-
-    try {
-      const nickname = getNickname();
+  try {
+    const nickname = getNickname();
+    
     await invoke<void>("connect", {
       ip: selectedServer.ipAddress, 
       nickname: nickname || undefined,
     });
-    
-    if (onOpenSessions) {
-      onOpenSessions();
-    }
+
+    if (onOpenSessions) onOpenSessions();
   } catch (error) {
-    console.error("Failed to connect to server:", error);
+    console.error("Failed to connect:", error);
   }
   };
 

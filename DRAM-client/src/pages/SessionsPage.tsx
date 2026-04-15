@@ -8,6 +8,7 @@ import {
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";
 import type { Session } from "../types/session";
+import { invoke } from "@tauri-apps/api/core";
 
 type SessionsPageProps = {
   nickname: string;
@@ -64,6 +65,10 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
       onConnectToSession(selectedSession.name);
     }
   };
+  
+  const handleLeave = async () => {
+    await invoke<void>("disconnect");
+  }
 
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
@@ -315,7 +320,10 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
           <button
             className="back-to-servers-btn disconnect-btn"
             type="button"
-            onClick={onDisconnect}
+            onClick={() => {
+              handleLeave();
+              onDisconnect();
+            }}
           >
             disconnect
           </button>
