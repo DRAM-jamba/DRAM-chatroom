@@ -87,8 +87,24 @@ async fn connect(
 }
 
 #[tauri::command]
-async fn disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
+async fn disconnect(
+    state: State<'_, AppState>
+) -> Result<(), AppError> {
     println!("Attempting to leave server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    let ip = state.current_ip.lock().await
+        .take()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.leave();
+    let client = reqwest::Client::new();
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to disconnect: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected disconnect: {}", e)))?;
+
     *state.connection.lock().await = ConnectionState::Disconnected;
     *state.session.lock().await = SessionState::Idle;
     println!("Left server");
