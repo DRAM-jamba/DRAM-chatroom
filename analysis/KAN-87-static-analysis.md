@@ -1,31 +1,30 @@
-# KAN-87 Static Code Analysis - DRAM Client
+# KAN-87 Static Code Analysis - DRAM Client (KAN-69 branch)
 
-## Rust side - cargo clippy
+## Rust side - cargo clippy (6 warnings)
 
-Unused imports in lib.rs:
+Unused imports in lib.rs - flagged but intentional:
 - crate::websocket::WsClient
 - tokio_tungstenite::tungstenite::client
 - serde::{Deserialize, Serialize}
+These will be needed once WebSocket and Session are connected.
 
 Unused variables:
-- `app` in create_session (line 102)
-- `session_key` after response parsing (line 124)
+- `app` in create_session (line 115)
+- `server` in connect (line 159)
+- `body` in send_message (line 203) - stub function
 
-Dead code:
-- `add` function defined but not in invoke_handler
-- `create_session` same issue
-- 8 methods in api.rs never called: add, leave, forget,
-  set_nickname, create_session, leave_session,
-  delete_session, ws
+Previous report findings now outdated:
+- add, create_session and all api.rs methods are now
+  properly registered in invoke_handler - no dead code
+
+## State.rs - significant improvement
+
+Now uses PersistedServer struct with ip, nickname, user_key.
+Has add_server, remove_server, get_server methods.
+Data persisted to servers.json via tauri_plugin_store.
 
 ## TypeScript side - manual review
 
-No ESLint configured in package.json.
-
-Formatting: consistent across all files - same
-indentation, naming, component structure throughout.
-
-Issues found:
-- console.log in ServersPage.tsx handleConnect
-- service files use temporary in-memory data,
-  not real Tauri invoke calls (intentional per comments)
+Formatting consistent across all files.
+console.log still present in ServersPage.tsx handleConnect.
+Service files still using temporary in-memory data.
