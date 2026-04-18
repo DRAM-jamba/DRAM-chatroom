@@ -26,7 +26,7 @@ async fn add(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    ip.parse::<std::net::Ipv4Addr>()
+    ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     let api = ServerApi::new(&format!("http://{}", ip));
@@ -50,7 +50,8 @@ async fn add(
         .ok_or_else(|| AppError::Network("Missing user_key in response".into()))?
         .to_string();
 
-    state.add_server(ip.clone(), nickname, user_key).await
+    state.add_server(ip.clone(), nickname, user_key)
+        .await
         .map_err(|e| AppError::Network(format!("Failed to save server: {}", e)))?;
     events::emit_connected(&app);
     Ok(())
@@ -59,12 +60,13 @@ async fn add(
 #[tauri::command]
 async fn connect(
     ip: String,
+    nickname: Option<String>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
-    ip.parse::<std::net::Ipv4Addr>()
+    ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
-    
+    println!("Attempting to connect to server at {}", ip);
     let server = state.get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — use add first", ip)))?;
@@ -81,7 +83,21 @@ async fn connect(
         .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
 
     *state.current_ip.lock().await = Some(ip.clone());
+    println!("State ip updated to {}", state.current_ip.lock().await.as_ref().unwrap());
     *state.connection.lock().await = ConnectionState::JoinedServer;
+
+    if let Some(nick) = nickname {
+        let url = api.set_nickname(&server.user_key, &nick);
+        let client = reqwest::Client::new();
+        client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
+            .error_for_status()
+            .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+    }
+
     events::emit_connected(&app);
     Ok(())
 }
@@ -149,8 +165,8 @@ async fn create_session(
 }
 
 #[tauri::command]
-async fn join_session(
-    session_id: String,
+async fn connect_session(
+    session_key: String,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), AppError> {
@@ -164,7 +180,7 @@ async fn join_session(
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
-    let url = api.join_session(&server.user_key, &session_id);
+    let url = api.connect_session(&session_key);
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
@@ -215,6 +231,17 @@ async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), Ap
 }
 
 #[tauri::command]
+async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
+    *state.session.lock().await = SessionState::Idle;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_servers(state: State<'_, AppState>) -> Result<Vec<state::PersistedServer>, AppError> {
+    Ok(state.servers.lock().await.clone())
+}
+
+#[tauri::command]
 async fn set_nickname(
     new_nickname: String,
     state: State<'_, AppState>,
@@ -241,17 +268,6 @@ async fn set_nickname(
         .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
     
     Ok(())
-}
-
-#[tauri::command]
-async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
-    *state.session.lock().await = SessionState::Idle;
-    Ok(())
-}
-
-#[tauri::command]
-async fn get_servers(state: State<'_, AppState>) -> Result<Vec<state::PersistedServer>, AppError> {
-    Ok(state.servers.lock().await.clone())
 }
 
 #[tauri::command]
@@ -290,6 +306,10 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             let app_state = AppState::new(app_handle);
+            let state_for_load = app_state.clone(); 
+            tauri::async_runtime::block_on(async move {
+                state_for_load.load_persisted_data().await;
+            });
             app.manage(app_state);
             Ok(())
         })
@@ -299,11 +319,11 @@ pub fn run() {
             connect,
             disconnect,
             create_session,
-            join_session,
+            connect_session,
             leave_session,
-            set_nickname,
             send_message,
             get_servers,
+            set_nickname,
             remove_server,
         ])
         .run(tauri::generate_context!())

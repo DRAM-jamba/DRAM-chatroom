@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ServerCard from "../components/ServerCard";
 import {
   addServer,
+  connectServer,
   getServers,
   removeServer,
   updateServer,
@@ -17,64 +18,59 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerIp, setNewServerIp] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadServers();
+    getServers().then(setServers);
   }, []);
 
-  const loadServers = async () => {
-    const data = await getServers();
-    setServers(data);
-  };
+  // Add server
 
   const handleAddServer = async () => {
-    if (!newServerName.trim() || !newServerIp.trim()) {
-      return;
+    if (!newServerName.trim() || !newServerIp.trim()) return;
+    setError(null);
+    try {
+      await addServer({ nickname: newServerName, ip: newServerIp });
+      const updated = await getServers();
+      setServers(updated);
+      setNewServerName("");
+      setNewServerIp("");
+      setShowAddForm(false);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
     }
-
-    const createdServer = await addServer({
-      name: newServerName,
-      ipAddress: newServerIp,
-    });
-
-    setServers((prev) => [...prev, createdServer]);
-    setNewServerName("");
-    setNewServerIp("");
-    setShowAddForm(false);
   };
 
-  const handleSaveEdit = async (
-    id: string,
-    name: string,
-    ipAddress: string
-  ) => {
-    const updatedServer = await updateServer(id, { name, ipAddress });
+  // Connect to server
 
+  const handleConnect = async (ip: string) => {
+    setError(null);
+    try {
+      await connectServer(ip);
+      onOpenSessions?.();
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
+  };
+
+  // Rename server (nickname only)
+
+  const handleSaveEdit = async (ip: string, nickname: string) => {
+    const updated = await updateServer(ip, { nickname });
     setServers((prev) =>
-      prev.map((server) => (server.id === id ? updatedServer : server))
+      prev.map((s) => (s.ipAddress === ip ? updated : s))
     );
   };
 
+  // Forget server 
+
   const handleRemove = async (id: string) => {
-    await removeServer(id);
-    setServers((prev) => prev.filter((server) => server.id !== id));
-  };
-
-  const handleConnect = async (id: string) => {
-    const selectedServer = servers.find((server) => server.id === id);
-
-    if (!selectedServer) {
-      return;
-    }
-
-    console.log("Connect to:", selectedServer);
-
-    // Example later when connecting through Rust/Tauri:
-    // import { invoke } from "@tauri-apps/api/core";
-    // await invoke("connect_to_server", { id });
-
-    if (onOpenSessions) {
-      onOpenSessions();
+    setError(null);
+    try {
+      await removeServer(id);
+      setServers((prev) => prev.filter((s) => s.id !== id));
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
     }
   };
 
@@ -96,6 +92,8 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
             />
           ))}
         </div>
+
+        {error && <p className="error-text">{error}</p>}
 
         <p className="trusted-text">Connect only to trusted servers</p>
 
@@ -131,6 +129,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
                   setShowAddForm(false);
                   setNewServerName("");
                   setNewServerIp("");
+                  setError(null);
                 }}
               >
                 back

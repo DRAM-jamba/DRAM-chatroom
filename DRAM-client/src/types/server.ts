@@ -1,5 +1,7 @@
+// Mirrors PersistedServer from src-tauri/src/state.rs
 export type Server = {
   id: string;
-  name: string;
   ipAddress: string;
+  name: string;
+  user_key: string;
 };

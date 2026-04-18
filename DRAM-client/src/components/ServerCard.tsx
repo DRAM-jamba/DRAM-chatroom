@@ -3,9 +3,9 @@ import type { Server } from "../types/server";
 
 type ServerCardProps = {
   server: Server;
-  onSaveEdit: (id: string, name: string, ipAddress: string) => void;
+  onSaveEdit: (ip: string, nickname: string) => void;
   onRemove: (id: string) => void;
-  onConnect: (id: string) => void;
+  onConnect: (ip: string) => void;
 };
 
 function ServerCard({
@@ -16,11 +16,11 @@ function ServerCard({
 }: ServerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(server.name);
+  const [editedNickname, setEditedNickname] = useState(server.name);
 
   const handleConfirmEdit = () => {
-    // IP address is not editable — pass the existing value unchanged
-    onSaveEdit(server.id, editedName, server.ipAddress);
+    if (!editedNickname.trim()) return;
+    onSaveEdit(server.ipAddress, editedNickname);
     setIsEditing(false);
   };
 
@@ -30,9 +30,10 @@ function ServerCard({
         <div className="edit-box">
           <input
             className="server-input"
-            value={editedName}
-            onChange={(e) => setEditedName(e.target.value)}
+            value={editedNickname}
+            onChange={(e) => setEditedNickname(e.target.value)}
             placeholder="Server name"
+            autoFocus
           />
           <button
             className="small-btn connect-btn"
@@ -66,7 +67,7 @@ function ServerCard({
               className="small-btn edit-btn"
               type="button"
               onClick={() => {
-                setEditedName(server.name);
+                setEditedNickname(server.name);
                 setIsEditing(true);
               }}
             >
@@ -84,7 +85,7 @@ function ServerCard({
             <button
               className="small-btn connect-btn"
               type="button"
-              onClick={() => onConnect(server.id)}
+              onClick={() => onConnect(server.ipAddress)}
             >
               connect
             </button>

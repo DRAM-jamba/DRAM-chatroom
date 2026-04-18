@@ -1,78 +1,57 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-// Temporary data for testing before connecting to Rust
-let temporaryServers: Server[] = [
-  {
-    id: "1",
-    name: "servername",
-    ipAddress: "87.247.64.20:1408",
-  },
-  {
-    id: "2",
-    name: "servername2",
-    ipAddress: "87.247.64.21:1408",
-  },
-  {
-    id: "3",
-    name: "servername3",
-    ipAddress: "87.247.64.22:1408",
-  },
-];
+// getServers 
+// Returns the list of servers the user has previously added.
+// Backed by Tauri's persisted store (servers.json).
 
 export async function getServers(): Promise<Server[]> {
-  // Example later when fetching from Rust/Tauri:
-  // import { invoke } from "@tauri-apps/api/core";
-  // const servers = await invoke<Server[]>("get_servers");
-  // return servers;
-
-  return Promise.resolve([...temporaryServers]);
+  return await invoke<Server[]>("get_servers");
 }
+
+// addServer
+// Registers the client with a new server using the given IP and nickname.
+// The server responds with a user_key which Tauri persists for future connects.
+// Corresponds to the `add` Tauri command in lib.rs.
 
 export async function addServer(data: {
-  name: string;
-  ipAddress: string;
-}): Promise<Server> {
-  // Example later when sending to Rust/Tauri:
-  // import { invoke } from "@tauri-apps/api/core";
-  // const newServer = await invoke<Server>("add_server", { data });
-  // return newServer;
-
-  const newServer: Server = {
-    id: Date.now().toString(),
-    name: data.name,
-    ipAddress: data.ipAddress,
-  };
-
-  temporaryServers.push(newServer);
-  return Promise.resolve(newServer);
+  nickname: string;
+  ip: string;
+}): Promise<void> {
+  await invoke("add", {
+    ip: data.ip.trim(),
+    nickname: data.nickname.trim(),
+  });
 }
+
+// connectServer
+// Establishes an active connection to a known server using its persisted user_key.
+// Called when the user clicks "connect" on a server card.
+// Corresponds to the `connect` Tauri command in lib.rs.
+
+export async function connectServer(ip: string): Promise<void> {
+  await invoke("connect", { ip });
+}
+
+// updateServer
+// Renames a server locally. Only the display nickname can be changeded
+// the IP and user_key are immutable after registration.
 
 export async function updateServer(
-  id: string,
-  data: { name: string; ipAddress: string }
+  ip: string,
+  data: { nickname: string }
 ): Promise<Server> {
-  // Example later when updating in Rust/Tauri:
-  // import { invoke } from "@tauri-apps/api/core";
-  // const updatedServer = await invoke<Server>("update_server", { id, name: data.name });
-  // return updatedServer;
+  // Wire up to Rust when the command is available:
+  // await invoke("rename_server", { ip, nickname: data.nickname });
 
-  const server = temporaryServers.find((item) => item.id === id);
-
-  if (!server) {
-    throw new Error("Server not found");
-  }
-
-  // Only the name is editable — IP address remains unchanged
-  server.name = data.name;
-
-  return Promise.resolve({ ...server });
+  // Temporary: reflect the rename optimistically on the frontend only
+  return Promise.resolve({ id: "", ipAddress: ip, name: data.nickname, user_key: "" });
 }
 
-export async function removeServer(id: string): Promise<void> {
-  // Example later when deleting in Rust/Tauri:
-  // import { invoke } from "@tauri-apps/api/core";
-  // await invoke("remove_server", { id });
+// removeServer
+// Removes a server from the persisted list.
+// Corresponds to the `remove_server` Tauri command in lib.rs.
 
-  temporaryServers = temporaryServers.filter((item) => item.id !== id);
-  return Promise.resolve();
+export async function removeServer(id: string): Promise<void> {
+  await invoke("remove_server", { id });
 }
