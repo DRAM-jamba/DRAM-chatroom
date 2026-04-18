@@ -17,10 +17,10 @@ function ServerCard({
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(server.name);
-  const [editedIp, setEditedIp] = useState(server.ipAddress);
 
   const handleConfirmEdit = () => {
-    onSaveEdit(server.id, editedName, editedIp);
+    // IP address is not editable — pass the existing value unchanged
+    onSaveEdit(server.id, editedName, server.ipAddress);
     setIsEditing(false);
   };
 
@@ -33,12 +33,6 @@ function ServerCard({
             value={editedName}
             onChange={(e) => setEditedName(e.target.value)}
             placeholder="Server name"
-          />
-          <input
-            className="server-input"
-            value={editedIp}
-            onChange={(e) => setEditedIp(e.target.value)}
-            placeholder="IP Address"
           />
           <button
             className="small-btn connect-btn"
@@ -71,7 +65,10 @@ function ServerCard({
             <button
               className="small-btn edit-btn"
               type="button"
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setEditedName(server.name);
+                setIsEditing(true);
+              }}
             >
               edit
             </button>
