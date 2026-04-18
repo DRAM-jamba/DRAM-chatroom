@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import SessionCard from "../components/SessionCard";
 import {
+  addSession,
   createSession,
+  forgetSession,
   getSessions,
-  removeSession,
+  joinSession,
   updateSession,
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";
@@ -17,9 +19,14 @@ type SessionsPageProps = {
   onConnectToSession?: (sessionName: string) => void;
 };
 
-type View = "list" | "create" | "generated";
+type View = "list" | "create" | "generated" | "add";
 
-function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSession }: SessionsPageProps) {
+function SessionsPage({
+  nickname,
+  onDisconnect,
+  onNicknameChange,
+  onConnectToSession,
+}: SessionsPageProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showHelpPopup, setShowHelpPopup] = useState(false);
@@ -33,7 +40,7 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
   const [generatedSessionKey, setGeneratedSessionKey] = useState("");
 
   useEffect(() => {
-    loadSessions();
+    getSessions().then(setSessions);
   }, []);
 
   const loadSessions = async () => {
@@ -69,16 +76,14 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
   const handleLeave = async () => {
     await invoke<void>("disconnect");
   }
+  // ── Nickname ──────────────────────────────────────────────────────────────
 
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
     if (!trimmed) return;
-
     await updateNickname(trimmed);
     setIsEditingNickname(false);
-    if (onNicknameChange) {
-      onNicknameChange(trimmed);
-    }
+    onNicknameChange?.(trimmed);
   };
 
   const handleNicknameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -88,6 +93,8 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
       setIsEditingNickname(false);
     }
   };
+
+  // ── Create session ────────────────────────────────────────────────────────
 
   const handleOpenCreate = () => {
     setShowPlusMenu(false);
@@ -99,28 +106,17 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
 
   const handleCreateConfirm = async () => {
     if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
-
     const result = await createSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
     });
-
+    setSessions((prev) => [...prev, result.session]);
     setGeneratedSessionKey(result.generatedKey);
-
-    const updatedSessions = await getSessions();
-    setSessions(updatedSessions);
-
     setView("generated");
   };
 
   const handleCloseGenerated = () => {
     setGeneratedSessionKey("");
-    setSessionNameInput("");
-    setSessionKeyInput("");
-    setView("list");
-  };
-
-  const handleCancelCreate = () => {
     setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
@@ -133,6 +129,54 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
       console.error("Failed to copy session key:", error);
     }
   };
+
+  // ── Add session ───────────────────────────────────────────────────────────
+
+  const handleOpenAdd = () => {
+    setShowPlusMenu(false);
+    setSessionNameInput("");
+    setSessionKeyInput("");
+    setView("add");
+  };
+
+  const handleAddConfirm = async () => {
+    if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
+    const session = await addSession({
+      sessionName: sessionNameInput,
+      sessionKey: sessionKeyInput,
+    });
+    setSessions((prev) => [...prev, session]);
+    setSessionNameInput("");
+    setSessionKeyInput("");
+    setView("list");
+  };
+
+  // ── Shared cancel ─────────────────────────────────────────────────────────
+
+  const handleCancel = () => {
+    setSessionNameInput("");
+    setSessionKeyInput("");
+    setView("list");
+  };
+
+  // ── Session card actions ──────────────────────────────────────────────────
+
+  const handleConnect = async (id: string) => {
+    const sessionName = await joinSession(id);
+    onConnectToSession?.(sessionName);
+  };
+
+  const handleSaveEdit = async (id: string, name: string) => {
+    const updated = await updateSession(id, { name });
+    setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
+  };
+
+  const handleForget = async (id: string) => {
+    await forgetSession(id);
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="servers-page">
@@ -202,8 +246,12 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
                   create
                 </button>
 
-                <button className="session-plus-option" type="button">
-                  join
+                <button
+                  className="session-plus-option"
+                  type="button"
+                  onClick={handleOpenAdd}
+                >
+                  add
                 </button>
               </div>
             )}
@@ -220,7 +268,7 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
                     <button
                       className="panel-close-btn"
                       type="button"
-                      onClick={handleCancelCreate}
+                      onClick={handleCancel}
                     >
                       ×
                     </button>
@@ -238,7 +286,7 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
                     <button
                       className="panel-close-btn"
                       type="button"
-                      onClick={handleCancelCreate}
+                      onClick={handleCancel}
                     >
                       ×
                     </button>
@@ -260,6 +308,55 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
             </div>
           )}
 
+          {view === "add" && (
+            <div className="session-create-overlay">
+              <div className="session-create-panels">
+                <div className="create-session-box">
+                  <div className="create-panel-header">
+                    <span>Session name</span>
+                    <button
+                      className="panel-close-btn"
+                      type="button"
+                      onClick={handleCancel}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <input
+                    className="server-input"
+                    value={sessionNameInput}
+                    onChange={(e) => setSessionNameInput(e.target.value)}
+                  />
+                </div>
+
+                <div className="create-session-box">
+                  <div className="create-panel-header">
+                    <span>Session key</span>
+                    <button
+                      className="panel-close-btn"
+                      type="button"
+                      onClick={handleCancel}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <input
+                    className="server-input"
+                    value={sessionKeyInput}
+                    onChange={(e) => setSessionKeyInput(e.target.value)}
+                  />
+                  <button
+                    className="big-confirm-btn"
+                    type="button"
+                    onClick={handleAddConfirm}
+                  >
+                    confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div
             className={`server-list-container ${
               view !== "list" ? "session-list-hidden" : ""
@@ -270,7 +367,7 @@ function SessionsPage({ nickname, onDisconnect, onNicknameChange, onConnectToSes
                 key={session.id}
                 session={session}
                 onSaveEdit={handleSaveEdit}
-                onRemove={handleRemove}
+                onRemove={handleForget}
                 onConnect={handleConnect}
               />
             ))}

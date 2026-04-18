@@ -231,6 +231,35 @@ async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), Ap
 }
 
 #[tauri::command]
+async fn set_nickname(
+    new_nickname: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    println!("Attempting to set nickname to '{}' for server at {}", new_nickname, state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+    println!("Current state IP: {}", state.current_ip.lock().await.as_ref().unwrap());
+    let server = state.get_server(&ip)
+        .await
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.set_nickname(&server.user_key, &new_nickname);
+    let client = reqwest::Client::new();
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
 async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
     *state.session.lock().await = SessionState::Idle;
     Ok(())
@@ -321,6 +350,7 @@ pub fn run() {
             create_session,
             connect_session,
             leave_session,
+            set_nickname,
             send_message,
             get_servers,
             set_nickname,

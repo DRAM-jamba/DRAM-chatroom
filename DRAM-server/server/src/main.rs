@@ -1,10 +1,11 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use axum::{Json, Router, response::IntoResponse, routing::get};
+use axum::{Json, Router, http::HeaderValue, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{net::TcpListener, sync::{Mutex, RwLock, broadcast::Sender}};
+use tower_http::cors::{Any, CorsLayer};
 
-use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::{state::AppState, user::User}};
+use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::session_chat::{SessionChat, SessionMap}};
 
 mod api;
 mod modules;
@@ -15,27 +16,19 @@ mod errors;
 #[tokio::main]
 async fn main() {
 
-    let initial_users = vec![
-        User {id: 1, user_key: "holy shit".into(), nickname: "ho".into(), related_session_keys: [].to_vec(), last_time_seen: 123 },
-        User {id: 2, user_key: "oh my god!".into(), nickname: "dddOh".into(), related_session_keys: [].to_vec(), last_time_seen: 3233 },
-    ];
-    
-    let state = AppState {
-        users: Arc::new(Mutex::new(initial_users)),
-        secret: "antihype".into(),
-    };
+    let active_sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
 
-    let state_for_server = state.clone();
+    let session_router = session_routes::router().with_state(active_sessions);
+    let server_router = server_routes::router();
+    
+    let cors_layer = CorsLayer::new().allow_methods(Any).allow_origin("http://127.0.0.1:8080".parse::<HeaderValue>().unwrap());
 
-    
-    let session_router = api::session_routes::router().with_state(state_for_server.clone());
-    let server_router = api::server_routes::router().with_state(state_for_server.clone());
-    
     let app = Router::new()
         .route("/", get(server_check))
         .route("/error", get(error_check))
         .nest("/session", session_router)
-        .nest("/server", server_router);
+        .nest("/server", server_router)
+        .layer(cors_layer);
 
     let addr = "0.0.0.0:3000";
     let listener = TcpListener::bind(addr).await.unwrap();
