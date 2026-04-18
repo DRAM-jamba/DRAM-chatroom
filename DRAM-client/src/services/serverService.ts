@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-// ─── getServers ──────────────────────────────────────────────────────────────
+// getServers 
 // Returns the list of servers the user has previously added.
 // Backed by Tauri's persisted store (servers.json).
 
@@ -9,7 +9,7 @@ export async function getServers(): Promise<Server[]> {
   return await invoke<Server[]>("get_servers");
 }
 
-// ─── addServer ───────────────────────────────────────────────────────────────
+// addServer
 // Registers the client with a new server using the given IP and nickname.
 // The server responds with a user_key which Tauri persists for future connects.
 // Corresponds to the `add` Tauri command in lib.rs.
@@ -19,12 +19,12 @@ export async function addServer(data: {
   ip: string;
 }): Promise<void> {
   await invoke("add", {
-    ip: data.ip,
-    nickname: data.nickname,
+    ip: data.ip.trim(),
+    nickname: data.nickname.trim(),
   });
 }
 
-// ─── connectServer ───────────────────────────────────────────────────────────
+// connectServer
 // Establishes an active connection to a known server using its persisted user_key.
 // Called when the user clicks "connect" on a server card.
 // Corresponds to the `connect` Tauri command in lib.rs.
@@ -33,11 +33,9 @@ export async function connectServer(ip: string): Promise<void> {
   await invoke("connect", { ip });
 }
 
-// ─── updateServer ────────────────────────────────────────────────────────────
-// Renames a server locally. Only the display nickname can be changed —
+// updateServer
+// Renames a server locally. Only the display nickname can be changeded
 // the IP and user_key are immutable after registration.
-// Note: there is no Tauri command for this yet; the rename is kept in-memory
-// until a `rename_server` command is added to lib.rs.
 
 export async function updateServer(
   ip: string,
@@ -47,13 +45,13 @@ export async function updateServer(
   // await invoke("rename_server", { ip, nickname: data.nickname });
 
   // Temporary: reflect the rename optimistically on the frontend only
-  return Promise.resolve({ ip, nickname: data.nickname, user_key: "" });
+  return Promise.resolve({ id: "", ipAddress: ip, name: data.nickname, user_key: "" });
 }
 
-// ─── removeServer ────────────────────────────────────────────────────────────
+// removeServer
 // Removes a server from the persisted list.
 // Corresponds to the `remove_server` Tauri command in lib.rs.
 
-export async function removeServer(ip: string): Promise<void> {
-  await invoke("remove_server", { ip });
+export async function removeServer(id: string): Promise<void> {
+  await invoke("remove_server", { id });
 }

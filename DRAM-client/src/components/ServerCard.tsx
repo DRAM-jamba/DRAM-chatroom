@@ -4,7 +4,7 @@ import type { Server } from "../types/server";
 type ServerCardProps = {
   server: Server;
   onSaveEdit: (ip: string, nickname: string) => void;
-  onRemove: (ip: string) => void;
+  onRemove: (id: string) => void;
   onConnect: (ip: string) => void;
 };
 
@@ -16,12 +16,11 @@ function ServerCard({
 }: ServerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedNickname, setEditedNickname] = useState(server.nickname);
+  const [editedNickname, setEditedNickname] = useState(server.name);
 
   const handleConfirmEdit = () => {
     if (!editedNickname.trim()) return;
-    // IP address is not editable — only the nickname can be changed
-    onSaveEdit(server.ip, editedNickname);
+    onSaveEdit(server.ipAddress, editedNickname);
     setIsEditing(false);
   };
 
@@ -55,20 +54,20 @@ function ServerCard({
         type="button"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="server-title">{server.nickname}</span>
+        <span className="server-title">{server.name}</span>
         <span className="server-arrow">{expanded ? "⌃" : "⌄"}</span>
       </button>
 
       {expanded && (
         <div className="server-details">
-          <p className="server-ip">IP: {server.ip}</p>
+          <p className="server-ip">IP: {server.ipAddress}</p>
 
           <div className="server-actions">
             <button
               className="small-btn edit-btn"
               type="button"
               onClick={() => {
-                setEditedNickname(server.nickname);
+                setEditedNickname(server.name);
                 setIsEditing(true);
               }}
             >
@@ -78,7 +77,7 @@ function ServerCard({
             <button
               className="small-btn forget-btn"
               type="button"
-              onClick={() => onRemove(server.ip)}
+              onClick={() => onRemove(server.id)}
             >
               forget
             </button>
@@ -86,7 +85,7 @@ function ServerCard({
             <button
               className="small-btn connect-btn"
               type="button"
-              onClick={() => onConnect(server.ip)}
+              onClick={() => onConnect(server.ipAddress)}
             >
               connect
             </button>

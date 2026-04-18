@@ -24,7 +24,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     getServers().then(setServers);
   }, []);
 
-  // ── Add server ────────────────────────────────────────────────────────────
+  // Add server
 
   const handleAddServer = async () => {
     if (!newServerName.trim() || !newServerIp.trim()) return;
@@ -41,7 +41,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     }
   };
 
-  // ── Connect to server ─────────────────────────────────────────────────────
+  // Connect to server
 
   const handleConnect = async (ip: string) => {
     setError(null);
@@ -53,26 +53,26 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     }
   };
 
-  // ── Rename server (nickname only) ─────────────────────────────────────────
+  // Rename server (nickname only)
 
   const handleSaveEdit = async (ip: string, nickname: string) => {
     const updated = await updateServer(ip, { nickname });
-    setServers((prev) => prev.map((s) => (s.ip === ip ? updated : s)));
+    setServers((prev) =>
+      prev.map((s) => (s.ipAddress === ip ? updated : s))
+    );
   };
 
-  // ── Remove server ─────────────────────────────────────────────────────────
+  // Forget server 
 
-  const handleRemove = async (ip: string) => {
+  const handleRemove = async (id: string) => {
     setError(null);
     try {
-      await removeServer(ip);
-      setServers((prev) => prev.filter((s) => s.ip !== ip));
+      await removeServer(id);
+      setServers((prev) => prev.filter((s) => s.id !== id));
     } catch (e: any) {
       setError(e?.message ?? String(e));
     }
   };
-
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="servers-page">
@@ -84,7 +84,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
         <div className="server-list-container">
           {servers.map((server) => (
             <ServerCard
-              key={server.ip}
+              key={server.id}
               server={server}
               onSaveEdit={handleSaveEdit}
               onRemove={handleRemove}
