@@ -3,9 +3,9 @@ import type { Server } from "../types/server";
 
 type ServerCardProps = {
   server: Server;
-  onSaveEdit: (id: string, name: string, ipAddress: string) => void;
-  onRemove: (id: string) => void;
-  onConnect: (id: string) => void;
+  onSaveEdit: (ip: string, nickname: string) => void;
+  onRemove: (ip: string) => void;
+  onConnect: (ip: string) => void;
 };
 
 function ServerCard({
@@ -16,11 +16,12 @@ function ServerCard({
 }: ServerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(server.name);
+  const [editedNickname, setEditedNickname] = useState(server.nickname);
 
   const handleConfirmEdit = () => {
-    // IP address is not editable — pass the existing value unchanged
-    onSaveEdit(server.id, editedName, server.ipAddress);
+    if (!editedNickname.trim()) return;
+    // IP address is not editable — only the nickname can be changed
+    onSaveEdit(server.ip, editedNickname);
     setIsEditing(false);
   };
 
@@ -30,9 +31,10 @@ function ServerCard({
         <div className="edit-box">
           <input
             className="server-input"
-            value={editedName}
-            onChange={(e) => setEditedName(e.target.value)}
+            value={editedNickname}
+            onChange={(e) => setEditedNickname(e.target.value)}
             placeholder="Server name"
+            autoFocus
           />
           <button
             className="small-btn connect-btn"
@@ -53,20 +55,20 @@ function ServerCard({
         type="button"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="server-title">{server.name}</span>
+        <span className="server-title">{server.nickname}</span>
         <span className="server-arrow">{expanded ? "⌃" : "⌄"}</span>
       </button>
 
       {expanded && (
         <div className="server-details">
-          <p className="server-ip">IP: {server.ipAddress}</p>
+          <p className="server-ip">IP: {server.ip}</p>
 
           <div className="server-actions">
             <button
               className="small-btn edit-btn"
               type="button"
               onClick={() => {
-                setEditedName(server.name);
+                setEditedNickname(server.nickname);
                 setIsEditing(true);
               }}
             >
@@ -76,7 +78,7 @@ function ServerCard({
             <button
               className="small-btn forget-btn"
               type="button"
-              onClick={() => onRemove(server.id)}
+              onClick={() => onRemove(server.ip)}
             >
               forget
             </button>
@@ -84,7 +86,7 @@ function ServerCard({
             <button
               className="small-btn connect-btn"
               type="button"
-              onClick={() => onConnect(server.id)}
+              onClick={() => onConnect(server.ip)}
             >
               connect
             </button>
