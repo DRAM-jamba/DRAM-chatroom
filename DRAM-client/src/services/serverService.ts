@@ -53,7 +53,7 @@ export async function updateServer(
 ): Promise<Server> {
   // Example later when updating in Rust/Tauri:
   // import { invoke } from "@tauri-apps/api/core";
-  // const updatedServer = await invoke<Server>("update_server", { id, data });
+  // const updatedServer = await invoke<Server>("update_server", { id, name: data.name });
   // return updatedServer;
 
   const server = temporaryServers.find((item) => item.id === id);
@@ -62,8 +62,8 @@ export async function updateServer(
     throw new Error("Server not found");
   }
 
+  // Only the name is editable — IP address remains unchanged
   server.name = data.name;
-  server.ipAddress = data.ipAddress;
 
   return Promise.resolve({ ...server });
 }
