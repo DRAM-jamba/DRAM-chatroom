@@ -42,7 +42,7 @@ function SessionsPage({
     getSessions().then(setSessions);
   }, []);
 
-  // ── Nickname ──────────────────────────────────────────────────────────────
+  // Nickname 
 
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
@@ -60,7 +60,7 @@ function SessionsPage({
     }
   };
 
-  // ── Create session ────────────────────────────────────────────────────────
+  // Create session 
 
   const handleOpenCreate = () => {
     setShowPlusMenu(false);
@@ -96,7 +96,7 @@ function SessionsPage({
     }
   };
 
-  // ── Add session ───────────────────────────────────────────────────────────
+  // Add session
 
   const handleOpenAdd = () => {
     setShowPlusMenu(false);
@@ -117,7 +117,7 @@ function SessionsPage({
     setView("list");
   };
 
-  // ── Shared cancel ─────────────────────────────────────────────────────────
+  // Shared cancel
 
   const handleCancel = () => {
     setSessionNameInput("");
@@ -125,7 +125,7 @@ function SessionsPage({
     setView("list");
   };
 
-  // ── Session card actions ──────────────────────────────────────────────────
+  // Session card actions
 
   const handleConnect = async (id: string) => {
     const sessionName = await joinSession(id);

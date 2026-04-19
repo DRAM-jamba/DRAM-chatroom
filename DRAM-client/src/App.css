@@ -672,9 +672,7 @@ button {
   font-size: 18px;
   color: #9f9f9f;
 }
-/* ============================================================
-   CHAT PAGE
-   ============================================================ */
+/* CHAT PAGE */
 
 .chat-page {
   display: flex;
@@ -1025,7 +1023,7 @@ button {
   box-shadow: 0 0 8px rgba(0, 170, 255, 0.2);
 }
 
-/* ── Nickname Page ───────────────────────────────────────── */
+/* Nickname Page */
 
 .nickname-main-panel {
   display: flex;
@@ -1065,9 +1063,14 @@ button {
 
 .nickname-confirm-btn {
   margin-top: 4px;
+  width: auto;
+    align-self: flex-end;
+    padding: 0 28px;
+    flex: none;
+    font-size: 15px;
 }
 
-/* ── Editable nickname in SessionsPage ───────────────────── */
+/* Editable nickname in SessionsPage */
 
 .session-user-box-btn {
   cursor: pointer;
@@ -1111,7 +1114,7 @@ button {
   background: #1a2a3a;
 }
 
-/* ── Disconnect button ───────────────────────────────────── */
+/* Disconnect button */
 
 .disconnect-btn {
   border-color: #3a1a1a;
