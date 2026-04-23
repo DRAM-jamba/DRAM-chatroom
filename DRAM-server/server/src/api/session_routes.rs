@@ -28,10 +28,12 @@ async fn get_session_list(State(_): State<SessionMap>,
 }
 
 async fn create_session(State(_): State<SessionMap>,
-                        Path((user_key, session_name)): Path<(String, String)>) -> Result<(), ApiError> {
+                        Path((user_key, session_name)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
     
     match create_session_l(user_key, session_name) {
-        Ok(()) => Ok(()),
+        Ok(session_key) => Ok(Json(json!({
+            "session_key": session_key
+        }))),
         Err(e) => Err(e)
     }
 }

@@ -131,8 +131,8 @@ async fn disconnect(
 async fn create_session(
     name: String,
     state: State<'_, AppState>,
-    app: AppHandle,
-) -> Result<(), AppError> {
+) -> Result<String, AppError> {
+    println!("Attempting to create session '{}' on server at {}", name, state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
     let ip = state.current_ip.lock().await
         .as_ref()
         .cloned()
@@ -153,7 +153,7 @@ async fn create_session(
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected session creation: {}", e)))?;
 
-    let _session_key: String = response
+    let session_key: String = response
         .json::<serde_json::Value>()
         .await
         .map_err(|e| AppError::Network(format!("Failed to parse response: {}", e)))?
@@ -161,7 +161,8 @@ async fn create_session(
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::Network("Missing session_key in response".into()))?
         .to_string();
-    Ok(())
+    println!("Session created with key {}", session_key);
+    Ok(session_key)
 }
 
 #[tauri::command]
