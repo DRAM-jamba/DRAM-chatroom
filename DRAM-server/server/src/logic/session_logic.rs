@@ -1,13 +1,13 @@
 use uuid::Uuid;
 
-use crate::{data_logic::{session_data::{add_session, get_session_by_session_key, get_session_list, remove_session}, user_data::{add_user, get_user_by_user_key, get_user_list, save_user_list, update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
+use crate::{data_logic::{session_data::{d_add_session, d_get_session_by_session_key, d_get_session_list, d_remove_session}, user_data::{d_add_user, d_get_user_by_user_key, d_get_user_list, d_save_user_list, d_update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
 
-pub fn get_user_related_session_list(user_key: String) -> Result<Vec<Session>, ApiError> {
-    let user = match get_user_by_user_key(user_key) {
+pub fn l_get_user_related_session_list(user_key: String) -> Result<Vec<Session>, ApiError> {
+    let user = match d_get_user_by_user_key(user_key) {
         Ok(u) => u,
         Err(e) => return Err(ApiError::NotFound)
     };
-    let session_list = match get_session_list() {
+    let session_list = match d_get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
@@ -46,12 +46,12 @@ pub fn l_create_session(user_key: String, session_name: String) -> Result<String
     }
 }
 
-pub fn add_session_by_session_key(user_key: String, session_key: String) -> Result<(), ApiError> {
-    let mut user = match get_user_by_user_key(user_key) {
+pub fn l_add_session_by_session_key(user_key: String, session_key: String) -> Result<(), ApiError> {
+    let mut user = match d_get_user_by_user_key(user_key) {
         Ok(u) => u,
         Err(e) => return Err(ApiError::NotFound)
     };
-    let session_list = match get_session_list() {
+    let session_list = match d_get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
@@ -61,7 +61,7 @@ pub fn add_session_by_session_key(user_key: String, session_key: String) -> Resu
             match user.related_session_keys.iter().find(|s| **s == session_key) { // TODO: find how works '*'
                 None => {
                     user.related_session_keys.push(session_key);
-                    match update_user(&user) {
+                    match d_update_user(&user) {
                         Ok(()) => Ok(()),
                         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
                     }
@@ -74,12 +74,12 @@ pub fn add_session_by_session_key(user_key: String, session_key: String) -> Resu
 
 }
 
-pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(), ApiError> {
-    let mut user = match get_user_by_user_key(user_key) {
+pub fn l_forget_session_by_user(user_key: String, session_key: String) -> Result<(), ApiError> {
+    let mut user = match d_get_user_by_user_key(user_key) {
         Ok(u) => u,
         Err(e) => return Err(ApiError::NotFound)
     };
-    let session_list = match get_session_list() {
+    let session_list = match d_get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
@@ -93,7 +93,7 @@ pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(
                         return Err(ApiError::InvalidInput("User is owner of session. He can delete session, but not forget".into()))
                     }
                     user.related_session_keys.remove(s_i);
-                    match update_user(&user) {
+                    match d_update_user(&user) {
                         Ok(()) => Ok(()),
                         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
                     }
@@ -104,12 +104,12 @@ pub fn forget_session_by_user(user_key: String, session_key: String) -> Result<(
     }
 }
 
-pub fn delete_session_by_owner(user_key: &String, session_key: &String) -> Result<(), ApiError> {
-    let mut user_list = match get_user_list() {
+pub fn l_delete_session_by_owner(user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    let mut user_list = match d_get_user_list() {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    let session = match get_session_by_session_key(&session_key) {
+    let session = match d_get_session_by_session_key(&session_key) {
         Ok(s) => s,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
@@ -126,18 +126,18 @@ pub fn delete_session_by_owner(user_key: &String, session_key: &String) -> Resul
         };
         u.related_session_keys.remove(s_i);
     };
-    match save_user_list(user_list) {
+    match d_save_user_list(user_list) {
         Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    match remove_session(&session) {
+    match d_remove_session(&session) {
         Ok(()) => Ok(()),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     }
 }
 
 // TODO: check it for security. for now it should be ok, but it is not ideal.
-fn generate_session_key(session_list: &Vec<Session>) -> String {
+fn l_generate_session_key(session_list: &Vec<Session>) -> String {
     let mut s_key: String;
     loop {
         s_key = Uuid::new_v4().to_string();

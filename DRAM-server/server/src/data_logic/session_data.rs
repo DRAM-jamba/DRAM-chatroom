@@ -7,7 +7,7 @@ use crate::{errors::app_error::AppError, modules::session::Session};
 
 const SESSION_LIST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/session_list.json");
 
-pub fn get_session_list() -> Result<Vec<Session>, AppError> {
+pub fn d_get_session_list() -> Result<Vec<Session>, AppError> {
     let json_path: &Path = Path::new(SESSION_LIST_PATH);
     
     let data = match read_to_string(json_path) {
@@ -27,7 +27,7 @@ pub fn get_session_list() -> Result<Vec<Session>, AppError> {
 
 // now this funciton delete session_list for moment, so here may be mistakes.
 // TODO: change later to DB or file blocking. security
-pub fn save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
+pub fn d_save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
     let json_path: &Path = Path::new(SESSION_LIST_PATH);
 
     let new_json: String = match to_string_pretty(&user_list) {
@@ -49,8 +49,8 @@ pub fn save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
     Ok(())
 }
 
-pub fn get_session_by_session_key(session_key: &String) -> Result<Session, AppError> {
-    let session_list = match get_session_list() {
+pub fn d_get_session_by_session_key(session_key: &String) -> Result<Session, AppError> {
+    let session_list = match d_get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(e)
     };
@@ -61,22 +61,22 @@ pub fn get_session_by_session_key(session_key: &String) -> Result<Session, AppEr
     Ok(session.clone())
 }
 
-pub fn add_session(session: &Session) -> Result<(), AppError> {
-    let mut vec = match get_session_list() {
+pub fn d_add_session(session: &Session) -> Result<(), AppError> {
+    let mut vec = match d_get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(e)
     };
 
     vec.push(session.clone());
 
-    match save_session_list(vec) {
+    match d_save_session_list(vec) {
         Ok(()) => Ok(()),
         Err(e) => return Err(e)
     }
 }
 
-pub fn remove_session(session: &Session) -> Result<(), AppError> {
-    let mut vec = match get_session_list() {
+pub fn d_remove_session(session: &Session) -> Result<(), AppError> {
+    let mut vec = match d_get_session_list() {
         Ok(v) => v,
         Err(e) => return Err(e)
     };
@@ -88,7 +88,7 @@ pub fn remove_session(session: &Session) -> Result<(), AppError> {
 
     vec.remove(s_i);
 
-    match save_session_list(vec) {
+    match d_save_session_list(vec) {
         Ok(()) => Ok(()),
         Err(e) => return Err(e)
     }
