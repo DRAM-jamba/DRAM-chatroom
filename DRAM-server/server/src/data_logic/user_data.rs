@@ -6,7 +6,7 @@ use crate::{errors::app_error::AppError, modules::user::User};
 
 const USER_LIST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/user_list.json");
 
-pub fn get_user_list() -> Result<Vec<User>, AppError> {
+pub fn d_get_user_list() -> Result<Vec<User>, AppError> {
     let json_path: &Path = Path::new(USER_LIST_PATH);
     
     let data = match read_to_string(json_path) {
@@ -26,7 +26,7 @@ pub fn get_user_list() -> Result<Vec<User>, AppError> {
 
 // now this funciton delete user_list for moment, so here may be mistakes.
 // TODO: change later to DB or file blocking. security
-pub fn save_user_list(user_list: Vec<User>) -> Result<(), AppError> {
+pub fn d_save_user_list(user_list: Vec<User>) -> Result<(), AppError> {
     let json_path: &Path = Path::new(USER_LIST_PATH);
 
     let new_json: String = match to_string_pretty(&user_list) {
@@ -48,8 +48,8 @@ pub fn save_user_list(user_list: Vec<User>) -> Result<(), AppError> {
     Ok(())
 }
 
-pub fn get_user_by_user_key(user_key: String) -> Result<User, AppError> {
-    let user_list = match get_user_list() {
+pub fn d_get_user_by_user_key(user_key: String) -> Result<User, AppError> {
+    let user_list = match d_get_user_list() {
         Ok(v) => v,
         Err(e) => return Err(e)
     };
@@ -61,25 +61,25 @@ pub fn get_user_by_user_key(user_key: String) -> Result<User, AppError> {
 }
 
 
-pub fn add_user(user: &User) -> Result<(), AppError> {
+pub fn d_add_user(user: &User) -> Result<(), AppError> {
 
-    let mut vec = match get_user_list() {
+    let mut vec = match d_get_user_list() {
         Ok(v) => v.to_vec(),
         Err(e) => return Err(e)
     };
     
     vec.push(user.clone());
     
-    match save_user_list(vec) {
+    match d_save_user_list(vec) {
         Ok(()) => Ok(()),
         Err(e) => return Err(e)
     }
 
 }
 
-pub fn update_user(user: &User) -> Result<(), AppError> {
+pub fn d_update_user(user: &User) -> Result<(), AppError> {
 
-    let mut vec = match get_user_list() {
+    let mut vec = match d_get_user_list() {
         Ok(v) => v.to_vec(),
         Err(e) => return Err(e.into())
     };
@@ -91,15 +91,15 @@ pub fn update_user(user: &User) -> Result<(), AppError> {
 
     vec[index] = user.clone();
     
-    match save_user_list(vec) {
+    match d_save_user_list(vec) {
         Ok(()) => Ok(()),
         Err(e) => return Err(e.into())
     }
 
 }
 
-pub fn remove_user(user: &User) -> Result<(), AppError> {
-    let mut vec = match get_user_list() {
+pub fn d_remove_user(user: &User) -> Result<(), AppError> {
+    let mut vec = match d_get_user_list() {
         Ok(v) => v,
         Err(e) => return Err(e)
     };
@@ -111,7 +111,7 @@ pub fn remove_user(user: &User) -> Result<(), AppError> {
 
     vec.remove(u_i);
 
-    match save_user_list(vec) {
+    match d_save_user_list(vec) {
         Ok(()) => Ok(()),
         Err(e) => return Err(e)
     }

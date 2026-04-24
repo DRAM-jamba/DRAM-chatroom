@@ -1,15 +1,15 @@
-use crate::{data_logic::{session_data::get_session_by_session_key, user_data::{get_user_by_user_key, update_user}}, errors::{api_error::ApiError, app_error::AppError}, modules::{session_chat::{SessionChat, SessionMap}, user::User}};
+use crate::{data_logic::{session_data::d_get_session_by_session_key, user_data::{d_get_user_by_user_key, d_update_user}}, errors::{api_error::ApiError, app_error::AppError}, modules::{session_chat::{SessionChat, SessionMap}, user::User}};
 use axum::{extract::{WebSocketUpgrade, ws::{Message, WebSocket}}, response::IntoResponse};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::broadcast::{self, Sender};
 
-pub async fn connection_handler(active_sessions: SessionMap, user_key: String, session_key: String, 
+pub async fn l_connection_handler(active_sessions: SessionMap, user_key: String, session_key: String, 
                                 ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
-    match get_session_by_session_key(&session_key) {
+    match d_get_session_by_session_key(&session_key) {
         Ok(s) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    let mut user = match get_user_by_user_key(user_key) {
+    let mut user = match d_get_user_by_user_key(user_key) {
         Ok(u) => u,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
@@ -18,23 +18,23 @@ pub async fn connection_handler(active_sessions: SessionMap, user_key: String, s
     }
     else {
         user.in_session = true;
-        match update_user(&user) {
+        match d_update_user(&user) {
             Ok(()) => (),
             Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
         }
     }
 
     // TODO: maybe check if the session is related to user?
-    let session_chat: SessionChat = get_or_create_active_session(&active_sessions, &session_key).await;    
+    let session_chat: SessionChat = l_get_or_create_active_session(&active_sessions, &session_key).await;    
 
     let response = ws.on_upgrade(move |socket| { 
-        handle_websocket(session_chat, socket, user, session_key, active_sessions.clone())
+        l_handle_websocket(session_chat, socket, user, session_key, active_sessions.clone())
     });
 
     Ok(response) 
 }
 
-async fn get_or_create_active_session(active_sessions: &SessionMap, session_key: &String) -> SessionChat {
+async fn l_get_or_create_active_session(active_sessions: &SessionMap, session_key: &String) -> SessionChat {
     let mut map = active_sessions.write().await;
 
     let sc = map.entry(session_key.clone())
@@ -44,7 +44,7 @@ async fn get_or_create_active_session(active_sessions: &SessionMap, session_key:
     sc
 }
 
-async fn handle_websocket(session_chat: SessionChat,mut ws: WebSocket, mut user: User, session_key: String, active_sessions: SessionMap) {
+async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, mut user: User, session_key: String, active_sessions: SessionMap) {
 
     let history = session_chat.history.read().await;
     for msg in history.iter() {
@@ -71,7 +71,7 @@ async fn handle_websocket(session_chat: SessionChat,mut ws: WebSocket, mut user:
         match result {
             Ok(msg) => match msg {
                 Message::Text(text) => {
-                    broadcast_message(&session_chat, text.to_string(), &user.nickname).await;
+                    l_broadcast_message(&session_chat, text.to_string(), &user.nickname).await;
                 },
                 Message::Binary(bytes) => {}, // TODO: use this to send images. for later
                 Message::Ping(_) => {},
@@ -100,14 +100,14 @@ async fn handle_websocket(session_chat: SessionChat,mut ws: WebSocket, mut user:
     }
 
     user.in_session = false;
-    match update_user(&user) {
+    match d_update_user(&user) {
         Ok(()) => (),
         Err(e) => () // TODO: fix it somehow. should i handle this error?
     }
 
 }
 
-async fn broadcast_message(session_chat: &SessionChat, mut msg: String, nickname: &String) {
+async fn l_broadcast_message(session_chat: &SessionChat, mut msg: String, nickname: &String) {
     let mut history = session_chat.history.write().await;
     msg = format!("{nickname}: {msg}");
     if history.len() >= 100 { // messages limit
