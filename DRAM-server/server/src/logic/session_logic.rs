@@ -17,7 +17,7 @@ pub fn l_get_user_related_session_list(user_key: String) -> Result<Vec<Session>,
     Ok(users_sessions)
 }
 
-pub fn l_create_session(user_key: String, session_name: String) -> Result<(), ApiError> {
+pub fn l_create_session(user_key: String, session_name: String) -> Result<String, ApiError> {
     let user = match d_get_user_by_user_key(user_key) {
         Ok(u) => u,
         Err(e) => return Err(ApiError::NotFound)
@@ -35,12 +35,13 @@ pub fn l_create_session(user_key: String, session_name: String) -> Result<(), Ap
                                          session_owner_id: user.id, 
                                          name: session_name, chat_log: [].to_vec(), 
                                          current_user_list: [].to_vec(), black_list: [].to_vec() };
+    let session_key = new_session.session_key.clone();
     match d_add_session(&new_session) {
         Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
     match l_add_session_by_session_key(user.user_key, new_session.session_key) {
-        Ok(()) => Ok(()),
+        Ok(()) => Ok(session_key),
         Err(e) => Err(e)
     }
 }

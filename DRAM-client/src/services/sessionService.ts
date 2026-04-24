@@ -1,4 +1,5 @@
 import type { Session } from "../types/session";
+import { invoke } from "@tauri-apps/api/core";
 
 // Temporary data for testing
 let temporarySessions: Session[] = [
@@ -31,19 +32,16 @@ export async function getSessions(): Promise<Session[]> {
 }
 
 // ─── createSession ──────────────────────────────────────────────────────────
-// Creates a new session with the given name and key.
-// Returns the server-generated session key to be shared with other users.
+// Creates a new session with the given name.
+// The server generates and returns the session key to be shared with other users.
 
 export async function createSession(data: {
   sessionName: string;
   sessionKey: string;
 }): Promise<{ session: Session; generatedKey: string }> {
-  // Later from Rust:
-  // import { invoke } from "@tauri-apps/api/core";
-  // return await invoke<{ session: Session; generatedKey: string }>("create_session", {
-  //   sessionName: data.sessionName,
-  //   sessionKey: data.sessionKey,
-  // });
+  const generatedKey = await invoke<string>("create_session", {
+    name: data.sessionName,
+  });
 
   const newSession: Session = {
     id: Date.now().toString(),
@@ -55,7 +53,7 @@ export async function createSession(data: {
 
   return Promise.resolve({
     session: newSession,
-    generatedKey: `${data.sessionName}-${data.sessionKey}-generated-key`,
+    generatedKey: generatedKey,
   });
 }
 
