@@ -1,19 +1,19 @@
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, routing::get};
 use serde::Serialize;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::server_logic::{add_user_to_server, connect_user_to_server, delete_user_from_server, set_user_nickname}};
+use crate::{errors::api_error::ApiError, logic::server_logic::{l_add_user_to_server, l_connect_user_to_server, l_delete_user_from_server, l_set_user_nickname}};
 
 pub fn router() -> Router<()> {
     Router::new()
-        .route("/add", get(add_server))
-        .route("/connect/{user_key}", get(connect_to_server))
-        .route("/leave", get(leave_server))
-        .route("/forget/{user_key}", get(forget_server))
-        .route("/set/nickname/{user_key}/{nickname}", get(set_nickname))
+        .route("/add", get(r_add_server))
+        .route("/connect/{user_key}", get(r_connect_to_server))
+        .route("/leave", get(r_leave_server))
+        .route("/forget/{user_key}", get(r_forget_server))
+        .route("/set/nickname/{user_key}/{nickname}", get(r_set_nickname))
 }
 
-async fn add_server() -> Result<Json<Value>, ApiError> {
-    match add_user_to_server() {
+async fn r_add_server() -> Result<Json<Value>, ApiError> {
+    match l_add_user_to_server() {
         Ok(response) => {
             let (auth_token, user_key) = response;
             Ok(Json(json!({
@@ -27,9 +27,9 @@ async fn add_server() -> Result<Json<Value>, ApiError> {
     }
 }
 
-async fn connect_to_server(Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
+async fn r_connect_to_server(Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
     
-    let response = connect_user_to_server(user_key);
+    let response = l_connect_user_to_server(user_key);
     match response {
         Ok(auth_token) => {
             Ok(Json(json!({
@@ -44,7 +44,7 @@ async fn connect_to_server(Path(user_key): Path<String>) -> Result<Json<Value>, 
 
 
 // TODO: finish
-async fn leave_server() -> Result<Json<Value>, ApiError> {
+async fn r_leave_server() -> Result<Json<Value>, ApiError> {
     if let Some("32") = Some("32") {
         Ok(Json(json!({
             "status": "leave_server in maintance",
@@ -56,16 +56,15 @@ async fn leave_server() -> Result<Json<Value>, ApiError> {
     }
 }
 
-// TODO: finish
-async fn forget_server(Path(user_key): Path<String>) -> Result<(), ApiError> {
-    match delete_user_from_server(user_key) {
+async fn r_forget_server(Path(user_key): Path<String>) -> Result<(), ApiError> {
+    match l_delete_user_from_server(user_key) {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
 }
 
-async fn set_nickname(Path((user_key, nickname)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
-    match set_user_nickname(user_key, nickname) {
+async fn r_set_nickname(Path((user_key, nickname)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
+    match l_set_user_nickname(user_key, nickname) {
         Ok(()) => Ok(Json(json!({"response":"nickname was changed successfully"}))),
         Err(e) => Err(e)
     }
