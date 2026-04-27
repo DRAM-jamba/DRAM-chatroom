@@ -166,6 +166,29 @@ async fn create_session(
 }
 
 #[tauri::command]
+async fn add_session(
+    session_key: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    println!("Attempting to add session '{}' on server at {}", session_key, state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let server = state.get_server(&ip)
+        .await
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.add_session(&server.user_key, &session_key);
+    let client = reqwest::Client::new();
+
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn connect_session(
     session_key: String,
     state: State<'_, AppState>,
