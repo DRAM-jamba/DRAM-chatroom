@@ -27,8 +27,8 @@ export async function getSessions(): Promise<Session[]> {
   // Later from Rust:
   // import { invoke } from "@tauri-apps/api/core";
   // return await invoke<Session[]>("get_sessions");
-
-  return Promise.resolve([...temporarySessions]);
+  return await invoke<Session[]>("get_sessions");
+  // return Promise.resolve([...temporarySessions]);
 }
 
 // ─── createSession ──────────────────────────────────────────────────────────

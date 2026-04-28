@@ -266,6 +266,60 @@ async fn get_servers(state: State<'_, AppState>) -> Result<Vec<state::PersistedS
 }
 
 #[tauri::command]
+async fn get_sessions(
+    state: State<'_, AppState>,
+) -> Result<Vec<state::Session>, AppError> {
+    println!("Attempting to retrieve sessions on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let server = state.get_server(&ip)
+        .await
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.session_list(&server.user_key);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to retrieve sessions: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected session list request: {}", e)))?;
+
+    let sessions: Vec<serde_json::Value> = response
+        .json()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to parse session list: {}", e)))?;
+
+    let session_list = sessions
+        .into_iter()
+        .map(|session| {
+            let session_key = session.get("session_key")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let name = session.get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unnamed")
+                .to_string();
+            
+            state::Session {
+                id: session_key,
+                name,
+                last_connected: "now".to_string(),
+            }
+        })
+        .collect();
+
+    Ok(session_list)
+}
+
+#[tauri::command]
 async fn set_nickname(
     new_nickname: String,
     state: State<'_, AppState>,
@@ -343,10 +397,12 @@ pub fn run() {
             connect,
             disconnect,
             create_session,
+            add_session,
             connect_session,
             leave_session,
             send_message,
             get_servers,
+            get_sessions,
             set_nickname,
             remove_server,
         ])
