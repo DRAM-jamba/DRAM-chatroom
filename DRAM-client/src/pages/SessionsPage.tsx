@@ -107,15 +107,15 @@ function SessionsPage({
 
   const handleAddConfirm = async () => {
     if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
-    const session = await addSession({
+    await addSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
     });
-    setSessions((prev) => [...prev, session]);
+    getSessions().then(setSessions);
     setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
-  };
+};
 
   // Shared cancel
 

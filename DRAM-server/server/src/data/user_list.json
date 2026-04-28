@@ -104,5 +104,15 @@
     "related_session_keys": [],
     "last_time_seen": 1776543835,
     "in_session": false
+  },
+  {
+    "id": 16,
+    "user_key": "22ff2158-d758-4e70-9183-7413aa5d3a28",
+    "nickname": "Rokas",
+    "related_session_keys": [
+      "session_number_21"
+    ],
+    "last_time_seen": 1777403805,
+    "in_session": false
   }
 ]
