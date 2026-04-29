@@ -28,7 +28,6 @@ export async function getSessions(): Promise<Session[]> {
   // import { invoke } from "@tauri-apps/api/core";
   // return await invoke<Session[]>("get_sessions");
   return await invoke<Session[]>("get_sessions");
-  // return Promise.resolve([...temporarySessions]);
 }
 
 // ─── createSession ──────────────────────────────────────────────────────────
@@ -63,25 +62,12 @@ export async function createSession(data: {
 // credentials before the session appears in the list.
 
 export async function addSession(data: {
-  sessionName: string;
+  sessionName: string;    // Accepted but not used by server
   sessionKey: string;
-}): Promise<Session> {
-  // Later from Rust:
-  // import { invoke } from "@tauri-apps/api/core";
-  // return await invoke<Session>("add_session", {
-  //   sessionName: data.sessionName,
-  //   sessionKey: data.sessionKey,
-  // });
-
-  const newSession: Session = {
-    id: Date.now().toString(),
-    name: data.sessionName,
-    lastConnected: "just now",
-  };
-
-  temporarySessions.push(newSession);
-
-  return Promise.resolve(newSession);
+}): Promise<void> {
+  await invoke<void>("add_session", {
+    sessionKey: data.sessionKey,  // Only send the key
+  });
 }
 
 // ─── joinSession ─────────────────────────────────────────────────────────────

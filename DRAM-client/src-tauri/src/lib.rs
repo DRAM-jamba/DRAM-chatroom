@@ -183,8 +183,13 @@ async fn add_session(
     let api = ServerApi::new(&format!("http://{}", ip));
     let url = api.add_session(&server.user_key, &session_key);
     let client = reqwest::Client::new();
-
-
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to add session: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected connection: {}", e)))?;
     Ok(())
 }
 
@@ -291,10 +296,16 @@ async fn get_sessions(
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected session list request: {}", e)))?;
 
-    let sessions: Vec<serde_json::Value> = response
+    let response_obj: serde_json::Value = response
         .json()
         .await
         .map_err(|e| AppError::Network(format!("Failed to parse session list: {}", e)))?;
+
+    let sessions: Vec<serde_json::Value> = response_obj
+        .get("related_sessions")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
 
     let session_list = sessions
         .into_iter()
