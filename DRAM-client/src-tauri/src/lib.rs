@@ -386,6 +386,34 @@ async fn remove_server(
     Ok(())
 }
 
+#[tauri::command]
+async fn forget_session(
+    session_key: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    println!("Attempting to forget session '{}' on server at {}", session_key, state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let server = state.get_server(&ip)
+        .await
+        .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.forget_session(&server.user_key, &session_key);
+    let client = reqwest::Client::new();
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to remove session: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected session removal: {}", e)))?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -416,6 +444,7 @@ pub fn run() {
             get_sessions,
             set_nickname,
             remove_server,
+            forget_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

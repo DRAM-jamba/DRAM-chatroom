@@ -66,7 +66,7 @@ export async function addSession(data: {
   sessionKey: string;
 }): Promise<void> {
   await invoke<void>("add_session", {
-    sessionKey: data.sessionKey,  // Only send the key
+    sessionKey: data.sessionKey,
   });
 }
 
@@ -117,12 +117,10 @@ export async function updateSession(
 // Removes the session from the user's session list.
 // The user will no longer see or be able to connect to this session.
 
-export async function forgetSession(id: string): Promise<void> {
-  // Later from Rust:
-  // import { invoke } from "@tauri-apps/api/core";
-  // await invoke("forget_session", { id });
-
-  temporarySessions = temporarySessions.filter((item) => item.id !== id);
+export async function forgetSession(sessionKey: string): Promise<void> {
+  await invoke<void>("forget_session", {
+    sessionKey: sessionKey,
+  });
 
   return Promise.resolve();
 }

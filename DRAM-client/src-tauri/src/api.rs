@@ -43,8 +43,11 @@ impl ServerApi {
     pub fn leave_session(&self) -> String {
         format!("{}/session/leave", self.base_url)
     }
-    pub fn delete_session(&self, user_key: &str, session_id: &str) -> String {
-        format!("{}/session/delete/{}/{}", self.base_url, user_key, session_id)
+    pub fn delete_session(&self, user_key: &str, session_key: &str) -> String {
+        format!("{}/session/delete/{}/{}", self.base_url, user_key, session_key)
+    }
+    pub fn forget_session(&self, user_key: &str, session_key: &str) -> String {
+        format!("{}/session/forget/{}/{}", self.base_url, user_key, session_key)
     }
 
     // WebSocket URL
