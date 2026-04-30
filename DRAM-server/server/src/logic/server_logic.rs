@@ -8,7 +8,7 @@ use crate::{data_logic::{session_data::d_get_session_list, user_data::{d_add_use
 pub fn l_add_user_to_server() -> Result<(String, String), ApiError> {
     let user_list = match d_get_user_list() {
         Ok(v) => v,
-        Err(e) => return Err(ApiError::InternalError) // TODO: change it later
+        Err(e) => return Err(ApiError::InvalidInput("user list is not found".into())) // TODO: change it later
     };
 
     let new_id = match user_list.last() {
@@ -21,7 +21,7 @@ pub fn l_add_user_to_server() -> Result<(String, String), ApiError> {
                                last_time_seen: chrono::Utc::now().timestamp(), in_session: false };
     match d_add_user(&new_user) {
         Ok(()) => (),
-        Err(e) => return Err(ApiError::InternalError) // TODO: change it later
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string())) // TODO: change it later
     };
 
     Ok((l_generate_auth_token(), new_user.user_key))
