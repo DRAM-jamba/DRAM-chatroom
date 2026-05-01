@@ -5,6 +5,7 @@ type SessionCardProps = {
   session: Session;
   onSaveEdit: (id: string, name: string) => void;
   onRemove: (id: string) => void;
+  onDelete: (id: string) => void;
   onConnect: (id: string) => void;
 };
 
@@ -12,11 +13,12 @@ function SessionCard({
   session,
   onSaveEdit,
   onRemove,
+  onDelete,
   onConnect,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"forget" | "delete" | null>(null);
   const [editedName, setEditedName] = useState(session.name);
 
   const handleConfirmEdit = () => {
@@ -81,7 +83,7 @@ function SessionCard({
             last time connected: {session.lastConnected}
           </p>
 
-          {!isConfirmingDelete ? (
+          {confirmAction === null && (
             <div className="server-actions">
               <button
                 className="small-btn edit-btn"
@@ -94,9 +96,17 @@ function SessionCard({
               <button
                 className="small-btn forget-btn"
                 type="button"
-                onClick={() => setIsConfirmingDelete(true)}
+                onClick={() => setConfirmAction("forget")}
               >
                 forget
+              </button>
+
+              <button
+                className="small-btn delete-btn"
+                type="button"
+                onClick={() => setConfirmAction("delete")}
+              >
+                delete
               </button>
 
               <button
@@ -107,14 +117,19 @@ function SessionCard({
                 connect
               </button>
             </div>
-          ) : (
+          )}
+
+          {confirmAction === "forget" && (
             <div className="session-delete-row">
-              <span className="session-delete-text">are you sure?</span>
+              <span className="session-delete-text">forget session?</span>
 
               <button
                 className="icon-btn"
                 type="button"
-                onClick={() => onRemove(session.id)}
+                onClick={() => {
+                  setConfirmAction(null);
+                  onRemove(session.id);
+                }}
               >
                 ✓
               </button>
@@ -122,7 +137,32 @@ function SessionCard({
               <button
                 className="icon-btn"
                 type="button"
-                onClick={() => setIsConfirmingDelete(false)}
+                onClick={() => setConfirmAction(null)}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {confirmAction === "delete" && (
+            <div className="session-delete-row">
+              <span className="session-delete-text">delete for everyone?</span>
+
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => {
+                  setConfirmAction(null);
+                  onDelete(session.id);
+                }}
+              >
+                ✓
+              </button>
+
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setConfirmAction(null)}
               >
                 ×
               </button>
