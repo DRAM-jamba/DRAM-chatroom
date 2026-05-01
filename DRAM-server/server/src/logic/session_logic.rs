@@ -86,13 +86,13 @@ pub fn l_forget_session_by_user(user_key: String, session_key: String) -> Result
     match session_list.iter().position(|s| s.session_key == session_key) {
         None => return Err(ApiError::NotFound),
         Some(s_i) => {
-            match user.related_session_keys.iter().find(|s| **s == session_key) { // TODO: find how works '*'
+            match user.related_session_keys.iter().position(|s| **s == session_key) { // TODO: find how works '*'
                 None => Err(ApiError::InvalidInput("User does not have this session".into())),
-                Some(s) => {
+                Some(found_s_i) => {
                     if session_list[s_i].session_owner_id == user.id {
                         return Err(ApiError::InvalidInput("User is owner of session. He can delete session, but not forget".into()))
                     }
-                    user.related_session_keys.remove(s_i);
+                    user.related_session_keys.remove(found_s_i);
                     match d_update_user(&user) {
                         Ok(()) => Ok(()),
                         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))

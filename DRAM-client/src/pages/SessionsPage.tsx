@@ -137,9 +137,9 @@ function SessionsPage({
     setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
   };
 
-  const handleForget = async (id: string) => {
-    await forgetSession(id);
-    setSessions((prev) => prev.filter((s) => s.id !== id));
+  const handleForget = async (sessionKey: string) => {
+    await forgetSession(sessionKey);
+    setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
   };
 
   // ─────────────────────────────────────────────────────────────────────────
