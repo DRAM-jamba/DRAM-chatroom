@@ -15,6 +15,14 @@ pub struct PersistedServer {
     pub user_key: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Session {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "lastConnected")]
+    pub last_connected: String,
+}
+
 #[derive(Debug, Clone)]
 pub enum ConnectionState {
     Disconnected,

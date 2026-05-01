@@ -104,5 +104,25 @@
     "related_session_keys": [],
     "last_time_seen": 1776543835,
     "in_session": false
+  },
+  {
+    "id": 16,
+    "user_key": "17e97eba-173c-4dd3-9df4-99b0b19980d0",
+    "nickname": "Rokas",
+    "related_session_keys": [
+      "silverstone_2024"
+    ],
+    "last_time_seen": 1777567914,
+    "in_session": false
+  },
+  {
+    "id": 17,
+    "user_key": "7d652769-c719-48d2-afb7-a99fc353cef4",
+    "nickname": "Mr. Antihype",
+    "related_session_keys": [
+      "496a02bc-0a3c-432e-96a3-64e669dbaf0c"
+    ],
+    "last_time_seen": 1777568838,
+    "in_session": false
   }
 ]

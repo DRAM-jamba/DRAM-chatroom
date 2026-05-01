@@ -107,15 +107,15 @@ function SessionsPage({
 
   const handleAddConfirm = async () => {
     if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
-    const session = await addSession({
+    await addSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
     });
-    setSessions((prev) => [...prev, session]);
+    getSessions().then(setSessions);
     setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
-  };
+};
 
   // Shared cancel
 
@@ -137,9 +137,9 @@ function SessionsPage({
     setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
   };
 
-  const handleForget = async (id: string) => {
-    await forgetSession(id);
-    setSessions((prev) => prev.filter((s) => s.id !== id));
+  const handleForget = async (sessionKey: string) => {
+    await forgetSession(sessionKey);
+    setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
   };
 
   // ─────────────────────────────────────────────────────────────────────────

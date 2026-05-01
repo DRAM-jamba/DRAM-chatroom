@@ -27,8 +27,7 @@ export async function getSessions(): Promise<Session[]> {
   // Later from Rust:
   // import { invoke } from "@tauri-apps/api/core";
   // return await invoke<Session[]>("get_sessions");
-
-  return Promise.resolve([...temporarySessions]);
+  return await invoke<Session[]>("get_sessions");
 }
 
 // ─── createSession ──────────────────────────────────────────────────────────
@@ -63,25 +62,12 @@ export async function createSession(data: {
 // credentials before the session appears in the list.
 
 export async function addSession(data: {
-  sessionName: string;
+  sessionName: string;    // Accepted but not used by server
   sessionKey: string;
-}): Promise<Session> {
-  // Later from Rust:
-  // import { invoke } from "@tauri-apps/api/core";
-  // return await invoke<Session>("add_session", {
-  //   sessionName: data.sessionName,
-  //   sessionKey: data.sessionKey,
-  // });
-
-  const newSession: Session = {
-    id: Date.now().toString(),
-    name: data.sessionName,
-    lastConnected: "just now",
-  };
-
-  temporarySessions.push(newSession);
-
-  return Promise.resolve(newSession);
+}): Promise<void> {
+  await invoke<void>("add_session", {
+    sessionKey: data.sessionKey,
+  });
 }
 
 // ─── joinSession ─────────────────────────────────────────────────────────────
@@ -131,12 +117,10 @@ export async function updateSession(
 // Removes the session from the user's session list.
 // The user will no longer see or be able to connect to this session.
 
-export async function forgetSession(id: string): Promise<void> {
-  // Later from Rust:
-  // import { invoke } from "@tauri-apps/api/core";
-  // await invoke("forget_session", { id });
-
-  temporarySessions = temporarySessions.filter((item) => item.id !== id);
+export async function forgetSession(sessionKey: string): Promise<void> {
+  await invoke<void>("forget_session", {
+    sessionKey: sessionKey,
+  });
 
   return Promise.resolve();
 }
