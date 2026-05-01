@@ -3,6 +3,8 @@ import SessionCard from "../components/SessionCard";
 import {
   addSession,
   createSession,
+  deleteSession,
+  disconnectFromServer,
   forgetSession,
   getSessions,
   joinSession,
@@ -42,7 +44,7 @@ function SessionsPage({
     getSessions().then(setSessions);
   }, []);
 
-  // Nickname 
+  // Nickname
 
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
@@ -60,7 +62,7 @@ function SessionsPage({
     }
   };
 
-  // Create session 
+  // Create session
 
   const handleOpenCreate = () => {
     setShowPlusMenu(false);
@@ -71,7 +73,7 @@ function SessionsPage({
   };
 
   const handleCreateConfirm = async () => {
-    if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
+    if (!sessionNameInput.trim()) return;
     const result = await createSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
@@ -115,7 +117,7 @@ function SessionsPage({
     setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
-};
+  };
 
   // Shared cancel
 
@@ -138,8 +140,23 @@ function SessionsPage({
   };
 
   const handleForget = async (sessionKey: string) => {
-    await forgetSession(sessionKey);
-    setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    try {
+      await forgetSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    } catch (error) {
+      console.error("Failed to forget session:", error);
+      getSessions().then(setSessions);
+    }
+  };
+
+  const handleDelete = async (sessionKey: string) => {
+    try {
+      await deleteSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      getSessions().then(setSessions);
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -244,24 +261,6 @@ function SessionsPage({
                     value={sessionNameInput}
                     onChange={(e) => setSessionNameInput(e.target.value)}
                   />
-                </div>
-
-                <div className="create-session-box">
-                  <div className="create-panel-header">
-                    <span>Session key</span>
-                    <button
-                      className="panel-close-btn"
-                      type="button"
-                      onClick={handleCancel}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    className="server-input"
-                    value={sessionKeyInput}
-                    onChange={(e) => setSessionKeyInput(e.target.value)}
-                  />
                   <button
                     className="big-confirm-btn"
                     type="button"
@@ -334,6 +333,7 @@ function SessionsPage({
                 session={session}
                 onSaveEdit={handleSaveEdit}
                 onRemove={handleForget}
+                onDelete={handleDelete}
                 onConnect={handleConnect}
               />
             ))}
@@ -383,7 +383,15 @@ function SessionsPage({
           <button
             className="back-to-servers-btn disconnect-btn"
             type="button"
-            onClick={onDisconnect}
+            onClick={async () => {
+              try {
+                await disconnectFromServer();
+              } catch (error) {
+                console.error("Failed to disconnect:", error);
+              } finally {
+                onDisconnect();
+              }
+            }}
           >
             disconnect
           </button>
