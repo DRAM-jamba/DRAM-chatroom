@@ -5,7 +5,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://antihype:An!?h3p37!W.W@db:5432/qorthone_api
+      DATABASE_URL: postgres://antihype:An%21%3Fh3p37%21W.W@quorthon_db:5432/quorthon_api
   db:
     image: postgres:15
     container_name: quorthon_db
@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: antihype
-      POSTGRES_PASSWORD: An!?h3p37!W.W
+      POSTGRES_PASSWORD: An!?h3p37!W.W # ! - %21, ? - %3F
       POSTGRES_DB: quorthon_api
     volumes:
       - quorthon_data:/var/lib/postgresql/data

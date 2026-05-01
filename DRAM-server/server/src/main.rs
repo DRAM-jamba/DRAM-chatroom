@@ -1,9 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, env, process::exit, sync::Arc};
 
 use axum::{Json, Router, http::HeaderValue, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
 use tokio::{net::TcpListener, sync::{Mutex, RwLock, broadcast::Sender}};
 use tower_http::cors::{Any, CorsLayer};
+use sqlx::{postgres::PgPoolOptions};
 
 use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::session_chat::{SessionChat, SessionMap}};
 
@@ -15,6 +16,28 @@ mod errors;
 
 #[tokio::main]
 async fn main() {
+    let db_url = match env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(e) => {
+            eprintln!("{e}");
+            exit(1)
+        }
+    };
+    let pool = match PgPoolOptions::new().connect(&db_url).await {
+        Ok(db_pool) => db_pool,
+        Err(e) => {
+            eprintln!("{e}");
+            exit(2)
+        }
+    };
+    match sqlx::migrate!("./migrations").run(&pool).await {
+        Ok(()) => (),
+        Err(e) => {
+            eprintln!("{e}");
+            exit(3)
+        }
+    };
+
 
     let active_sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
 
