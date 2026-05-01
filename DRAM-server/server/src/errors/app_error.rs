@@ -9,4 +9,7 @@ pub enum AppError {
 
     #[error("else: {0}")]
     Else(String),
+
+    #[error("database error: {0}")]
+    Database(#[from] sqlx::Error),
 }
