@@ -12,18 +12,18 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS user_session (
-    id_user_session SERIAL PRIMARY KEY,
-    fk_user_key     VARCHAR(255) NOT NULL,
-    fk_session_key  VARCHAR(255) NOT NULL,
+    user_key     VARCHAR(255) NOT NULL REFERENCES users(user_key),
+    session_key  VARCHAR(255) NOT NULL REFERENCES sessions(session_key),
     user_role       VARCHAR(30) CHECK (user_role IN ('owner', 'member')),
-    CONSTRAINT contains FOREIGN KEY (fk_user_key)    REFERENCES users (user_key),
-    CONSTRAINT relates  FOREIGN KEY (fk_session_key) REFERENCES sessions (session_key)
+    PRIMARY KEY (user_key, session_key)
 );
 
+CREATE UNIQUE INDEX one_owner_per_session 
+ON user_session (session_key) 
+WHERE user_role = 'owner';
+
 CREATE TABLE IF NOT EXISTS blacklist (
-    id_blacklist   SERIAL PRIMARY KEY,
-    fk_user_key    VARCHAR(255) NOT NULL,
-    fk_session_key VARCHAR(255) NOT NULL,
-    CONSTRAINT is_banned FOREIGN KEY (fk_user_key)    REFERENCES users (user_key),
-    CONSTRAINT banned_in FOREIGN KEY (fk_session_key) REFERENCES sessions (session_key)
+    user_key     VARCHAR(255) NOT NULL REFERENCES users(user_key),
+    session_key  VARCHAR(255) NOT NULL REFERENCES sessions(session_key),
+    PRIMARY KEY (user_key, session_key)
 );

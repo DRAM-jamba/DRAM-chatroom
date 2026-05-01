@@ -1,77 +1,110 @@
+use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::{data_logic::{session_data::d_get_session_list, user_data::{d_add_user, d_get_user_by_user_key, d_get_user_list, d_remove_user, d_update_user}}, 
+use crate::{data_logic::{connection_data::d_get_user_sessions, user_data::{d_add_user, d_get_user, d_get_user_list, d_remove_user, d_update_user}}, 
                         errors::api_error::ApiError, 
-                        logic::{auth_logic::l_generate_auth_token, session_logic::l_delete_session_by_owner}, 
+                        logic::{auth_logic::l_generate_auth_token, session_logic::{l_delete_session_by_owner_by_tx, l_forget_session_by_tx}}, 
                         modules::user::User};
 
-pub fn l_add_user_to_server() -> Result<(String, String), ApiError> {
-    let user_list = match d_get_user_list() {
+pub async fn l_add_user_to_server(db_pool: Pool<Postgres>) -> Result<String, ApiError> {
+    let user_list = match d_get_user_list(db_pool.clone()).await {
         Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput("user list is not found".into())) // TODO: change it later
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string())) // TODO: change it later
     };
 
-    let new_id = match user_list.last() {
-        None => 0,
-        Some(u) => u.id + 1
+    let new_user: User = User {user_key: l_generate_user_key(&user_list), nickname: "".into(), 
+                               last_time_seen: chrono::Local::now().naive_local() };
+    
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-
-    let new_user: User = User {id: new_id, user_key: l_generate_user_key(&user_list), nickname: "".into(), 
-                               related_session_keys: [].to_vec(), 
-                               last_time_seen: chrono::Utc::now().timestamp(), in_session: false };
-    match d_add_user(&new_user) {
+    
+    match d_add_user(&mut tx, &new_user).await {
         Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string())) // TODO: change it later
     };
 
-    Ok((l_generate_auth_token(), new_user.user_key))
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(new_user.user_key)
 }
 
 
-pub fn l_connect_user_to_server(user_key: String) -> Result<String, ApiError> {
-    let user = match d_get_user_by_user_key(user_key) {
+pub async fn l_connect_user_to_server(db_pool: Pool<Postgres>, user_key: String) -> Result<String, ApiError> {
+    let _user = match d_get_user(db_pool.clone(), &user_key).await {
         Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
+        Err(_e) => return Err(ApiError::NotFound)
     };
     Ok(l_generate_auth_token())
 }
 
-pub fn l_delete_user_from_server(user_key: String) -> Result<(), ApiError> {
-    let user = match d_get_user_by_user_key(user_key) {
-        Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
-    };
-    let session_list = match d_get_session_list() {
-        Ok(v) => v,
+pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, user_key: String) -> Result<(), ApiError> {
+    let connections = match d_get_user_sessions(db_pool.clone(), &user_key).await {
+        Ok(c) => c,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
 
-    for s in session_list.iter() {
-        if s.session_owner_id == user.id {
-            match l_delete_session_by_owner(&user.user_key, &s.session_key) {
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    for c in connections.iter() {
+        if c.user_role == "member" {
+            match l_forget_session_by_tx(db_pool.clone(), &mut tx, &c.user_key, &c.session_key).await {
                 Ok(()) => (),
                 Err(e) => return Err(e)
-            }
+            };
+        }
+        else if c.user_role == "owner" {
+                match l_delete_session_by_owner_by_tx(db_pool.clone(), &mut tx, &c.user_key, &c.session_key).await {
+                Ok(()) => (),
+                Err(e) => return Err(e)
+            };
         }
     };
 
-    match d_remove_user(&user) {
-        Ok(()) => Ok(()),
+    match d_remove_user(&mut tx, &user_key).await {
+        Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    }
+    };
+
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(())
 
 }
 
-pub fn l_set_user_nickname(user_key: String, nickname: String) -> Result<(), ApiError> {
-    let mut user = match d_get_user_by_user_key(user_key) {
+pub async fn l_set_user_nickname(db_pool: Pool<Postgres>, user_key: String, nickname: String) -> Result<(), ApiError> {
+    let mut user = match d_get_user(db_pool.clone(), &user_key).await {
         Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
     user.nickname = nickname;
-    match d_update_user(&user) {
-        Ok(()) => Ok(()),
-        Err(e) => Err(ApiError::InvalidInput(e.to_string()))
-    }
+
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match d_update_user(&mut tx, &user).await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(())
 }
 
 // TODO: check it for security. for now it should be ok, but it is not ideal.
@@ -81,7 +114,7 @@ fn l_generate_user_key(user_list: &Vec<User>) -> String {
         u_key = Uuid::new_v4().to_string();
         match user_list.iter().find(|u| u.user_key == u_key) {
             None => break,
-            Some(u) => continue
+            Some(_) => continue
         } 
     };
 
