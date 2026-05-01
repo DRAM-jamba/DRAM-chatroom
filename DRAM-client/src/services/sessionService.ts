@@ -75,20 +75,11 @@ export async function addSession(data: {
 // Establishes an active connection to the session on the server.
 // Returns the session name to navigate to the chat view.
 
-export async function joinSession(sessionId: string): Promise<string> {
+export async function joinSession(sessionKey: string): Promise<string> {
   // Later from Rust:
   // import { invoke } from "@tauri-apps/api/core";
   // return await invoke<string>("join_session", { sessionId });
-
-  const session = temporarySessions.find((s) => s.id === sessionId);
-
-  if (!session) {
-    throw new Error("Session not found");
-  }
-
-  session.lastConnected = "just now";
-
-  return Promise.resolve(session.name);
+  return await invoke<string>("connect_session", { sessionKey });
 }
 
 // ─── updateSession ───────────────────────────────────────────────────────────

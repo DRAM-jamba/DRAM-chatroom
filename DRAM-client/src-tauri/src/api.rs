@@ -37,8 +37,8 @@ impl ServerApi {
     pub fn add_session(&self, user_key: &str, session_key: &str) -> String {
         format!("{}/session/add/{}/{}", self.base_url, user_key, session_key)
     }
-    pub fn connect_session(&self, key: &str) -> String {
-        format!("{}/session/connect/{}", self.base_url, key)
+    pub fn connect_session(&self, user_key: &str, session_key: &str) -> String {
+        format!("{}/session/connect/{}/{}", self.base_url, user_key, session_key)
     }
     pub fn leave_session(&self) -> String {
         format!("{}/session/leave", self.base_url)
@@ -51,7 +51,7 @@ impl ServerApi {
     }
 
     // WebSocket URL
-    pub fn ws(&self, user_key: &str) -> String {
-        format!("{}/ws/{}", self.base_url.replace("http", "ws"), user_key)
+    pub fn ws(&self, user_key: &str, session_key: &str) -> String {
+        format!("{}/session/connect/{}/{}", self.base_url.replace("http", "ws"), user_key, session_key)
     }
 }

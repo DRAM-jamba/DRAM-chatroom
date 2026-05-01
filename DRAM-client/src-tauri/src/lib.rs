@@ -209,54 +209,22 @@ async fn connect_session(
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
-    let url = api.connect_session(&session_key);
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .send()
+    let ws_url = api.ws(&server.user_key, &session_key);
+
+    let ws_client = websocket::WsClient::connect(&ws_url, app.clone())
         .await
-        .map_err(|e| AppError::Network(format!("Failed to join session: {}", e)))?
-        .error_for_status()
-        .map_err(|e| AppError::Auth(format!("Server rejected join: {}", e)))?;
+        .map_err(|e| AppError::Network(format!("Failed to open websocket: {}", e)))?;
 
-    let response_value: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| AppError::Network(format!("Failed to parse response: {}", e)))?;
-
-    let payload: events::SessionPayload = if let Some(inner) = response_value.get("payload") {
-        serde_json::from_value(inner.clone())
-            .map_err(|e| AppError::Network(format!("Failed to parse session payload: {}", e)))?
-    } else {
-        serde_json::from_value(response_value)
-            .map_err(|e| AppError::Network(format!("Failed to parse session payload: {}", e)))?
-    };
-
-    *state.session.lock().await = SessionState::JoinedSession;
-
-    //let ws_url = api.ws(&user_key);
-    //let ws_client = websocket::WsClient::connect(&ws_url, app.clone())
-    //    .await
-    //    .map_err(|e| AppError::Network(format!("Failed to open websocket: {}", e)))?;
-
-    //*state.connection.lock().await = ConnectionState::Connected(ws_client);
-    //websocket::start_heartbeat(&state).await;
+    *state.session.lock().await = SessionState::JoinedSession(ws_client);
 
     emit_joined_session(&app);
-    emit_session_update(&app, payload);
     Ok(())
 }
 
 #[tauri::command]
 async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), AppError> {
-    let conn = state.connection.lock().await;
-    match &*conn {
-        ConnectionState::Connected => {
-            // TODO: Send via WebSocket client
-            Ok(())
-        },
-        _ => Err(AppError::Network("Not connected".into())),
-    }
+    // TODO: implement
+    Ok(())
 }
 
 #[tauri::command]
