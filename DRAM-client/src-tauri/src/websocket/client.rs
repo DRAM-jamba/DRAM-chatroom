@@ -9,7 +9,7 @@ use crate::events;
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WsClient {
     pub sink: Arc<Mutex<WsSink>>,
 }

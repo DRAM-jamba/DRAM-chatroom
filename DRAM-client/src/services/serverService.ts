@@ -10,14 +10,14 @@ export async function addServer(data: {
   nickname: string;
   ip: string;
 }): Promise<void> {
-  await invoke("add", {
+  await invoke("add_server", {
     ip: data.ip.trim(),
     nickname: data.nickname.trim(),
   });
 }
 
 export async function connectServer(ip: string): Promise<void> {
-  await invoke("connect", { ip });
+  await invoke("connect_server", { ip });
 }
 
 export async function updateServer(
@@ -32,5 +32,5 @@ export async function updateServer(
 }
 
 export async function removeServer(id: string): Promise<void> {
-  await invoke("remove_server", { id });
+  await invoke("forget_server", { id });
 }
