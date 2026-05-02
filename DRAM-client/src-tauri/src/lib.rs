@@ -322,6 +322,10 @@ async fn connect_session(
     let server = state.get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
+        .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+
+    state.save_nickname(&ip, new_nickname).await
+        .map_err(|e| AppError::Network(format!("Failed to save nickname: {}", e)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
     let ws_url = api.ws(&server.user_key, &session_key);
@@ -434,6 +438,41 @@ async fn get_servers(
     state: State<'_, AppState>
 ) -> Result<Vec<state::PersistedServer>, AppError> {
     Ok(state.servers.lock().await.clone())
+    let nickname = state.get_nickname(&ip).await
+        .ok_or_else(|| AppError::Auth(format!("No nickname found for server {}", ip)))?;
+
+    Ok(nickname)
+}
+
+#[tauri::command]
+async fn get_nickname(
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let nickname = state.get_nickname(&ip).await
+        .ok_or_else(|| AppError::Auth(format!("No nickname found for server {}", ip)))?;
+
+    Ok(nickname)
+}
+
+#[tauri::command]
+async fn save_nickname(
+    nickname: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    state.save_nickname(&ip, nickname).await
+        .map_err(|e| AppError::Network(format!("Failed to save nickname: {}", e)))?;
+    
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -471,6 +510,8 @@ pub fn run() {
             send_message,
             // Client commands
             get_servers
+            get_nickname,
+            save_nickname,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

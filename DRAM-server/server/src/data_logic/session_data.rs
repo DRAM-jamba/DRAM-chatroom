@@ -1,95 +1,46 @@
-use std::{fs::{self, read_to_string}, path::Path};
-
-use serde_json::{from_str, to_string_pretty};
+use sqlx::{Pool, Postgres, Transaction};
 
 use crate::{errors::app_error::AppError, modules::session::Session};
 
 
-const SESSION_LIST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/session_list.json");
+pub async fn d_get_session_list(db_pool: Pool<Postgres>) -> Result<Vec<Session>, AppError> {
 
-pub fn d_get_session_list() -> Result<Vec<Session>, AppError> {
-    let json_path: &Path = Path::new(SESSION_LIST_PATH);
-    
-    let data = match read_to_string(json_path) {
-        Ok(s) if s.trim().is_empty() => String::from("[]"),
-        Ok(s) => s,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::from("[]"),
-        Err(e) => return Err(e.into()),
-    };
-
-    let vec: Vec<Session> = match from_str(&data) {
-        Ok(v) => v,
-        Err(e) => return Err(e.into())
-    };
-
-    Ok(vec)
+    sqlx::query_as::<_, Session>("SELECT session_key, session_name FROM sessions")
+                                .fetch_all(&db_pool).await
+                                .map_err(|e| AppError::Database(e))
 }
 
-// now this funciton delete session_list for moment, so here may be mistakes.
-// TODO: change later to DB or file blocking. security
-pub fn d_save_session_list(user_list: Vec<Session>) -> Result<(), AppError> {
-    let json_path: &Path = Path::new(SESSION_LIST_PATH);
+pub async fn d_get_session(db_pool: Pool<Postgres>, session_key: &String) -> Result<Session, AppError> {
 
-    let new_json: String = match to_string_pretty(&user_list) {
-        Ok(v) => v,
-        Err(e) => return Err(e.into())
-    };
+    sqlx::query_as::<_, Session>("SELECT session_key, session_name FROM sessions WHERE session_key = $1")
+                    .bind(&session_key)
+                    .fetch_one(&db_pool).await
+                    .map_err(|e| AppError::Database(e))
+}
 
-    let tmp_path = json_path.with_extension("json.tmp");
+pub async fn d_add_session(tx: &mut Transaction<'_, Postgres>, session: &Session) -> Result<(), AppError> {
 
-    match fs::write(&tmp_path, new_json) {
-        Ok(()) => (),
-        Err(e) => return Err(e.into())
-    };
-    match fs::rename(&tmp_path, &json_path) {
-        Ok(()) => (),
-        Err(e) => return Err(e.into())
-    };
+    let _result = sqlx::query("INSERT INTO sessions (session_key, session_name) VALUES ($1, $2)")
+                    .bind(&session.session_key)
+                    .bind(&session.session_name)
+                    .execute(&mut **tx).await?; 
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
 
     Ok(())
 }
 
-pub fn d_get_session_by_session_key(session_key: &String) -> Result<Session, AppError> {
-    let session_list = match d_get_session_list() {
-        Ok(v) => v,
-        Err(e) => return Err(e)
-    };
-    let session = match session_list.iter().find(|s| s.session_key == *session_key) {
-        None => return Err(AppError::Else("Session not found".into())),
-        Some(s) => s
-    };
-    Ok(session.clone())
-}
+pub async fn d_remove_session(tx: &mut Transaction<'_, Postgres>, session_key: &String) -> Result<(), AppError> {
 
-pub fn d_add_session(session: &Session) -> Result<(), AppError> {
-    let mut vec = match d_get_session_list() {
-        Ok(v) => v,
-        Err(e) => return Err(e)
-    };
+    let result = sqlx::query("DELETE FROM sessions WHERE session_key = $1")
+                    .bind(&session_key)
+                    .execute(&mut **tx).await?; 
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
 
-    vec.push(session.clone());
-
-    match d_save_session_list(vec) {
-        Ok(()) => Ok(()),
-        Err(e) => return Err(e)
+    if result.rows_affected() == 0 {
+        return Err(AppError::Database(sqlx::Error::RowNotFound));
     }
-}
 
-pub fn d_remove_session(session: &Session) -> Result<(), AppError> {
-    let mut vec = match d_get_session_list() {
-        Ok(v) => v,
-        Err(e) => return Err(e)
-    };
-
-    let s_i = match vec.iter().position(|s| s.session_id == session.session_id) {
-        None => return Err(AppError::Else("Session not found in session list".into())),
-        Some(i) => i
-    };
-
-    vec.remove(s_i);
-
-    match d_save_session_list(vec) {
-        Ok(()) => Ok(()),
-        Err(e) => return Err(e)
-    }
+    Ok(())
 }

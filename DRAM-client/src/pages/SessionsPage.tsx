@@ -3,6 +3,8 @@ import SessionCard from "../components/SessionCard";
 import {
   addSession,
   createSession,
+  deleteSession,
+  disconnectFromServer,
   forgetSession,
   getSessions,
   joinSession,
@@ -42,8 +44,6 @@ function SessionsPage({
     getSessions().then(setSessions);
   }, []);
 
-  // Nickname 
-
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
     if (!trimmed) return;
@@ -60,8 +60,6 @@ function SessionsPage({
     }
   };
 
-  // Create session 
-
   const handleOpenCreate = () => {
     setShowPlusMenu(false);
     setSessionNameInput("");
@@ -71,7 +69,7 @@ function SessionsPage({
   };
 
   const handleCreateConfirm = async () => {
-    if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
+    if (!sessionNameInput.trim()) return;
     const result = await createSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
@@ -96,36 +94,30 @@ function SessionsPage({
     }
   };
 
-  // Add session
 
   const handleOpenAdd = () => {
     setShowPlusMenu(false);
-    setSessionNameInput("");
     setSessionKeyInput("");
     setView("add");
   };
 
   const handleAddConfirm = async () => {
-    if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
-    await addSession({
-      sessionName: sessionNameInput,
-      sessionKey: sessionKeyInput,
-    });
+    if (!sessionKeyInput.trim()) return;
+    await addSession({ sessionKey: sessionKeyInput });
     getSessions().then(setSessions);
-    setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
-};
+  };
 
-  // Shared cancel
+  const handleAddKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleAddConfirm();
+  };
 
   const handleCancel = () => {
     setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
   };
-
-  // Session card actions
 
   const handleConnect = async (id: string) => {
     const sessionName = await joinSession(id);
@@ -138,8 +130,23 @@ function SessionsPage({
   };
 
   const handleForget = async (sessionKey: string) => {
-    await forgetSession(sessionKey);
-    setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    try {
+      await forgetSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    } catch (error) {
+      console.error("Failed to forget session:", error);
+      getSessions().then(setSessions);
+    }
+  };
+
+  const handleDelete = async (sessionKey: string) => {
+    try {
+      await deleteSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      getSessions().then(setSessions);
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -244,24 +251,6 @@ function SessionsPage({
                     value={sessionNameInput}
                     onChange={(e) => setSessionNameInput(e.target.value)}
                   />
-                </div>
-
-                <div className="create-session-box">
-                  <div className="create-panel-header">
-                    <span>Session key</span>
-                    <button
-                      className="panel-close-btn"
-                      type="button"
-                      onClick={handleCancel}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    className="server-input"
-                    value={sessionKeyInput}
-                    onChange={(e) => setSessionKeyInput(e.target.value)}
-                  />
                   <button
                     className="big-confirm-btn"
                     type="button"
@@ -279,24 +268,6 @@ function SessionsPage({
               <div className="session-create-panels">
                 <div className="create-session-box">
                   <div className="create-panel-header">
-                    <span>Session name</span>
-                    <button
-                      className="panel-close-btn"
-                      type="button"
-                      onClick={handleCancel}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    className="server-input"
-                    value={sessionNameInput}
-                    onChange={(e) => setSessionNameInput(e.target.value)}
-                  />
-                </div>
-
-                <div className="create-session-box">
-                  <div className="create-panel-header">
                     <span>Session key</span>
                     <button
                       className="panel-close-btn"
@@ -310,6 +281,9 @@ function SessionsPage({
                     className="server-input"
                     value={sessionKeyInput}
                     onChange={(e) => setSessionKeyInput(e.target.value)}
+                    onKeyDown={handleAddKeyDown}
+                    placeholder="enter session key..."
+                    autoFocus
                   />
                   <button
                     className="big-confirm-btn"
@@ -334,6 +308,7 @@ function SessionsPage({
                 session={session}
                 onSaveEdit={handleSaveEdit}
                 onRemove={handleForget}
+                onDelete={handleDelete}
                 onConnect={handleConnect}
               />
             ))}
@@ -383,7 +358,15 @@ function SessionsPage({
           <button
             className="back-to-servers-btn disconnect-btn"
             type="button"
-            onClick={onDisconnect}
+            onClick={async () => {
+              try {
+                await disconnectFromServer();
+              } catch (error) {
+                console.error("Failed to disconnect:", error);
+              } finally {
+                onDisconnect();
+              }
+            }}
           >
             disconnect
           </button>

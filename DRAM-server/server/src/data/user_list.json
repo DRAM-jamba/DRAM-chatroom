@@ -98,14 +98,6 @@
     "in_session": false
   },
   {
-    "id": 15,
-    "user_key": "3c902062-9d36-4748-8cee-53ec2cf3f1f0",
-    "nickname": "Adomas",
-    "related_session_keys": [],
-    "last_time_seen": 1776543835,
-    "in_session": false
-  },
-  {
     "id": 16,
     "user_key": "17e97eba-173c-4dd3-9df4-99b0b19980d0",
     "nickname": "Rokas",
@@ -127,12 +119,12 @@
   },
   {
     "id": 18,
-    "user_key": "1af28fba-60b3-4305-a61d-cd025ca45d6d",
-    "nickname": "Rokas",
+    "user_key": "b7803c31-6039-4290-9502-7128b7f55d9c",
+    "nickname": "Adam",
     "related_session_keys": [
-      "7ea34cde-b529-4941-b60d-e03ec27101d6"
+      "b8316173-ea85-4e0c-be13-101026bdcb44"
     ],
-    "last_time_seen": 1777743014,
+    "last_time_seen": 1777666191,
     "in_session": false
   }
 ]

@@ -1,118 +1,64 @@
-use std::{ fs::{self, read_to_string}, ops::Index, path::Path};
-
-use serde_json::{from_str, to_string_pretty};
+use sqlx::{Pool, Postgres, Transaction};
 
 use crate::{errors::app_error::AppError, modules::user::User};
 
-const USER_LIST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/user_list.json");
-
-pub fn d_get_user_list() -> Result<Vec<User>, AppError> {
-    let json_path: &Path = Path::new(USER_LIST_PATH);
-    
-    let data = match read_to_string(json_path) {
-        Ok(s) if s.trim().is_empty() => String::from("[]"),
-        Ok(s) => s,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::from("[]"),
-        Err(e) => return Err(e.into()),
-    };
-
-    let vec: Vec<User> = match from_str(&data) {
-        Ok(v) => v,
-        Err(e) => return Err(e.into())
-    };
-
-    Ok(vec)
+pub async fn d_get_user_list(db_pool: Pool<Postgres>) -> Result<Vec<User>, AppError> {
+  
+    sqlx::query_as::<_, User>("SELECT user_key, nickname, last_time_seen FROM users")
+                                .fetch_all(&db_pool).await
+                                .map_err(|e| AppError::Database(e))
 }
 
-// now this funciton delete user_list for moment, so here may be mistakes.
-// TODO: change later to DB or file blocking. security
-pub fn d_save_user_list(user_list: Vec<User>) -> Result<(), AppError> {
-    let json_path: &Path = Path::new(USER_LIST_PATH);
+pub async fn d_get_user(db_pool: Pool<Postgres>, user_key: &String) -> Result<User, AppError> {
+ 
+    sqlx::query_as::<_, User>("SELECT user_key, nickname, last_time_seen FROM users WHERE user_key = $1")
+                    .bind(&user_key)
+                    .fetch_one(&db_pool).await
+                    .map_err(|e| AppError::Database(e))
+}
 
-    let new_json: String = match to_string_pretty(&user_list) {
-        Ok(v) => v,
-        Err(e) => return Err(e.into())
-    };
 
-    let tmp_path = json_path.with_extension("json.tmp");
+pub async fn d_add_user(tx: &mut Transaction<'_, Postgres>, user: &User) -> Result<(), AppError> {
 
-    match fs::write(&tmp_path, new_json) {
-        Ok(()) => (),
-        Err(e) => return Err(e.into())
-    };
-    match fs::rename(&tmp_path, &json_path) {
-        Ok(()) => (),
-        Err(e) => return Err(e.into())
-    };
+    let _result = sqlx::query("INSERT INTO users (user_key, nickname, last_time_seen) VALUES ($1, $2, $3)")
+                    .bind(&user.user_key)
+                    .bind(&user.nickname)
+                    .bind(&user.last_time_seen)
+                    .execute(&mut **tx).await?; 
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
 
     Ok(())
 }
 
-pub fn d_get_user_by_user_key(user_key: String) -> Result<User, AppError> {
-    let user_list = match d_get_user_list() {
-        Ok(v) => v,
-        Err(e) => return Err(e)
-    };
-    let user = match user_list.iter().find(|u| u.user_key == user_key) {
-        None => return Err(AppError::Else("User not found".into())),
-        Some(u) => u
-    };
-    Ok(user.clone())
-}
+pub async fn d_update_user(tx: &mut Transaction<'_, Postgres>, user: &User) -> Result<(), AppError> {
 
+    let result = sqlx::query("UPDATE users SET nickname = $1, last_time_seen = $2 WHERE user_key = $3")
+                    .bind(&user.nickname)
+                    .bind(&user.last_time_seen)
+                    .bind(&user.user_key)
+                    .execute(&mut **tx).await?; 
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
 
-pub fn d_add_user(user: &User) -> Result<(), AppError> {
-
-    let mut vec = match d_get_user_list() {
-        Ok(v) => v.to_vec(),
-        Err(e) => return Err(e)
-    };
-    
-    vec.push(user.clone());
-    
-    match d_save_user_list(vec) {
-        Ok(()) => Ok(()),
-        Err(e) => return Err(e)
+    if result.rows_affected() == 0 {
+        return Err(AppError::Database(sqlx::Error::RowNotFound));
     }
 
+    Ok(())
 }
 
-pub fn d_update_user(user: &User) -> Result<(), AppError> {
-
-    let mut vec = match d_get_user_list() {
-        Ok(v) => v.to_vec(),
-        Err(e) => return Err(e.into())
-    };
+pub async fn d_remove_user(tx: &mut Transaction<'_, Postgres>, user_key: &String) -> Result<(), AppError> {
     
-    let index= match vec.iter().position(|u| u.id == user.id) {
-        None => return Err(AppError::Else("User not found in the list".into())),
-        Some(u) => u
-    };
+    let result = sqlx::query("DELETE FROM users WHERE user_key = $1")
+                    .bind(&user_key)
+                    .execute(&mut **tx).await?; 
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
 
-    vec[index] = user.clone();
-    
-    match d_save_user_list(vec) {
-        Ok(()) => Ok(()),
-        Err(e) => return Err(e.into())
+    if result.rows_affected() == 0 {
+        return Err(AppError::Database(sqlx::Error::RowNotFound));
     }
 
-}
-
-pub fn d_remove_user(user: &User) -> Result<(), AppError> {
-    let mut vec = match d_get_user_list() {
-        Ok(v) => v,
-        Err(e) => return Err(e)
-    };
-
-    let u_i = match vec.iter().position(|u| u.id == user.id) {
-        None => return Err(AppError::Else("User not found in user list".into())),
-        Some(i) => i
-    };
-
-    vec.remove(u_i);
-
-    match d_save_user_list(vec) {
-        Ok(()) => Ok(()),
-        Err(e) => return Err(e)
-    }
+    Ok(())
 }

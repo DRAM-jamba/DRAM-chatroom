@@ -1,138 +1,179 @@
+use sqlx::{Pool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::{data_logic::{session_data::{d_add_session, d_get_session_by_session_key, d_get_session_list, d_remove_session}, user_data::{d_add_user, d_get_user_by_user_key, d_get_user_list, d_save_user_list, d_update_user}}, errors::api_error::ApiError, modules::{session::Session, user}};
+use crate::{data_logic::{connection_data::{d_add_connection, d_get_user_role, d_get_user_sessions, d_remove_all_connections_to_session, d_remove_connection}, session_data::{d_add_session, d_get_session_list, d_remove_session}}, errors::api_error::ApiError, modules::{connection::Connection, session::Session}};
 
-pub fn l_get_user_related_session_list(user_key: String) -> Result<Vec<Session>, ApiError> {
-    let user = match d_get_user_by_user_key(user_key) {
-        Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
+pub async fn l_get_session_list(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<Session>, ApiError> {
+    let connections = match d_get_user_sessions(db_pool.clone(), &user_key).await {
+        Ok(c) => c,
+        Err(_e) => return Err(ApiError::NotFound)
     };
-    let session_list = match d_get_session_list() {
+    let session_list = match d_get_session_list(db_pool.clone()).await {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
     let users_sessions: Vec<Session> = session_list.into_iter()
-                                                   .filter(|s| user.related_session_keys.contains(&s.session_key))
+                                                   .filter(|s| connections.iter().any(|c| c.session_key == s.session_key))
                                                    .collect();
     Ok(users_sessions)
 }
 
-pub fn l_create_session(user_key: String, session_name: String) -> Result<String, ApiError> {
-    let user = match d_get_user_by_user_key(user_key) {
-        Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
-    };
-    let session_list = match d_get_session_list() {
+pub async fn l_create_session(db_pool: Pool<Postgres>, user_key: &String, session_name: &String) -> Result<String, ApiError> {
+    let session_list = match d_get_session_list(db_pool.clone()).await {
         Ok(v) => v,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    let new_id = match session_list.last() {
-        None => 0,
-        Some(i) => i.session_id + 1
-    };
 
-    let new_session: Session = Session { session_id: new_id, session_key: l_generate_session_key(&session_list), 
-                                         session_owner_id: user.id, 
-                                         name: session_name, chat_log: [].to_vec(), 
-                                         current_user_list: [].to_vec(), black_list: [].to_vec() };
+    let new_session: Session = Session { session_key: l_generate_session_key(&session_list), 
+                                         session_name: session_name.clone() };
     let session_key = new_session.session_key.clone();
-    match d_add_session(&new_session) {
+
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match d_add_session(&mut tx, &new_session).await {
         Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    match l_add_session_by_session_key(user.user_key, new_session.session_key) {
-        Ok(()) => Ok(session_key),
-        Err(e) => Err(e)
-    }
-}
-
-pub fn l_add_session_by_session_key(user_key: String, session_key: String) -> Result<(), ApiError> {
-    let mut user = match d_get_user_by_user_key(user_key) {
-        Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
-    };
-    let session_list = match d_get_session_list() {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    match session_list.iter().find(|s| s.session_key == session_key) {
-        None => return Err(ApiError::NotFound),
-        Some(s) => {
-            match user.related_session_keys.iter().find(|s| **s == session_key) { // TODO: find how works '*'
-                None => {
-                    user.related_session_keys.push(session_key);
-                    match d_update_user(&user) {
-                        Ok(()) => Ok(()),
-                        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-                    }
-                },
-                Some(s) => Err(ApiError::InvalidInput("User already has this session".into()))
-            }
-            
-        }
-    }
-
-}
-
-pub fn l_forget_session_by_user(user_key: String, session_key: String) -> Result<(), ApiError> {
-    let mut user = match d_get_user_by_user_key(user_key) {
-        Ok(u) => u,
-        Err(e) => return Err(ApiError::NotFound)
-    };
-    let session_list = match d_get_session_list() {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    match session_list.iter().position(|s| s.session_key == session_key) {
-        None => return Err(ApiError::NotFound),
-        Some(s_i) => {
-            match user.related_session_keys.iter().position(|s| **s == session_key) { // TODO: find how works '*'
-                None => Err(ApiError::InvalidInput("User does not have this session".into())),
-                Some(found_s_i) => {
-                    if session_list[s_i].session_owner_id == user.id {
-                        return Err(ApiError::InvalidInput("User is owner of session. He can delete session, but not forget".into()))
-                    }
-                    user.related_session_keys.remove(found_s_i);
-                    match d_update_user(&user) {
-                        Ok(()) => Ok(()),
-                        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-                    }
-                }
-            }
-            
-        }
-    }
-}
-
-pub fn l_delete_session_by_owner(user_key: &String, session_key: &String) -> Result<(), ApiError> {
-    let mut user_list = match d_get_user_list() {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    let session = match d_get_session_by_session_key(&session_key) {
-        Ok(s) => s,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-
-    match user_list.iter().find(|u| u.id == session.session_owner_id && u.user_key == *user_key) {
-        None => return Err(ApiError::NotFound),
-        Some(u) => ()
-    };
-
-    for u in user_list.iter_mut() {
-        let s_i = match u.related_session_keys.iter().position(|s_k| **s_k == session.session_key) {
-            None => continue,
-            Some(i) => i
-        };
-        u.related_session_keys.remove(s_i);
-    };
-    match d_save_user_list(user_list) {
+    
+    let new_connection: Connection = Connection { user_key: user_key.clone(), session_key: session_key.clone(), user_role: "owner".into() };
+    match d_add_connection(&mut tx, &new_connection).await {
         Ok(()) => (),
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };
-    match d_remove_session(&session) {
+
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(session_key.clone())
+}
+
+pub async fn l_add_session(db_pool: Pool<Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    
+    let new_connection: Connection = Connection { user_key: user_key.clone(), session_key: session_key.clone(), user_role: "member".into() };
+    
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+    
+    match d_add_connection(&mut tx, &new_connection).await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+    // db handle all errors
+
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(())
+}
+
+pub async fn l_forget_session(db_pool: Pool<Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    
+    let connection = match d_get_user_role(db_pool.clone(), &user_key, &session_key).await {
+        Ok(c) => c,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    if connection.user_role != "member" {
+        return Err(ApiError::InvalidInput("User is owner of session. He can delete session, but not forget".into()));
+    }
+
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match d_remove_connection(&mut tx, &user_key, &session_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(())
+}
+
+pub async fn l_forget_session_by_tx(db_pool: Pool<Postgres>, mut tx: &mut Transaction<'_, Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    
+    let connection = match d_get_user_role(db_pool.clone(), &user_key, &session_key).await {
+        Ok(c) => c,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    if connection.user_role != "member" {
+        return Err(ApiError::InvalidInput("User is owner of session. He can delete session, but not forget".into()));
+    }
+
+    match d_remove_connection(&mut tx, &user_key, &session_key).await {
         Ok(()) => Ok(()),
+        Err(e) => Err(ApiError::InvalidInput(e.to_string()))
+    }
+}
+
+pub async fn l_delete_session_by_owner(db_pool: Pool<Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    
+    let connection = match d_get_user_role(db_pool.clone(), &user_key, &session_key).await {
+        Ok(c) => c,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    if connection.user_role != "owner" {
+        return Err(ApiError::InvalidInput("User is not owner of session. He can forget session, but not delete".into()));
+    }
+
+    let mut tx = match db_pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match d_remove_all_connections_to_session(&mut tx, &session_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match d_remove_session(&mut tx, &session_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match tx.commit().await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    Ok(())
+}
+
+pub async fn l_delete_session_by_owner_by_tx(db_pool: Pool<Postgres>, mut tx: &mut Transaction<'_, Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    
+    let connection = match d_get_user_role(db_pool.clone(), &user_key, &session_key).await {
+        Ok(c) => c,
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    if connection.user_role != "owner" {
+        return Err(ApiError::InvalidInput("User is not owner of session. He can forget session, but not delete".into()));
+    }
+
+    match d_remove_all_connections_to_session(&mut tx, &session_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+    };
+
+    match d_remove_session(&mut tx, &session_key).await {
+        Ok(()) => Ok(()),
+        Err(e) => Err(ApiError::InvalidInput(e.to_string()))
     }
 }
 
@@ -143,7 +184,7 @@ fn l_generate_session_key(session_list: &Vec<Session>) -> String {
         s_key = Uuid::new_v4().to_string();
         match session_list.iter().find(|s| s.session_key == s_key) {
             None => break,
-            Some(s) => continue
+            Some(_) => continue
         } 
     };
 

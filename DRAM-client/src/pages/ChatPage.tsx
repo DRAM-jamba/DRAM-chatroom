@@ -1,64 +1,50 @@
 import { useEffect, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
-import { getMessages, sendMessage, getMembers } from "../services/chatService";
+import {
+  getMessages,
+  getMembers,
+  sendMessage,
+  leaveSession,
+  subscribeToMessages,
+} from "../services/chatService";
 import type { Message, Member } from "../types/message";
 
 type ChatPageProps = {
   sessionName: string;
+  nickname: string;
   onLeaveSession: () => void;
 };
 
-// TODO: wire up to Rust — replace with real current user from auth/session context
-// import { invoke } from "@tauri-apps/api/core";
-// const currentUsername = await invoke<string>("get_current_username");
-const CURRENT_USERNAME = "your username";
-
-function ChatPage({ sessionName, onLeaveSession }: ChatPageProps) {
+function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
-    loadMessages();
-    loadMembers();
+    getMessages().then(setMessages);
+    getMembers().then(setMembers);
 
-    // TODO: wire up to Rust — subscribe to real-time message events
-    // import { listen } from "@tauri-apps/api/event";
-    // const unlisten = await listen<Message>("new_message", (event) => {
-    //   setMessages((prev) => [...prev, event.payload]);
-    // });
-    // return () => unlisten();
+    let unlisten: (() => void) | undefined;
+    subscribeToMessages((msg) => {
+      setMessages((prev) => [...prev, msg]);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
-  const loadMessages = async () => {
-    // TODO: wire up to Rust
-    // import { invoke } from "@tauri-apps/api/core";
-    // const data = await invoke<Message[]>("get_messages", { sessionId });
-    const data = await getMessages();
-    setMessages(data);
-  };
-
-  const loadMembers = async () => {
-    // TODO: wire up to Rust
-    // import { invoke } from "@tauri-apps/api/core";
-    // const data = await invoke<Member[]>("get_members", { sessionId });
-    const data = await getMembers();
-    setMembers(data);
-  };
-
+  // Send the message text to the server. The echo will arrive via the
+  // "message" WebSocket event and be appended by subscribeToMessages.
   const handleSend = async (content: string) => {
-    // TODO: wire up to Rust
-    // import { invoke } from "@tauri-apps/api/core";
-    // const newMessage = await invoke<Message>("send_message", { content, sessionId });
-    const newMessage = await sendMessage(content);
-    setMessages((prev) => [...prev, newMessage]);
+    await sendMessage(content);
   };
 
-  const handleLeaveSession = () => {
-    // TODO: wire up to Rust — notify server of disconnect
-    // import { invoke } from "@tauri-apps/api/core";
-    // await invoke("leave_session", { sessionId });
+  const handleLeaveSession = async () => {
+    await leaveSession();
     onLeaveSession();
   };
 
@@ -118,9 +104,9 @@ function ChatPage({ sessionName, onLeaveSession }: ChatPageProps) {
           </div>
         </div>
 
-        <MessageList messages={messages} currentUsername={CURRENT_USERNAME} />
+        <MessageList messages={messages} currentUsername={nickname} />
 
-        <MessageInput currentUsername={CURRENT_USERNAME} onSend={handleSend} />
+        <MessageInput currentUsername={nickname} onSend={handleSend} />
       </main>
 
       {/* Right members sidebar */}
