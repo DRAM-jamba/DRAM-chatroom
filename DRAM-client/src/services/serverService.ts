@@ -18,7 +18,7 @@ export async function addServer(data: {
   nickname: string;
   ip: string;
 }): Promise<void> {
-  await invoke("add", {
+  await invoke("add_server", {
     ip: data.ip.trim(),
     nickname: data.nickname.trim(),
   });
@@ -30,7 +30,7 @@ export async function addServer(data: {
 // Corresponds to the `connect` Tauri command in lib.rs.
 
 export async function connectServer(ip: string): Promise<void> {
-  await invoke("connect", { ip });
+  await invoke("connect_server", { ip });
 }
 
 // updateServer
@@ -53,5 +53,5 @@ export async function updateServer(
 // Corresponds to the `remove_server` Tauri command in lib.rs.
 
 export async function removeServer(id: string): Promise<void> {
-  await invoke("remove_server", { id });
+  await invoke("forget_server", { id });
 }

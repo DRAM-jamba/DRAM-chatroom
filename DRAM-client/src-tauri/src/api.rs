@@ -9,20 +9,18 @@ impl ServerApi {
     }
 
     // Server commands
-    pub fn add(&self) -> String {
+    pub fn add_server(&self) -> String {
         format!("{}/server/add", self.base_url)
     }
-    pub fn connect(&self, user_key: &str) -> String {
+    pub fn connect_server(&self, user_key: &str) -> String {
         format!("{}/server/connect/{}", self.base_url, user_key)
     }
-    pub fn leave(&self) -> String {
+    pub fn leave_server(&self) -> String {
         format!("{}/server/leave", self.base_url)
     }
-    pub fn forget(&self, user_key: &str) -> String {
+    pub fn forget_server(&self, user_key: &str) -> String {
         format!("{}/server/forget/{}", self.base_url, user_key)
     }
-
-    // User commands
     pub fn set_nickname(&self, user_key: &str, nickname: &str) -> String {
         format!("{}/server/set/nickname/{}/{}", self.base_url, user_key, nickname)
     }
