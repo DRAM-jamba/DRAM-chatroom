@@ -314,7 +314,7 @@ async fn get_sessions(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let name = session.get("name")
+            let name = session.get("session_name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unnamed")
                 .to_string();
