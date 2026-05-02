@@ -2,7 +2,7 @@ use crate::error::AppError;
 use crate::events::{emit_joined_session, emit_session_update};
 use crate::state::{AppState, ConnectionState, SessionState};
 use crate::api::ServerApi;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, ipc};
 use tauri::Manager;
 
 mod error;
@@ -226,7 +226,7 @@ async fn get_sessions(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let name = session.get("name")
+            let name = session.get("session_name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unnamed")
                 .to_string();
@@ -322,10 +322,6 @@ async fn connect_session(
     let server = state.get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
-        .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
-
-    state.save_nickname(&ip, new_nickname).await
-        .map_err(|e| AppError::Network(format!("Failed to save nickname: {}", e)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
     let ws_url = api.ws(&server.user_key, &session_key);
@@ -438,10 +434,6 @@ async fn get_servers(
     state: State<'_, AppState>
 ) -> Result<Vec<state::PersistedServer>, AppError> {
     Ok(state.servers.lock().await.clone())
-    let nickname = state.get_nickname(&ip).await
-        .ok_or_else(|| AppError::Auth(format!("No nickname found for server {}", ip)))?;
-
-    Ok(nickname)
 }
 
 #[tauri::command]
@@ -509,7 +501,7 @@ pub fn run() {
             delete_session,
             send_message,
             // Client commands
-            get_servers
+            get_servers,
             get_nickname,
             save_nickname,
         ])
