@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Message, Member } from "../types/message";
 
-
 type MessagePayload = {
   from: string;
   body: string;
@@ -14,6 +13,30 @@ type SessionPayload = {
   participants: string[];
   chat_log: MessagePayload[];
 };
+
+let cachedMessages: Message[] = [];
+let cachedMembers: Member[] = [];
+let sessionUpdateUnlisten: (() => void) | null = null;
+
+(async () => {
+  sessionUpdateUnlisten = await listen<SessionPayload>(
+    "session_update",
+    (event) => {
+      const payload = event.payload;
+
+      cachedMessages = payload.chat_log.map(payloadToMessage);
+
+      cachedMembers = payload.participants.map((username) => ({
+        username,
+        online: true,
+      }));
+
+      // One-shot: stop listening after the first event.
+      sessionUpdateUnlisten?.();
+      sessionUpdateUnlisten = null;
+    }
+  );
+})();
 
 
 function formatTimestamp(ts: number): string {
@@ -33,7 +56,7 @@ function formatDate(ts: number): string {
   ) {
     return "Today";
   }
-  return d.toLocaleDateString("en-GB"); // dd/mm/yyyy
+  return d.toLocaleDateString("en-GB");
 }
 
 function payloadToMessage(p: MessagePayload): Message {
@@ -47,88 +70,81 @@ function payloadToMessage(p: MessagePayload): Message {
 }
 
 export async function getMessages(): Promise<Message[]> {
+  if (cachedMessages.length > 0 || sessionUpdateUnlisten === null) {
+    return cachedMessages;
+  }
+
   return new Promise((resolve) => {
-    // TODO: listen<SessionPayload>("session_update", (event) => {
-    //   const messages = event.payload.chat_log.map(payloadToMessage);
-    //   resolve(messages);
-    // }).then((unlisten) => {
-    //   // Clean up the one-shot listener after it fires
-    //   listen<SessionPayload>("session_update", () => {
-    //     unlisten();
-    //   });
-    // });
-    resolve([]);
+    const timeout = setTimeout(() => resolve([]), 3000);
+
+    const origUnlisten = sessionUpdateUnlisten;
+    sessionUpdateUnlisten = () => {
+      origUnlisten?.();
+      clearTimeout(timeout);
+      resolve(cachedMessages);
+    };
   });
 }
-
 
 export async function getMembers(): Promise<Member[]> {
+  if (cachedMembers.length > 0 || sessionUpdateUnlisten === null) {
+    return cachedMembers;
+  }
+
   return new Promise((resolve) => {
-    // TODO: listen<SessionPayload>("session_update", (event) => {
-    //   const members: Member[] = event.payload.participants.map((username) => ({
-    //     username,
-    //     online: true,
-    //   }));
-    //   resolve(members);
-    // }).then((unlisten) => {
-    //   listen<SessionPayload>("session_update", () => {
-    //     unlisten();
-    //   });
-    // });
-    resolve([]);
+    const timeout = setTimeout(() => resolve([]), 3000);
+
+    const origUnlisten = sessionUpdateUnlisten;
+    sessionUpdateUnlisten = () => {
+      origUnlisten?.();
+      clearTimeout(timeout);
+      resolve(cachedMembers);
+    };
   });
 }
 
-export async function sendMessage(
-  content: string,
-  currentUsername: string
-): Promise<Message> {
-  // TODO: await invoke<void>("send_message", { body: content });
-
-  const now = Math.floor(Date.now() / 1000);
-  return {
-    id: `${currentUsername}-${now}-${Math.random()}`,
-    authorUsername: currentUsername,
-    content,
-    timestamp: formatTimestamp(now),
-    date: "Today",
-  };
+export async function sendMessage(content: string): Promise<void> {
+  await invoke<void>("send_message", { body: content });
 }
 
 export async function leaveSession(): Promise<void> {
-  // TODO: await invoke<void>("leave_session");
+  await invoke<void>("leave_session");
+  cachedMessages = [];
+  cachedMembers = [];
 }
 
+/**
+ * Subscribes to real-time messages arriving over the WebSocket connection.
+ */
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
-  // TODO: const unlisten = await listen<string>("message", (event) => {
-  //   const raw = event.payload;
-  //   const colonIndex = raw.indexOf(": ");
-  //
-  //   let authorUsername: string;
-  //   let content: string;
-  //
-  //   if (colonIndex !== -1) {
-  //     authorUsername = raw.slice(0, colonIndex);
-  //     content = raw.slice(colonIndex + 2);
-  //   } else {
-  //     authorUsername = "unknown";
-  //     content = raw;
-  //   }
-  //
-  //   const now = Math.floor(Date.now() / 1000);
-  //   const msg: Message = {
-  //     id: `${authorUsername}-${now}-${Math.random()}`,
-  //     authorUsername,
-  //     content,
-  //     timestamp: formatTimestamp(now),
-  //     date: "Today",
-  //   };
-  //
-  //   onMessage(msg);
-  // });
-  //
-  // return unlisten;
-  return () => { };
+  const unlisten = await listen<string>("message", (event) => {
+    const raw = event.payload;
+    const colonIndex = raw.indexOf(": ");
+
+    let authorUsername: string;
+    let content: string;
+
+    if (colonIndex !== -1) {
+      authorUsername = raw.slice(0, colonIndex);
+      content = raw.slice(colonIndex + 2);
+    } else {
+      authorUsername = "unknown";
+      content = raw;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const msg: Message = {
+      id: `${authorUsername}-${now}-${Math.random()}`,
+      authorUsername,
+      content,
+      timestamp: formatTimestamp(now),
+      date: "Today",
+    };
+
+    onMessage(msg);
+  });
+
+  return unlisten;
 }

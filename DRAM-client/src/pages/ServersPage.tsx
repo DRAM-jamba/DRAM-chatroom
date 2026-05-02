@@ -24,8 +24,6 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     getServers().then(setServers);
   }, []);
 
-  // Add server
-
   const handleAddServer = async () => {
     if (!newServerName.trim() || !newServerIp.trim()) return;
     setError(null);
@@ -41,8 +39,6 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     }
   };
 
-  // Connect to server
-
   const handleConnect = async (ip: string) => {
     setError(null);
     try {
@@ -53,7 +49,6 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     }
   };
 
-  // Rename server (nickname only)
 
   const handleSaveEdit = async (ip: string, nickname: string) => {
     const updated = await updateServer(ip, { nickname });
@@ -62,7 +57,6 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     );
   };
 
-  // Forget server 
 
   const handleRemove = async (id: string) => {
     setError(null);

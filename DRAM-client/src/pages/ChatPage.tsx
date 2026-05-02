@@ -22,12 +22,9 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
-    // Load initial messages and members from the session_update event
-    // that the ClientBackend emits right after connect_session() completes.
     getMessages().then(setMessages);
     getMembers().then(setMembers);
 
-    // Subscribe to real-time incoming messages over WebSocket.
     let unlisten: (() => void) | undefined;
     subscribeToMessages((msg) => {
       setMessages((prev) => [...prev, msg]);
@@ -40,9 +37,10 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     };
   }, []);
 
+  // Send the message text to the server. The echo will arrive via the
+  // "message" WebSocket event and be appended by subscribeToMessages.
   const handleSend = async (content: string) => {
-    const newMessage = await sendMessage(content, nickname);
-    setMessages((prev) => [...prev, newMessage]);
+    await sendMessage(content);
   };
 
   const handleLeaveSession = async () => {

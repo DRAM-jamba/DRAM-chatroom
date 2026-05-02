@@ -79,10 +79,6 @@ function SessionCard({
 
       {expanded && (
         <div className="server-details">
-          <p className="server-ip">
-            last time connected: {session.lastConnected}
-          </p>
-
           {confirmAction === null && (
             <div className="server-actions">
               <button

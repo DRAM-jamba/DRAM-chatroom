@@ -21,14 +21,13 @@ export async function createSession(data: {
     ({
       id: generatedKey,
       name: data.sessionName,
-      lastConnected: "just now",
     } as Session);
 
   return { session: newSession, generatedKey };
 }
 
+
 export async function addSession(data: {
-  sessionName: string; // accepted in UI but not sent to server
   sessionKey: string;
 }): Promise<void> {
   await invoke<void>("add_session", {
