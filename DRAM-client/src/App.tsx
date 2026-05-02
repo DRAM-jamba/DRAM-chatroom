@@ -18,6 +18,7 @@ function App() {
     return (
       <ChatPage
         sessionName={page.sessionName}
+        nickname={page.nickname}
         onLeaveSession={() =>
           setPage({ name: "sessions", nickname: page.nickname })
         }
