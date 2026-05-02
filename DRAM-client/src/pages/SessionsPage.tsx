@@ -273,6 +273,33 @@ function SessionsPage({
             </div>
           )}
 
+          {view === "generated" && (
+            <div className="generated-session-box">
+              <div className="create-panel-header">
+                <span>Generated session key</span>
+              </div>
+
+              <div className="generated-key-row">
+                <div className="generated-key-text">{generatedSessionKey}</div>
+                <button
+                  className="copy-key-btn"
+                  type="button"
+                  onClick={handleCopyGeneratedKey}
+                >
+                  copy
+                </button>
+              </div>
+
+              <button
+                className="big-confirm-btn"
+                type="button"
+                onClick={handleCloseGenerated}
+              >
+                close
+              </button>
+            </div>
+          )}
+
           {view === "add" && (
             <div className="session-create-overlay">
               <div className="session-create-panels">
@@ -374,69 +401,29 @@ function SessionsPage({
             <button className="settings-btn" type="button">
               settings
             </button>
+
+            {onDisconnect && (
+              <button
+                className="small-btn disconnect-btn"
+                type="button"
+                onClick={async () => {
+                  try {
+                    await disconnectFromServer();
+                  } catch (error) {
+                    console.error("Failed to disconnect:", error);
+                  } finally {
+                    onDisconnect();
+                  }
+                }}
+              >
+                disconnect
+              </button>
+            )}
           </div>
 
           <p className="version-text">ver. 0.2</p>
         </div>
-
-        {onDisconnect && (
-          <button
-            className="back-to-servers-btn disconnect-btn"
-            type="button"
-            onClick={async () => {
-              try {
-                await disconnectFromServer();
-              } catch (error) {
-                console.error("Failed to disconnect:", error);
-              } finally {
-                onDisconnect();
-              }
-            }}
-          >
-            disconnect
-          </button>
-        )}
       </aside>
-
-      <main className="main-panel">
-        {view === "generated" ? (
-          <div className="generated-panel-preview">
-            <div className="generated-session-box generated-session-box-preview">
-              <div className="create-panel-header">
-                <span>Generated session key</span>
-              </div>
-
-              <div className="generated-key-row">
-                <div className="generated-key-text">{generatedSessionKey}</div>
-                <button
-                  className="copy-key-btn"
-                  type="button"
-                  onClick={handleCopyGeneratedKey}
-                >
-                  copy
-                </button>
-              </div>
-
-              <button
-                className="big-confirm-btn"
-                type="button"
-                onClick={handleCloseGenerated}
-              >
-                close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="instructions">
-            <p>use left panel to:</p>
-            <ul>
-              <li>add sessions</li>
-              <li>edit session info</li>
-              <li>remove sessions</li>
-            </ul>
-          </div>
-        )}
-      </main>
     </div>
   );
 }

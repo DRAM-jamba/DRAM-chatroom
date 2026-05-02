@@ -1,5 +1,11 @@
 * {
   box-sizing: border-box;
+  user-select: none;
+  }
+  
+  input,
+  textarea {
+    user-select: text;
 }
 
 html,
@@ -27,7 +33,7 @@ button {
 }
 
 .servers-page {
-  display: flex;
+  display: block;
   width: 100%;
   min-height: 100vh;
   background: #050505;
@@ -139,24 +145,55 @@ button {
 }
 
 .small-btn:hover,
-.big-confirm-btn:hover,
 .plus-button:hover {
   opacity: 0.9;
 }
 
 .edit-btn {
-  background: #2a2a2a;
+    background: transparent;
+      border: 1px solid #2a2a2a;
+      color: #aaaaaa;
+    }
+    
+    .edit-btn:hover {
+      border-color: #aaaaaa;
+      color: #cccccc;
+      box-shadow: 0 0 6px rgba(170, 170, 170, 0.2);
 }
 
 .forget-btn {
-  background: #b0003a;
+    background: transparent;
+      border: 1px solid #3a1a1a;
+      color: #cc6666;
+    }
+    
+    .forget-btn:hover {
+      border-color: #ff4444;
+      color: #ff6666;
+      box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
 }
 
 .delete-btn {
-  background: #b0003a;
+    background: transparent;
+      border: 1px solid #3a1a1a;
+      color: #cc6666;
+    }
+    
+    .delete-btn:hover {
+      border-color: #ff4444;
+      color: #ff6666;
+      box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
 }
 .connect-btn {
-  background: #00995f;
+    background: transparent;
+      border: 1px solid #1a3a2a;
+      color: #44cc88;
+    }
+    
+    .connect-btn:hover {
+      border-color: #00cc77;
+      color: #00ee88;
+      box-shadow: 0 0 6px rgba(0, 200, 120, 0.2);
 }
 
 .edit-box {
@@ -241,12 +278,18 @@ button {
 .big-confirm-btn {
   flex: 1;
   height: 38px;
-  border: none;
+  border: 1px solid #2a2a2a;
   border-radius: 6px;
-  background: #5f00d6;
+  background: #1a1a1a;
   color: white;
   cursor: pointer;
-  font-size: 18px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  
+  .big-confirm-btn:hover {
+    border-color: #00aaff;
+    box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
+    background: #202020;
 }
 
 .bottom-line {
@@ -364,19 +407,21 @@ button {
   top: 0;
   right: 0;
   width: 90px;
-  border: 1px solid #6a00ff;
+  border: 1px solid #00aaff;
   border-radius: 8px;
   overflow: hidden;
   background: #141414;
   z-index: 20;
+  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
 }
 
 .session-plus-close {
   width: 100%;
   height: 28px;
   border: none;
-  background: #6a00ff;
-  color: white;
+  color: #e5e5e5;
+    border-bottom: 1px solid #2a2a2a;
+    background: #1a1a1a;
   cursor: pointer;
   font-size: 18px;
 }
@@ -386,7 +431,7 @@ button {
   height: 34px;
   border: none;
   border-top: 1px solid #2a2a2a;
-  background: #141414;
+  background: #1a1a1a;
   color: #e5e5e5;
   cursor: pointer;
 }
@@ -1120,7 +1165,11 @@ button {
 /* Disconnect button */
 
 .disconnect-btn {
-  border-color: #3a1a1a;
+  height: 28px;
+    width: 145px;
+    padding: 0 10px;
+    background: #1a1a1a;
+    border: 1px solid #3a1a1a;
   color: #cc6666;
 }
 
@@ -1132,17 +1181,17 @@ button {
 
 
 @font-face {
-  font-family: "Monocraft";
-  src: url("./assets/fonts/Monocraft.ttf") format("truetype");
+  font-family: "Exo";
+    src: url("./assets/fonts/Exo-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
 }
 
 body {
   margin: 0;
-  font-family: "Monocraft", monospace;
+  font-family: "Exo", sans-serif;
 }
 
 * {
-  font-family: "Monocraft", monospace;
+  font-family: "Exo", sans-serif;
 }

@@ -41,11 +41,7 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
       <aside className="sidebar">
         <h1 className="logo">quorthon</h1>
         <div className="sidebar-line" />
-        <div className="sidebar-line bottom-line" />
-        <p className="version-text">ver. 0.2</p>
-      </aside>
 
-      <main className="main-panel nickname-main-panel">
         <div className="nickname-card">
           <h2 className="nickname-title">Choose your nickname</h2>
           <p className="nickname-subtitle">
@@ -77,7 +73,10 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
             {loading ? "connecting..." : "confirm"}
           </button>
         </div>
-      </main>
+
+        <div className="sidebar-line bottom-line" />
+        <p className="version-text">ver. 0.2</p>
+      </aside>
     </div>
   );
 }
