@@ -325,6 +325,7 @@ async fn connect_session(
     
     let api = ServerApi::new(&format!("http://{}", ip));
     let ws_url = api.ws(&server.user_key, &session_key);
+    println!("Connecting to session websocket at {}", ws_url);
 
     let ws_client = websocket::WsClient::connect(&ws_url, app.clone())
         .await
@@ -337,8 +338,27 @@ async fn connect_session(
 }
 
 #[tauri::command]
-async fn leave_session(state: State<'_, AppState>) -> Result<(), AppError> {
-    // TODO: update
+async fn leave_session(
+    state: State<'_, AppState>
+) -> Result<(), AppError> {
+    println!("Attempting to leave session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let api = ServerApi::new(&format!("http://{}", ip));
+    let url = api.leave_session();
+    let client = reqwest::Client::new();
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to leave session: {}", e)))?
+        .error_for_status()
+        .map_err(|e| AppError::Auth(format!("Server rejected session leave: {}", e)))?;
+    println!("Attempting to leave session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+
     *state.session.lock().await = SessionState::Idle;
     Ok(())
 }

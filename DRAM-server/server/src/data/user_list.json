@@ -124,5 +124,15 @@
     ],
     "last_time_seen": 1777568838,
     "in_session": false
+  },
+  {
+    "id": 18,
+    "user_key": "1af28fba-60b3-4305-a61d-cd025ca45d6d",
+    "nickname": "Rokas",
+    "related_session_keys": [
+      "7ea34cde-b529-4941-b60d-e03ec27101d6"
+    ],
+    "last_time_seen": 1777743014,
+    "in_session": false
   }
 ]
