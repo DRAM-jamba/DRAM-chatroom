@@ -150,6 +150,9 @@ async fn set_nickname(
         .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+
+        state.save_nickname(&ip, new_nickname).await
+            .map_err(|e| AppError::Network(format!("Failed to update nickname: {}", e)))?;
     
     Ok(())
 }
@@ -167,13 +170,7 @@ async fn forget_server(
     let api = ServerApi::new(&format!("http://{}", server.ip));
     let url = api.forget_server(&server.user_key);
     let client = reqwest::Client::new();
-    client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| AppError::Network(format!("Failed to forget server: {}", e)))?
-        .error_for_status()
-        .map_err(|e| AppError::Auth(format!("Server rejected forget: {}", e)))?;
+    let _ = client.get(&url).send().await;
 
     state.remove_server(&server.ip).await
         .map_err(|e| AppError::Network(format!("Failed to remove server: {}", e)))?;
