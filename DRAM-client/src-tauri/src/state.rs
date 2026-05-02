@@ -11,8 +11,9 @@ pub struct PersistedServer {
     #[serde(rename = "ipAddress")]
     pub ip: String,
     #[serde(rename = "name")]
-    pub nickname: String,
+    pub server_name: String,
     pub user_key: String,
+    pub user_nickname: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -81,7 +82,7 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn add_server(&self, ip: String, nickname: String, user_key: String) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn add_server(&self, ip: String, server_name: String, user_key: String) -> Result<String, Box<dyn std::error::Error>> {
         let mut servers = self.servers.lock().await;
 
         let new_id = Uuid::new_v4().to_string();
@@ -93,8 +94,9 @@ impl AppState {
         let new_server = PersistedServer { 
             id: new_id.clone(), 
             ip, 
-            nickname, 
-            user_key 
+            server_name, 
+            user_key, 
+            user_nickname: None
         };
         servers.push(new_server);
         drop(servers);
@@ -108,6 +110,22 @@ impl AppState {
         drop(servers);
         self.save_servers().await?;
         Ok(())
+    }
+
+    pub async fn save_nickname(&self, ip: &str, nickname: String) -> Result<(), Box<dyn std::error::Error>> {
+        let mut servers = self.servers.lock().await;
+        if let Some(server) = servers.iter_mut().find(|s| s.ip == ip) {
+            server.user_nickname = Some(nickname);
+            drop(servers);
+            self.save_servers().await?;
+            Ok(())
+        } else {
+            Err("Server not found".into())
+        }
+    }
+
+    pub async fn get_nickname(&self, ip: &str) -> Option<String> {
+        self.servers.lock().await.iter().find(|s| s.ip == ip).map(|s| s.user_nickname.clone().unwrap_or_default())
     }
 
     pub async fn get_server(&self, ip: &str) -> Option<PersistedServer> {
@@ -175,8 +193,9 @@ mod tests {
         servers.push(PersistedServer {
             id: "1".to_string(),
             ip: "127.0.0.1".to_string(),
-            nickname: "test".to_string(),  // Add a dummy nickname since it's required
+            server_name: "test".to_string(),  // Add a dummy server name since it's required
             user_key: "abc123".to_string(),
+            user_nickname: None,  // Add a dummy nickname since it's required
         });
     }  // Lock is dropped here
     let servers = s.servers.lock().await;
@@ -258,14 +277,16 @@ mod tests {
         servers.push(PersistedServer {
             id: "1".to_string(),
             ip: "192.168.1.1".to_string(),
-            nickname: "srv1".to_string(),
+            server_name: "srv1".to_string(),
             user_key: "k1".to_string(),
+            user_nickname: None,
         });
         servers.push(PersistedServer {
             id: "2".to_string(),
             ip: "192.168.1.2".to_string(),
-            nickname: "srv2".to_string(),
+            server_name: "srv2".to_string(),
             user_key: "k2".to_string(),
+            user_nickname: None,
         });
     }
     let servers = s.servers.lock().await;

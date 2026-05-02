@@ -355,6 +355,9 @@ async fn set_nickname(
         .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+
+    state.save_nickname(&ip, new_nickname).await
+        .map_err(|e| AppError::Network(format!("Failed to save nickname: {}", e)))?;
     
     Ok(())
 }
@@ -414,6 +417,37 @@ async fn forget_session(
     Ok(())
 }
 
+#[tauri::command]
+async fn get_nickname(
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    let nickname = state.get_nickname(&ip).await
+        .ok_or_else(|| AppError::Auth(format!("No nickname found for server {}", ip)))?;
+
+    Ok(nickname)
+}
+
+#[tauri::command]
+async fn save_nickname(
+    nickname: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let ip = state.current_ip.lock().await
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
+
+    state.save_nickname(&ip, nickname).await
+        .map_err(|e| AppError::Network(format!("Failed to save nickname: {}", e)))?;
+    
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -445,6 +479,8 @@ pub fn run() {
             set_nickname,
             remove_server,
             forget_session,
+            get_nickname,
+            save_nickname,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
