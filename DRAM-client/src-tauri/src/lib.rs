@@ -2,7 +2,7 @@ use crate::error::AppError;
 use crate::events::{emit_joined_session, emit_session_update};
 use crate::state::{AppState, ConnectionState, SessionState};
 use crate::api::ServerApi;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, ipc};
 use tauri::Manager;
 
 mod error;
@@ -150,6 +150,9 @@ async fn set_nickname(
         .map_err(|e| AppError::Network(format!("Failed to set nickname: {}", e)))?
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
+
+        state.save_nickname(&ip, new_nickname).await
+            .map_err(|e| AppError::Network(format!("Failed to update nickname: {}", e)))?;
     
     Ok(())
 }
@@ -167,13 +170,7 @@ async fn forget_server(
     let api = ServerApi::new(&format!("http://{}", server.ip));
     let url = api.forget_server(&server.user_key);
     let client = reqwest::Client::new();
-    client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| AppError::Network(format!("Failed to forget server: {}", e)))?
-        .error_for_status()
-        .map_err(|e| AppError::Auth(format!("Server rejected forget: {}", e)))?;
+    let _ = client.get(&url).send().await;
 
     state.remove_server(&server.ip).await
         .map_err(|e| AppError::Network(format!("Failed to remove server: {}", e)))?;
@@ -226,7 +223,7 @@ async fn get_sessions(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let name = session.get("name")
+            let name = session.get("session_name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unnamed")
                 .to_string();
@@ -322,10 +319,6 @@ async fn connect_session(
     let server = state.get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add a server first", ip)))?;
-        .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
-
-    state.save_nickname(&ip, new_nickname).await
-        .map_err(|e| AppError::Network(format!("Failed to save nickname: {}", e)))?;
     
     let api = ServerApi::new(&format!("http://{}", ip));
     let ws_url = api.ws(&server.user_key, &session_key);
@@ -351,6 +344,10 @@ async fn leave_session(
         .cloned()
         .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
 
+    if let SessionState::JoinedSession(ws_client) = &*state.session.lock().await {
+        let _ = ws_client.close().await;
+    }
+
     let api = ServerApi::new(&format!("http://{}", ip));
     let url = api.leave_session();
     let client = reqwest::Client::new();
@@ -361,7 +358,7 @@ async fn leave_session(
         .map_err(|e| AppError::Network(format!("Failed to leave session: {}", e)))?
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected session leave: {}", e)))?;
-    println!("Attempting to leave session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    println!("Left session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
 
     *state.session.lock().await = SessionState::Idle;
     Ok(())
@@ -438,10 +435,6 @@ async fn get_servers(
     state: State<'_, AppState>
 ) -> Result<Vec<state::PersistedServer>, AppError> {
     Ok(state.servers.lock().await.clone())
-    let nickname = state.get_nickname(&ip).await
-        .ok_or_else(|| AppError::Auth(format!("No nickname found for server {}", ip)))?;
-
-    Ok(nickname)
 }
 
 #[tauri::command]
@@ -509,7 +502,7 @@ pub fn run() {
             delete_session,
             send_message,
             // Client commands
-            get_servers
+            get_servers,
             get_nickname,
             save_nickname,
         ])

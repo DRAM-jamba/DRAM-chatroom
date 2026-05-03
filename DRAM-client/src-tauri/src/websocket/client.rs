@@ -61,4 +61,13 @@ impl WsClient {
             .await
             .map_err(|e| AppError::Network(e.to_string()))
     }
+
+    pub async fn close(&self) -> Result<(), AppError> {
+        self.sink
+            .lock()
+            .await
+            .send(Message::Close(None))
+            .await
+            .map_err(|e| AppError::Network(e.to_string()))
+    }
 }

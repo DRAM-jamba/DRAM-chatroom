@@ -81,5 +81,5 @@ export async function deleteSession(sessionKey: string): Promise<void> {
 
 
 export async function disconnectFromServer(): Promise<void> {
-  await invoke<void>("disconnect");
+  await invoke<void>("leave_server");
 }
