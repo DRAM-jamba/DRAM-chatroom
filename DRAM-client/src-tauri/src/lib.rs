@@ -344,6 +344,10 @@ async fn leave_session(
         .cloned()
         .ok_or_else(|| AppError::Network("Not connected to server".into()))?;
 
+    if let SessionState::JoinedSession(ws_client) = &*state.session.lock().await {
+        let _ = ws_client.close().await;
+    }
+
     let api = ServerApi::new(&format!("http://{}", ip));
     let url = api.leave_session();
     let client = reqwest::Client::new();
@@ -354,7 +358,7 @@ async fn leave_session(
         .map_err(|e| AppError::Network(format!("Failed to leave session: {}", e)))?
         .error_for_status()
         .map_err(|e| AppError::Auth(format!("Server rejected session leave: {}", e)))?;
-    println!("Attempting to leave session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
+    println!("Left session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
 
     *state.session.lock().await = SessionState::Idle;
     Ok(())
