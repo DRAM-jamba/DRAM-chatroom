@@ -1,5 +1,11 @@
 * {
   box-sizing: border-box;
+  user-select: none;
+  }
+  
+  input,
+  textarea {
+    user-select: text;
 }
 
 html,
@@ -9,6 +15,7 @@ body,
   padding: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -27,7 +34,7 @@ button {
 }
 
 .servers-page {
-  display: flex;
+  display: block;
   width: 100%;
   min-height: 100vh;
   background: #050505;
@@ -35,8 +42,8 @@ button {
 
 .sidebar {
   width: 360px;
-  height: 100vh;
-  padding: 18px 16px;
+  height: calc(100vh - 28px);
+    padding: 8px 8px;
   background: linear-gradient(to bottom, #090909, #111111);
   border-right: 1px solid #262626;
   display: flex;
@@ -51,6 +58,10 @@ button {
   font-weight: 400;
   letter-spacing: 0.5px;
   color: #f2f2f2;
+  display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .sidebar-line {
@@ -139,24 +150,55 @@ button {
 }
 
 .small-btn:hover,
-.big-confirm-btn:hover,
 .plus-button:hover {
   opacity: 0.9;
 }
 
 .edit-btn {
-  background: #2a2a2a;
+    background: transparent;
+      border: 1px solid #2a2a2a;
+      color: #aaaaaa;
+    }
+    
+    .edit-btn:hover {
+      border-color: #aaaaaa;
+      color: #cccccc;
+      box-shadow: 0 0 6px rgba(170, 170, 170, 0.2);
 }
 
 .forget-btn {
-  background: #b0003a;
+    background: transparent;
+      border: 1px solid #3a1a1a;
+      color: #cc6666;
+    }
+    
+    .forget-btn:hover {
+      border-color: #ff4444;
+      color: #ff6666;
+      box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
 }
 
 .delete-btn {
-  background: #b0003a;
+    background: transparent;
+      border: 1px solid #3a1a1a;
+      color: #cc6666;
+    }
+    
+    .delete-btn:hover {
+      border-color: #ff4444;
+      color: #ff6666;
+      box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
 }
 .connect-btn {
-  background: #00995f;
+    background: transparent;
+      border: 1px solid #1a3a2a;
+      color: #44cc88;
+    }
+    
+    .connect-btn:hover {
+      border-color: #00cc77;
+      color: #00ee88;
+      box-shadow: 0 0 6px rgba(0, 200, 120, 0.2);
 }
 
 .edit-box {
@@ -221,32 +263,39 @@ button {
   gap: 10px;
 }
 
+    
 .cancel-btn {
   width: 110px;
   height: 38px;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
-  background: #1a1a1a;
-  color: white;
+  background: transparent;
+    color: #aaaaaa;
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .cancel-btn:hover {
-  border-color: #00aaff;
-  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
-  background: #202020;
+  border-color: #aaaaaa;
+    color: #cccccc;
+    box-shadow: 0 0 6px rgba(170, 170, 170, 0.2);
 }
 
 .big-confirm-btn {
   flex: 1;
   height: 38px;
-  border: none;
-  border-radius: 6px;
-  background: #5f00d6;
-  color: white;
+    border-radius: 6px;
+    background: transparent;
+      border: 1px solid #1a3a2a;
+      color: #44cc88;
   cursor: pointer;
-  font-size: 18px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  
+  .big-confirm-btn:hover {
+    border-color: #00cc77;
+    color: #00ee88;
+    box-shadow: 0 0 6px rgba(0, 200, 120, 0.2);
 }
 
 .bottom-line {
@@ -255,7 +304,7 @@ button {
 }
 
 .version-text {
-  margin: 0;
+  margin: 0 0 0 auto;
   text-align: right;
   color: #b8b8b8;
   font-size: 14px;
@@ -304,16 +353,13 @@ button {
 
 .add-server-box {
   border: 1px solid #2a2a2a;
+  border-color: #00aaff;
+    box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
   border-radius: 6px;
   padding: 12px 10px 10px;
   margin-bottom: 12px;
   background: rgba(15, 15, 15, 0.95);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.add-server-box:hover {
-  border-color: #00aaff;
-  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
 }
 
 .session-top-row {
@@ -364,19 +410,21 @@ button {
   top: 0;
   right: 0;
   width: 90px;
-  border: 1px solid #6a00ff;
+  border: 1px solid #00aaff;
   border-radius: 8px;
   overflow: hidden;
   background: #141414;
   z-index: 20;
+  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
 }
 
 .session-plus-close {
   width: 100%;
   height: 28px;
   border: none;
-  background: #6a00ff;
-  color: white;
+  color: #e5e5e5;
+    border-bottom: 1px solid #2a2a2a;
+    background: #1a1a1a;
   cursor: pointer;
   font-size: 18px;
 }
@@ -386,7 +434,7 @@ button {
   height: 34px;
   border: none;
   border-top: 1px solid #2a2a2a;
-  background: #141414;
+  background: #1a1a1a;
   color: #e5e5e5;
   cursor: pointer;
 }
@@ -418,6 +466,9 @@ button {
   background: #151515;
   color: white;
   cursor: pointer;
+  display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .icon-btn:hover {
@@ -428,6 +479,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 0 0 0;
 }
 
 .left-bottom-buttons {
@@ -436,8 +488,8 @@ button {
 }
 
 .tiny-square-btn {
-  width: 28px;
-  height: 28px;
+  width: 35px;
+    height: 35px;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
   background: #1a1a1a;
@@ -446,13 +498,17 @@ button {
 }
 
 .settings-btn {
-  height: 28px;
+  height: 35px;
+    width: 35px;
   padding: 0 10px;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
   background: #1a1a1a;
   color: #d6d6d6;
   cursor: pointer;
+  display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .tiny-square-btn:hover,
@@ -626,10 +682,11 @@ button {
 
 .create-session-box,
 .generated-session-box {
-  border: 1px solid #6a00ff;
+  border: 1px solid #00aaff;
   border-radius: 6px;
   background: rgba(15, 15, 15, 0.98);
   overflow: hidden;
+  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
 }
 
 .create-session-box .server-input {
@@ -680,7 +737,7 @@ button {
 .chat-page {
   display: flex;
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 28px);
   background: #050505;
   overflow: hidden;
 }
@@ -689,8 +746,8 @@ button {
 .chat-left-sidebar {
   width: 192px;
   flex-shrink: 0;
-  height: 100vh;
-  padding: 12px 14px;
+  height: calc(100vh - 28px);
+    padding: 12px 8px;
   background: linear-gradient(to bottom, #090909, #111111);
   border-right: 1px solid #1e1e1e;
   display: flex;
@@ -702,12 +759,20 @@ button {
   display: flex;
   align-items: baseline;
   gap: 6px;
+    display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
 }
 
 .chat-logo-text {
   font-size: 18px;
   color: #f2f2f2;
   font-weight: 400;
+  display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .chat-version {
@@ -721,32 +786,17 @@ button {
   gap: 10px;
 }
 
-.leave-session-btn {
-  width: 100%;
-  height: 34px;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  background: #151515;
-  color: #e0e0e0;
-  cursor: pointer;
-  font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.leave-session-btn:hover {
-  border-color: #b0003a;
-  box-shadow: 0 0 8px rgba(176, 0, 58, 0.3);
-}
-
 .chat-left-actions {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.chat-small-btn {
-  width: 28px;
-  height: 28px;
+.chat-small-btn,
+.chat-settings-btn,
+.leave-session-btn {
+  width: 40px;
+  height: 40px;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
   background: #1a1a1a;
@@ -754,24 +804,26 @@ button {
   cursor: pointer;
   font-size: 13px;
   transition: border-color 0.2s ease;
+  display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  
+  .leave-session-btn:hover {
+    border-color: #ff4444;
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
 }
 
 .chat-small-btn:hover {
   border-color: #00aaff;
 }
-
-.chat-settings-btn {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  background: #1a1a1a;
-  color: #d6d6d6;
-  cursor: pointer;
-  font-size: 13px;
-  transition: border-color 0.2s ease;
+.chat-small-btn.active {
+  border-color: #cc6666;
 }
-
+.chat-small-btn.active:hover {
+  border-color: #ff4444;
+}
 .chat-settings-btn:hover {
   border-color: #00aaff;
 }
@@ -782,7 +834,7 @@ button {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   border-right: 1px solid #1e1e1e;
 }
 
@@ -850,6 +902,7 @@ button {
   width: 6px;
 }
 
+t
 .message-list::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -923,7 +976,7 @@ button {
 /* Message input */
 .message-input-wrapper {
   flex-shrink: 0;
-  padding: 10px 14px 14px;
+  padding: 12px 8px;
   background: #050505;
 }
 
@@ -954,7 +1007,7 @@ button {
 .chat-members-sidebar {
   width: 180px;
   flex-shrink: 0;
-  height: 100vh;
+  height: calc(100vh - 28px);
   display: flex;
   flex-direction: column;
   background: linear-gradient(to bottom, #090909, #111111);
@@ -1010,7 +1063,7 @@ button {
 
 .call-btn {
   width: 100%;
-  height: 38px;
+  height: 40px;
   border: none;
   border-radius: 6px;
   background: #1a1a1a;
@@ -1104,24 +1157,30 @@ button {
   width: 34px;
   height: 38px;
   border: 1px solid #2a2a2a;
+  border-color: #00aaff;
   border-radius: 6px;
   background: #151515;
   color: #00aaff;
   font-size: 16px;
   cursor: pointer;
   transition: border-color 0.2s ease;
-}
-
-.nickname-confirm-inline-btn:hover {
-  border-color: #00aaff;
-  background: #1a2a3a;
+  display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Disconnect button */
 
 .disconnect-btn {
-  border-color: #3a1a1a;
+  height: 35px;
+    width: 35px;
+    padding: 0 10px;
+    background: #1a1a1a;
+    border: 1px solid #3a1a1a;
   color: #cc6666;
+  display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .disconnect-btn:hover {
@@ -1132,17 +1191,53 @@ button {
 
 
 @font-face {
-  font-family: "Monocraft";
-  src: url("./assets/fonts/Monocraft.ttf") format("truetype");
+  font-family: "Exo";
+    src: url("./assets/fonts/Exo-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
 }
 
 body {
   margin: 0;
-  font-family: "Monocraft", monospace;
+  font-family: "Exo", sans-serif;
 }
 
 * {
-  font-family: "Monocraft", monospace;
+  font-family: "Exo", sans-serif;
+  }
+  
+  .titlebar {
+    height: 28px;
+    width: 100%;
+    background: #090909;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 4px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #1e1e1e;
+    -webkit-app-region: drag;
+  }
+  
+  .titlebar-btn {
+    width: 28px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    -webkit-app-region: no-drag;
+  }
+  
+  .titlebar-btn:hover {
+    background: #2a2a2a;
+  }
+  
+  .titlebar-close:hover {
+    background: #cc0000;
 }

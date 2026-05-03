@@ -331,12 +331,17 @@ async fn connect_session(
     *state.session.lock().await = SessionState::JoinedSession(ws_client);
 
     emit_joined_session(&app);
+    let window = app.get_webview_window("main").unwrap();
+    window.set_resizable(true).unwrap();
+    window.set_maximizable(true).unwrap();
+    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 800, height: 628 })).unwrap();
     Ok(())
 }
 
 #[tauri::command]
 async fn leave_session(
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<(), AppError> {
     println!("Attempting to leave session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
     let ip = state.current_ip.lock().await
@@ -361,6 +366,10 @@ async fn leave_session(
     println!("Left session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
 
     *state.session.lock().await = SessionState::Idle;
+    let window = app.get_webview_window("main").unwrap();
+    window.set_resizable(false).unwrap();
+    window.set_maximizable(false).unwrap();
+    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 360, height: 628 })).unwrap();
     Ok(())
 }
 

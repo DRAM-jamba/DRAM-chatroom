@@ -55,7 +55,11 @@ function ServerCard({
         onClick={() => setExpanded(!expanded)}
       >
         <span className="server-title">{server.name}</span>
-        <span className="server-arrow">{expanded ? "⌃" : "⌄"}</span>
+        <img
+          src={expanded ? "/src/assets/icons/arrowupicon.svg" : "/src/assets/icons/arrowdownicon.svg"}
+          width="16"
+          height="16"
+        />
       </button>
 
       {expanded && (
