@@ -61,7 +61,6 @@ function formatDate(ts: number): string {
 
 function payloadToMessage(p: MessagePayload): Message {
   return {
-    id: `${p.from}-${p.ts}-${Math.random()}`,
     authorUsername: p.from,
     content: p.body,
     timestamp: formatTimestamp(p.ts),
@@ -136,7 +135,6 @@ export async function subscribeToMessages(
 
     const now = Math.floor(Date.now() / 1000);
     const msg: Message = {
-      id: `${authorUsername}-${now}-${Math.random()}`,
       authorUsername,
       content,
       timestamp: formatTimestamp(now),

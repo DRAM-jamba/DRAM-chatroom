@@ -227,11 +227,15 @@ async fn get_sessions(
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unnamed")
                 .to_string();
+            let user_role = session.get("user_role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string();
             
             state::Session {
                 id: session_key,
                 name,
-                last_connected: "now".to_string(),
+                user_role,
             }
         })
         .collect();
@@ -425,7 +429,12 @@ async fn send_message(
     body: String, 
     state: State<'_, AppState>
 ) -> Result<(), AppError> {
-    // TODO: implement
+    let session = state.session.lock().await;
+
+    if let SessionState::JoinedSession(ws_client) = &*session {
+        ws_client.send(&body).await
+            .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?;
+    }
     Ok(())
 }
 
