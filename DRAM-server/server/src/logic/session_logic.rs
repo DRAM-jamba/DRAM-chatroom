@@ -1,21 +1,14 @@
 use sqlx::{Pool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::{data_logic::{connection_data::{d_add_connection, d_get_user_role, d_get_user_sessions, d_remove_all_connections_to_session, d_remove_connection}, session_data::{d_add_session, d_get_session_list, d_remove_session}}, errors::api_error::ApiError, modules::{connection::Connection, session::Session}};
+use crate::{data_logic::{connection_data::{d_add_connection, d_get_user_role, d_get_user_sessions, d_remove_all_connections_to_session, d_remove_connection}, session_data::{d_add_session, d_get_session_list, d_remove_session}}, errors::api_error::ApiError, modules::{connection::Connection, session::{Session, SessionRole}}};
 
-pub async fn l_get_session_list(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<Session>, ApiError> {
-    let connections = match d_get_user_sessions(db_pool.clone(), &user_key).await {
+pub async fn l_get_session_list(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<SessionRole>, ApiError> {
+    let user_sessions = match d_get_user_sessions(db_pool.clone(), &user_key).await {
         Ok(c) => c,
         Err(_e) => return Err(ApiError::NotFound)
     };
-    let session_list = match d_get_session_list(db_pool.clone()).await {
-        Ok(v) => v,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    let users_sessions: Vec<Session> = session_list.into_iter()
-                                                   .filter(|s| connections.iter().any(|c| c.session_key == s.session_key))
-                                                   .collect();
-    Ok(users_sessions)
+    Ok(user_sessions)
 }
 
 pub async fn l_create_session(db_pool: Pool<Postgres>, user_key: &String, session_name: &String) -> Result<String, ApiError> {
