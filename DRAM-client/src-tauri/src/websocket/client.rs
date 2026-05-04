@@ -1,11 +1,14 @@
 use futures_util::{SinkExt, StreamExt};
+use serde_json::ser;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
+use crate::events::{MessagePayload, SessionPayload, emit_message};
 use crate::events;
+use crate::state::Session;
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
@@ -27,15 +30,22 @@ impl WsClient {
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
                 match msg {
-                    Message::Text(text) => {
-                        events::emit_message(&app_clone, &text);
+                Message::Text(text) => {
+                    match serde_json::from_str::<MessagePayload>(&text) {
+                        Ok(payload) => {
+                            emit_message(&app_clone, payload);
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to parse incoming message: {} | Error: {}", text, e);
+                        }
                     }
-                    Message::Close(_) => {
-                        events::emit_disconnected(&app_clone);
-                        break;
-                    }
-                    _ => {}
                 }
+                Message::Close(_) => {
+                events::emit_disconnected(&app_clone);
+                break;
+            }
+            _ => {}
+        }
             }
         });
 

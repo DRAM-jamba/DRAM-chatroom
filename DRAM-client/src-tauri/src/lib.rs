@@ -227,11 +227,15 @@ async fn get_sessions(
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unnamed")
                 .to_string();
+            let user_role = session.get("user_role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string();
             
             state::Session {
                 id: session_key,
                 name,
-                last_connected: "now".to_string(),
+                user_role,
             }
         })
         .collect();
@@ -331,17 +335,12 @@ async fn connect_session(
     *state.session.lock().await = SessionState::JoinedSession(ws_client);
 
     emit_joined_session(&app);
-    let window = app.get_webview_window("main").unwrap();
-    window.set_resizable(true).unwrap();
-    window.set_maximizable(true).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 800, height: 628 })).unwrap();
     Ok(())
 }
 
 #[tauri::command]
 async fn leave_session(
-    state: State<'_, AppState>,
-    app: AppHandle,
+    state: State<'_, AppState>
 ) -> Result<(), AppError> {
     println!("Attempting to leave session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
     let ip = state.current_ip.lock().await
@@ -366,10 +365,6 @@ async fn leave_session(
     println!("Left session on server at {}", state.current_ip.lock().await.as_ref().unwrap_or(&"None".to_string()));
 
     *state.session.lock().await = SessionState::Idle;
-    let window = app.get_webview_window("main").unwrap();
-    window.set_resizable(false).unwrap();
-    window.set_maximizable(false).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 360, height: 628 })).unwrap();
     Ok(())
 }
 
@@ -434,7 +429,12 @@ async fn send_message(
     body: String, 
     state: State<'_, AppState>
 ) -> Result<(), AppError> {
-    // TODO: implement
+    let session = state.session.lock().await;
+
+    if let SessionState::JoinedSession(ws_client) = &*session {
+        ws_client.send(&body).await
+            .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?;
+    }
     Ok(())
 }
 

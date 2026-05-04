@@ -1,5 +1,4 @@
 export type Message = {
-  id: string;
   authorUsername: string;
   content: string;
   timestamp: string; // e.g. "14:08"

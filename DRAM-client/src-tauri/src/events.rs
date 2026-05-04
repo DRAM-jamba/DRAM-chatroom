@@ -18,8 +18,8 @@ pub struct SessionPayload {
 
 
 // TODO: check whether UI is actualy reacting to the used session update and message events
-pub fn emit_message(app: &AppHandle, raw: &str) {
-    let _ = app.emit("message", raw);
+pub fn emit_message(app: &AppHandle, payload: MessagePayload) {
+    let _ = app.emit("message", payload);
 }
 
 pub fn emit_joined_session(app: &AppHandle) {
