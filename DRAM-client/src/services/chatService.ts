@@ -116,6 +116,9 @@ export async function leaveSession(): Promise<void> {
 /**
  * Subscribes to real-time messages arriving over the WebSocket connection.
  */
+
+// TODO: validate if ts actualy works,
+// also adjust the received message object (remove ID)
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
