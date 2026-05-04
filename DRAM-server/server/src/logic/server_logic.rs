@@ -1,7 +1,7 @@
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::{data_logic::{connection_data::d_get_user_sessions, user_data::{d_add_user, d_get_user, d_get_user_list, d_remove_user, d_update_user}}, 
+use crate::{data_logic::{connection_data::{d_get_user_connections}, user_data::{d_add_user, d_get_user, d_get_user_list, d_remove_user, d_update_user}}, 
                         errors::api_error::ApiError, 
                         logic::{auth_logic::l_generate_auth_token, session_logic::{l_delete_session_by_owner_by_tx, l_forget_session_by_tx}}, 
                         modules::user::User};
@@ -43,7 +43,7 @@ pub async fn l_connect_user_to_server(db_pool: Pool<Postgres>, user_key: String)
 }
 
 pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, user_key: String) -> Result<(), ApiError> {
-    let connections = match d_get_user_sessions(db_pool.clone(), &user_key).await {
+    let connections = match d_get_user_connections(db_pool.clone(), &user_key).await {
         Ok(c) => c,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
     };

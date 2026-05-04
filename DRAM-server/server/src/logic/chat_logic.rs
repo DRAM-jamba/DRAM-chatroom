@@ -1,4 +1,4 @@
-use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::{d_get_user}}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, server_state::ServerState, user::User}};
+use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::MessageObj, server_state::ServerState, user::User}};
 use axum::{extract::{WebSocketUpgrade, ws::{Message, WebSocket}}, response::IntoResponse};
 use futures_util::{SinkExt, StreamExt};
 
@@ -29,6 +29,10 @@ pub async fn l_connection_handler(server_state: ServerState, user_key: String, s
 
     let session_chat: SessionChat = l_get_or_create_active_session(&server_state.active_sessions, &session_key).await;    
 
+    let mut s_users = session_chat.users.write().await;
+    s_users.push(user.nickname.clone());
+    drop(s_users);
+
     let new_session_key = session_key.clone();
 
     let response = ws.on_upgrade(move |socket| { 
@@ -54,7 +58,11 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
     let history = session_chat.history.read().await;
     for msg in history.iter() {
-        if ws.send(Message::Text(msg.clone().into())).await.is_err() {
+        let json = match serde_json::to_string(&msg) {
+            Ok(s) => s,
+            Err(e) => format!("Problem with message sending: {e}")
+        };
+        if ws.send(Message::Text(json.into())).await.is_err() {
             return;
         }
     }
@@ -101,25 +109,46 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
     send_task.abort(); // it is not happening in moment, so tx.receiver_count think that it is still exits
 
-    if session_chat.tx.receiver_count() == 1 { // TODO: not sure in this. but it works fine
+    // remove user from active_users, so user can join to other session
+    let mut active_users = server_state.active_users.write().await;
+    active_users.remove(&user.user_key);
+    drop(active_users);
+
+    // remove user from session users list
+    let mut s_users = session_chat.users.write().await;
+    let index = match s_users.iter().position(|n| n == &user.nickname) {
+        Some(i) => i,
+        None => 99999999
+    };
+    if index != 99999999 {
+        s_users.remove(index);
+    }
+    drop(s_users);
+
+    // TODO: not sure in this. but it works fine
+    if session_chat.tx.receiver_count() == 1 || session_chat.tx.receiver_count() == 0 { 
         let mut active_sessions = server_state.active_sessions.write().await;
         active_sessions.remove(&session_key);
         drop(active_sessions);
     }
 
-    let mut active_users = server_state.active_users.write().await;
-    active_users.remove(&user.user_key);
-    drop(active_users);
+
 
 }
 
-async fn l_broadcast_message(session_chat: &SessionChat, mut msg: String, nickname: &String) {
+async fn l_broadcast_message(session_chat: &SessionChat, msg: String, nickname: &String) {
+    let ts = chrono::offset::Utc::now();
+    let new_msg: MessageObj = MessageObj { from: nickname.clone(), body: msg.clone(), ts: ts.timestamp() };
     let mut history = session_chat.history.write().await;
-    msg = format!("{nickname}: {msg}");
     if history.len() >= 100 { // messages limit
         history.pop_front();
     }
-    history.push_back(msg.clone());
+    history.push_back(new_msg.clone());
     drop(history);
-    let _ = session_chat.tx.send(msg);
+    let json = match serde_json::to_string(&new_msg) {
+        Ok(s) => s,
+        Err(e) => format!("Problem with message sending: {e}")
+    };
+
+    let _ = session_chat.tx.send(json);
 }
