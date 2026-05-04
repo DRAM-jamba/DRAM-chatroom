@@ -211,7 +211,7 @@ async fn get_sessions(
         .map_err(|e| AppError::Network(format!("Failed to parse session list: {}", e)))?;
 
     let sessions: Vec<serde_json::Value> = response_obj
-        .get("related_sessions")
+        .get("user_sessions")
         .and_then(|v| v.as_array())
         .cloned()
         .unwrap_or_default();

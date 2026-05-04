@@ -31,6 +31,7 @@ impl WsClient {
                 Message::Text(text) => {
                     match serde_json::from_str::<MessagePayload>(&text) {
                         Ok(payload) => {
+                            println!("Received message!");
                             emit_message(&app_clone, payload);
                         }
                         Err(e) => {
@@ -53,6 +54,7 @@ impl WsClient {
     }
 
     pub async fn send(&self, msg: &str) -> Result<(), AppError> {
+        println!("Sending message: {}", msg);
         self.sink
             .lock()
             .await
