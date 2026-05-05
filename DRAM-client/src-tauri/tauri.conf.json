@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "dram-client",
-        "width": 800,
-        "height": 600
+        "title": "",
+        "width": 360,
+        "height": 628,
+        "resizable": false,
+        "maximizable": false,
+        "decorations": false
       }
     ],
     "security": {

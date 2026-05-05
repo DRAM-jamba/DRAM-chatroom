@@ -1,64 +1,66 @@
 import { useEffect, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
-import { getMessages, sendMessage, getMembers } from "../services/chatService";
+import {
+  getMessages,
+  getMembers,
+  sendMessage,
+  leaveSession,
+  subscribeToMessages,
+} from "../services/chatService";
 import type { Message, Member } from "../types/message";
+import TitleBar from "../components/TitleBar";
 
 type ChatPageProps = {
   sessionName: string;
+  nickname: string;
   onLeaveSession: () => void;
 };
 
-// TODO: wire up to Rust — replace with real current user from auth/session context
-// import { invoke } from "@tauri-apps/api/core";
-// const currentUsername = await invoke<string>("get_current_username");
-const CURRENT_USERNAME = "your username";
-
-function ChatPage({ sessionName, onLeaveSession }: ChatPageProps) {
+function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [showHelp, setShowHelp] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    loadMessages();
-    loadMembers();
+    getMessages().then((initialMsgs) => {
+      setMessages((prev) => {
+        // Prevent unnecessary state that overwrites the message list
+        if (initialMsgs.length === 0) return prev;
+        // list merging based on timestamp uniqueness to avoid duplicates from the initial fetch and the subscribeToMessages listener
+        const existingTs = new Set(prev.map(m => m.timestamp));
+        const uniqueNew = initialMsgs.filter(m => !existingTs.has(m.timestamp));
+        return [...uniqueNew, ...prev];
+      });
+    });
 
-    // TODO: wire up to Rust — subscribe to real-time message events
-    // import { listen } from "@tauri-apps/api/event";
-    // const unlisten = await listen<Message>("new_message", (event) => {
-    //   setMessages((prev) => [...prev, event.payload]);
-    // });
-    // return () => unlisten();
+    getMembers().then(setMembers);
+    // Cleanup for listener
+    const unlistenPromise = subscribeToMessages((msg) => {
+      setMessages((prev) => {
+        if (prev.some(m => m.timestamp === msg.timestamp && m.content === msg.content)) {
+            return prev;
+        }
+        return [...prev, msg];
+      });
+    });
+
+    return () => {
+      // Guaruantee clean up the listener on unmount
+      unlistenPromise.then((unlisten) => unlisten());
+    };
   }, []);
 
-  const loadMessages = async () => {
-    // TODO: wire up to Rust
-    // import { invoke } from "@tauri-apps/api/core";
-    // const data = await invoke<Message[]>("get_messages", { sessionId });
-    const data = await getMessages();
-    setMessages(data);
-  };
-
-  const loadMembers = async () => {
-    // TODO: wire up to Rust
-    // import { invoke } from "@tauri-apps/api/core";
-    // const data = await invoke<Member[]>("get_members", { sessionId });
-    const data = await getMembers();
-    setMembers(data);
-  };
-
+  // Send the message text to the server. The echo will arrive via the
+  // "message" WebSocket event and be appended by subscribeToMessages.
   const handleSend = async (content: string) => {
-    // TODO: wire up to Rust
-    // import { invoke } from "@tauri-apps/api/core";
-    // const newMessage = await invoke<Message>("send_message", { content, sessionId });
-    const newMessage = await sendMessage(content);
-    setMessages((prev) => [...prev, newMessage]);
+    await sendMessage(content);
   };
 
-  const handleLeaveSession = () => {
-    // TODO: wire up to Rust — notify server of disconnect
-    // import { invoke } from "@tauri-apps/api/core";
-    // await invoke("leave_session", { sessionId });
+  const handleLeaveSession = async () => {
+    await leaveSession();
     onLeaveSession();
   };
 
@@ -66,27 +68,66 @@ function ChatPage({ sessionName, onLeaveSession }: ChatPageProps) {
   const offlineMembers = members.filter((m) => !m.online);
 
   return (
-    <div className="chat-page">
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <TitleBar showMaximize />
+      <div className="chat-page" style={{ flex: 1, minHeight: 0 }}>
       {/* Left sidebar */}
       <aside className="chat-left-sidebar">
         <div className="chat-logo-row">
+            <img src="/src/assets/icons/logorgb.png" width="18" height="18" />
           <span className="chat-logo-text">quorthon</span>
           <span className="chat-version">ver. 0.2</span>
         </div>
 
         <div className="chat-left-bottom">
-          <button
+            <div className="chat-left-actions">
+              <button
+                className={`chat-small-btn ${muted ? "active" : ""}`}
+                type="button"
+                onClick={() => {
+                  setMuted(prev => {
+                    const next = !prev;
+                    if (!next) setHidden(false);
+                    return next;
+                  });
+                }}
+              >
+                <img
+                  src={muted ? "/src/assets/icons/micoffbtnicon.svg" : "/src/assets/icons/micbtnicon.svg"}
+                  width="16"
+                  height="16"
+                />
+              </button>
+
+              <button
+                className={`chat-small-btn ${hidden ? "active" : ""}`}
+                type="button"
+                onClick={() => {
+                  setHidden(prev => {
+                    const next = !prev;
+                    if (next) setMuted(true);
+                    return next;
+                  });
+                }}
+              >
+                <img
+                  src={hidden ? "/src/assets/icons/headphonesoffbtnicon.svg" : "/src/assets/icons/headphonesbtnicon.svg"}
+                  width="16"
+                  height="16"
+                />
+              </button>
+
+              <button className="chat-settings-btn" type="button">
+                <img src="/src/assets/icons/settingbtnicon.svg" width="16" height="16" />
+              </button>
+
+              <button
             className="leave-session-btn"
             type="button"
             onClick={handleLeaveSession}
           >
-            leave session
-          </button>
-
-          <div className="chat-left-actions">
-            <button className="chat-small-btn" type="button">M</button>
-            <button className="chat-small-btn" type="button">H</button>
-            <button className="chat-settings-btn" type="button">settings</button>
+                <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
+              </button>
           </div>
         </div>
       </aside>
@@ -118,9 +159,9 @@ function ChatPage({ sessionName, onLeaveSession }: ChatPageProps) {
           </div>
         </div>
 
-        <MessageList messages={messages} currentUsername={CURRENT_USERNAME} />
+        <MessageList messages={messages} currentUsername={nickname} />
 
-        <MessageInput currentUsername={CURRENT_USERNAME} onSend={handleSend} />
+        <MessageInput currentUsername={nickname} onSend={handleSend} />
       </main>
 
       {/* Right members sidebar */}
@@ -155,6 +196,7 @@ function ChatPage({ sessionName, onLeaveSession }: ChatPageProps) {
           </button>
         </div>
       </aside>
+    </div>
     </div>
   );
 }

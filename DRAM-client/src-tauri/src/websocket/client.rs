@@ -1,15 +1,18 @@
 use futures_util::{SinkExt, StreamExt};
+use serde_json::ser;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
+use crate::events::{MessagePayload, SessionPayload, emit_message};
 use crate::events;
+use crate::state::Session;
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WsClient {
     pub sink: Arc<Mutex<WsSink>>,
 }
@@ -27,16 +30,24 @@ impl WsClient {
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
                 match msg {
-                    Message::Text(text) => {
-                        events::emit_message(&app_clone, &text);
+                Message::Text(text) => {
+                    match serde_json::from_str::<MessagePayload>(&text) {
+                        Ok(payload) => {
+                            println!("Received message!");
+                            emit_message(&app_clone, payload);
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to parse incoming message: {} | Error: {}", text, e);
+                        }
                     }
-                    Message::Close(_) => {
-                        events::emit_disconnected(&app_clone);
-                        break;
-                    }
-                    _ => {}
                 }
+                Message::Close(_) => {
+                    events::emit_disconnected(&app_clone);
+                    break;
+                }
+                _ => {}
             }
+                }    
         });
 
         Ok(Self {
@@ -45,6 +56,7 @@ impl WsClient {
     }
 
     pub async fn send(&self, msg: &str) -> Result<(), AppError> {
+        println!("Sending message: {}", msg);
         self.sink
             .lock()
             .await
@@ -58,6 +70,15 @@ impl WsClient {
             .lock()
             .await
             .send(Message::Ping(vec![].into()))
+            .await
+            .map_err(|e| AppError::Network(e.to_string()))
+    }
+
+    pub async fn close(&self) -> Result<(), AppError> {
+        self.sink
+            .lock()
+            .await
+            .send(Message::Close(None))
             .await
             .map_err(|e| AppError::Network(e.to_string()))
     }

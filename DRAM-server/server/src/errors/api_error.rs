@@ -1,11 +1,11 @@
-use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde_json::json;
 
 #[derive(Debug)]
 pub enum ApiError {
     NotFound, // 404
     InvalidInput(String), // 400
-    InternalError, // 500
+    InternalError // 500
 }
 
 impl IntoResponse for ApiError {

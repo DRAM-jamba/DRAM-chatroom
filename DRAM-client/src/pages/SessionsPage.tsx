@@ -3,6 +3,8 @@ import SessionCard from "../components/SessionCard";
 import {
   addSession,
   createSession,
+  deleteSession,
+  disconnectFromServer,
   forgetSession,
   getSessions,
   joinSession,
@@ -10,6 +12,7 @@ import {
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";
 import type { Session } from "../types/session";
+import TitleBar from "../components/TitleBar";
 
 type SessionsPageProps = {
   nickname: string;
@@ -36,13 +39,11 @@ function SessionsPage({
 
   const [sessionNameInput, setSessionNameInput] = useState("");
   const [sessionKeyInput, setSessionKeyInput] = useState("");
-  const [generatedSessionKey, setGeneratedSessionKey] = useState("");
+  const [generatedSessionKey, setGeneratedSessionKey] = useState(""); 
 
   useEffect(() => {
     getSessions().then(setSessions);
   }, []);
-
-  // Nickname 
 
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
@@ -60,8 +61,6 @@ function SessionsPage({
     }
   };
 
-  // Create session 
-
   const handleOpenCreate = () => {
     setShowPlusMenu(false);
     setSessionNameInput("");
@@ -71,7 +70,7 @@ function SessionsPage({
   };
 
   const handleCreateConfirm = async () => {
-    if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
+    if (!sessionNameInput.trim()) return;
     const result = await createSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
@@ -96,36 +95,26 @@ function SessionsPage({
     }
   };
 
-  // Add session
 
   const handleOpenAdd = () => {
     setShowPlusMenu(false);
-    setSessionNameInput("");
     setSessionKeyInput("");
     setView("add");
   };
 
   const handleAddConfirm = async () => {
-    if (!sessionNameInput.trim() || !sessionKeyInput.trim()) return;
-    const session = await addSession({
-      sessionName: sessionNameInput,
-      sessionKey: sessionKeyInput,
-    });
-    setSessions((prev) => [...prev, session]);
-    setSessionNameInput("");
+    if (!sessionKeyInput.trim()) return;
+    await addSession({ sessionKey: sessionKeyInput });
+    getSessions().then(setSessions);
     setSessionKeyInput("");
     setView("list");
   };
-
-  // Shared cancel
 
   const handleCancel = () => {
     setSessionNameInput("");
     setSessionKeyInput("");
     setView("list");
   };
-
-  // Session card actions
 
   const handleConnect = async (id: string) => {
     const sessionName = await joinSession(id);
@@ -137,17 +126,36 @@ function SessionsPage({
     setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
   };
 
-  const handleForget = async (id: string) => {
-    await forgetSession(id);
-    setSessions((prev) => prev.filter((s) => s.id !== id));
+  const handleForget = async (sessionKey: string) => {
+    try {
+      await forgetSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    } catch (error) {
+      console.error("Failed to forget session:", error);
+      getSessions().then(setSessions);
+    }
+  };
+
+  const handleDelete = async (sessionKey: string) => {
+    try {
+      await deleteSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      getSessions().then(setSessions);
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="servers-page">
+      <TitleBar />
       <aside className="sidebar session-sidebar">
-        <h1 className="logo">quorthon</h1>
+        <h1 className="logo">
+          <img src="/src/assets/icons/logorgb.png" width="24" height="24" />
+          quorthon
+        </h1>
 
         <div className="sidebar-line" />
 
@@ -168,7 +176,7 @@ function SessionsPage({
                 onClick={handleNicknameConfirm}
                 title="Confirm nickname"
               >
-                ✓
+                <img src="/src/assets/icons/confirmbtnicon.svg" width="16" height="16" />
               </button>
             </div>
           ) : (
@@ -244,24 +252,6 @@ function SessionsPage({
                     value={sessionNameInput}
                     onChange={(e) => setSessionNameInput(e.target.value)}
                   />
-                </div>
-
-                <div className="create-session-box">
-                  <div className="create-panel-header">
-                    <span>Session key</span>
-                    <button
-                      className="panel-close-btn"
-                      type="button"
-                      onClick={handleCancel}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    className="server-input"
-                    value={sessionKeyInput}
-                    onChange={(e) => setSessionKeyInput(e.target.value)}
-                  />
                   <button
                     className="big-confirm-btn"
                     type="button"
@@ -271,6 +261,33 @@ function SessionsPage({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {view === "generated" && (
+            <div className="generated-session-box">
+              <div className="create-panel-header">
+                <span>Generated session key</span>
+              </div>
+
+              <div className="generated-key-row">
+                <div className="generated-key-text">{generatedSessionKey}</div>
+                <button
+                  className="copy-key-btn"
+                  type="button"
+                  onClick={handleCopyGeneratedKey}
+                >
+                  copy
+                </button>
+              </div>
+
+              <button
+                className="big-confirm-btn"
+                type="button"
+                onClick={handleCloseGenerated}
+              >
+                close
+              </button>
             </div>
           )}
 
@@ -334,6 +351,7 @@ function SessionsPage({
                 session={session}
                 onSaveEdit={handleSaveEdit}
                 onRemove={handleForget}
+                onDelete={handleDelete}
                 onConnect={handleConnect}
               />
             ))}
@@ -372,63 +390,31 @@ function SessionsPage({
             </div>
 
             <button className="settings-btn" type="button">
-              settings
+              <img src="/src/assets/icons/settingbtnicon.svg" width="16" height="16" />
             </button>
+
+            {onDisconnect && (
+              <button
+                className="small-btn disconnect-btn"
+                type="button"
+                onClick={async () => {
+                  try {
+                    await disconnectFromServer();
+                  } catch (error) {
+                    console.error("Failed to disconnect:", error);
+                  } finally {
+                    onDisconnect();
+                  }
+                }}
+              >
+                <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
+              </button>
+            )}
           </div>
 
           <p className="version-text">ver. 0.2</p>
         </div>
-
-        {onDisconnect && (
-          <button
-            className="back-to-servers-btn disconnect-btn"
-            type="button"
-            onClick={onDisconnect}
-          >
-            disconnect
-          </button>
-        )}
       </aside>
-
-      <main className="main-panel">
-        {view === "generated" ? (
-          <div className="generated-panel-preview">
-            <div className="generated-session-box generated-session-box-preview">
-              <div className="create-panel-header">
-                <span>Generated session key</span>
-              </div>
-
-              <div className="generated-key-row">
-                <div className="generated-key-text">{generatedSessionKey}</div>
-                <button
-                  className="copy-key-btn"
-                  type="button"
-                  onClick={handleCopyGeneratedKey}
-                >
-                  copy
-                </button>
-              </div>
-
-              <button
-                className="big-confirm-btn"
-                type="button"
-                onClick={handleCloseGenerated}
-              >
-                close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="instructions">
-            <p>use left panel to:</p>
-            <ul>
-              <li>add sessions</li>
-              <li>edit session info</li>
-              <li>remove sessions</li>
-            </ul>
-          </div>
-        )}
-      </main>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { submitNickname } from "../services/nicknameService";
+import { submitNickname, saveNickname } from "../services/nicknameService";
+import TitleBar from "../components/TitleBar";
 
 type NicknamePageProps = {
   onNicknameSet: (nickname: string) => void;
@@ -21,7 +22,10 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
     setError("");
 
     try {
+      // Send to the server so other users see the nickname immediately.
       await submitNickname(trimmed);
+      // Persist locally so this page is skipped on every future launch.
+      await saveNickname(trimmed);
       onNicknameSet(trimmed);
     } catch {
       setError("Failed to set nickname. Please try again.");
@@ -38,14 +42,11 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
 
   return (
     <div className="servers-page">
+      <TitleBar />
       <aside className="sidebar">
         <h1 className="logo">quorthon</h1>
         <div className="sidebar-line" />
-        <div className="sidebar-line bottom-line" />
-        <p className="version-text">ver. 0.2</p>
-      </aside>
 
-      <main className="main-panel nickname-main-panel">
         <div className="nickname-card">
           <h2 className="nickname-title">Choose your nickname</h2>
           <p className="nickname-subtitle">
@@ -77,7 +78,10 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
             {loading ? "connecting..." : "confirm"}
           </button>
         </div>
-      </main>
+
+        <div className="sidebar-line bottom-line" />
+        <p className="version-text">ver. 0.2</p>
+      </aside>
     </div>
   );
 }

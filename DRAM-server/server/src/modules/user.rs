@@ -1,14 +1,10 @@
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
-    pub id: u64,
     pub user_key: String,
     pub nickname: String,
-    pub related_session_keys: Vec<String>,
-    pub last_time_seen: i64, // timestamp,
-    pub in_session: bool
+    pub last_time_seen: chrono::NaiveDateTime
 }
-
-// TODO: make methods 

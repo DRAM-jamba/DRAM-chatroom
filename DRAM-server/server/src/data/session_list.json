@@ -65,5 +65,23 @@
     "chat_log": [],
     "current_user_list": [],
     "black_list": []
+  },
+  {
+    "session_id": 7,
+    "session_key": "496a02bc-0a3c-432e-96a3-64e669dbaf0c",
+    "session_owner_id": 17,
+    "name": "kot",
+    "chat_log": [],
+    "current_user_list": [],
+    "black_list": []
+  },
+  {
+    "session_id": 8,
+    "session_key": "b8316173-ea85-4e0c-be13-101026bdcb44",
+    "session_owner_id": 18,
+    "name": "KTU",
+    "chat_log": [],
+    "current_user_list": [],
+    "black_list": []
   }
 ]
