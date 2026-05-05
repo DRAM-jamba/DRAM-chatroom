@@ -18,11 +18,11 @@ pub struct PersistedServer {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Session {
     pub id: String,
     pub name: String,
-    #[serde(rename = "lastConnected")]
-    pub last_connected: String,
+    pub user_role: String,
 }
 
 #[derive(Debug, Clone)]
