@@ -25,18 +25,31 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    getMessages().then(setMessages);
-    getMembers().then(setMembers);
+    getMessages().then((initialMsgs) => {
+      setMessages((prev) => {
+        // Prevent unnecessary state that overwrites the message list
+        if (initialMsgs.length === 0) return prev;
+        // list merging based on timestamp uniqueness to avoid duplicates from the initial fetch and the subscribeToMessages listener
+        const existingTs = new Set(prev.map(m => m.timestamp));
+        const uniqueNew = initialMsgs.filter(m => !existingTs.has(m.timestamp));
+        return [...uniqueNew, ...prev];
+      });
+    });
 
-    let unlisten: (() => void) | undefined;
-    subscribeToMessages((msg) => {
-      setMessages((prev) => [...prev, msg]);
-    }).then((fn) => {
-      unlisten = fn;
+    getMembers().then(setMembers);
+    // Cleanup for listener
+    const unlistenPromise = subscribeToMessages((msg) => {
+      setMessages((prev) => {
+        if (prev.some(m => m.timestamp === msg.timestamp && m.content === msg.content)) {
+            return prev;
+        }
+        return [...prev, msg];
+      });
     });
 
     return () => {
-      unlisten?.();
+      // Guaruantee clean up the listener on unmount
+      unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
 

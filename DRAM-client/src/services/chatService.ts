@@ -65,6 +65,7 @@ function payloadToMessage(p: MessagePayload): Message {
     content: p.body,
     timestamp: formatTimestamp(p.ts),
     date: formatDate(p.ts),
+    id: p.ts.toString()
   };
 }
 
@@ -121,6 +122,21 @@ export async function leaveSession(): Promise<void> {
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
+  return await listen<any>("message", (event) => {
+    const p = event.payload; 
+
+    const msg: Message = {
+      authorUsername: p.from, // Map 'from' to 'authorUsername'[cite: 11]
+      content: p.body,        // Map 'body' to 'content'[cite: 11]
+      timestamp: formatTimestamp(p.ts),
+      date: formatDate(p.ts),
+      id: p.ts.toString(),    // Use the timestamp as a temporary key
+    };
+
+    onMessage(msg);
+  });
+  
+  
   const unlisten = await listen<string>("message", (event) => {
     const raw = event.payload;
     const colonIndex = raw.indexOf(": ");
@@ -142,6 +158,7 @@ export async function subscribeToMessages(
       content,
       timestamp: formatTimestamp(now),
       date: "Today",
+      id: now.toString(),
     };
 
     onMessage(msg);

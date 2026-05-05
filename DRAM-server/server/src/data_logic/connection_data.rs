@@ -1,10 +1,22 @@
 use sqlx::{Pool, Postgres, Transaction};
 
-use crate::{errors::app_error::AppError, modules::connection::Connection};
+use crate::{errors::app_error::AppError, modules::{connection::Connection, session::SessionRole}};
 
 
 
-pub async fn d_get_user_sessions(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<Connection>, AppError> {
+pub async fn d_get_user_sessions(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<SessionRole>, AppError> {
+  
+    sqlx::query_as::<_, SessionRole>("SELECT sessions.session_key, session_name, user_role 
+                                                      FROM user_session
+                                                      JOIN sessions
+                                                      ON sessions.session_key = user_session.session_key 
+                                                      WHERE user_key = $1")
+                                .bind(&user_key)
+                                .fetch_all(&db_pool).await
+                                .map_err(|e| AppError::Database(e))
+}
+
+pub async fn d_get_user_connections(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<Connection>, AppError> {
   
     sqlx::query_as::<_, Connection>("SELECT user_key, session_key, user_role FROM user_session WHERE user_key = $1")
                                 .bind(&user_key)

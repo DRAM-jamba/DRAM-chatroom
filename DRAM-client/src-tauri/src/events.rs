@@ -16,8 +16,6 @@ pub struct SessionPayload {
     pub chat_log:     Vec<MessagePayload>,
 }
 
-
-// TODO: check whether UI is actualy reacting to the used session update and message events
 pub fn emit_message(app: &AppHandle, payload: MessagePayload) {
     let _ = app.emit("message", payload);
 }

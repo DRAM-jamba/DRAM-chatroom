@@ -19,7 +19,7 @@ async fn r_get_session_list(State(server_state): State<ServerState>,
     match l_get_session_list(server_state.db_pool.clone(), &user_key).await {
         Ok(session_list) => {
             Ok(Json(json!({
-                "related_sessions": session_list
+                "user_sessions": session_list
             })))
         },
         Err(e) => Err(e)
