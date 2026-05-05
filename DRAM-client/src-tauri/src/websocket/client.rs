@@ -1,4 +1,5 @@
 use futures_util::{SinkExt, StreamExt};
+use serde_json::ser;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
@@ -7,6 +8,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, Web
 use crate::error::AppError;
 use crate::events::{MessagePayload, SessionPayload, emit_message};
 use crate::events;
+use crate::state::Session;
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 

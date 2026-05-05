@@ -8,6 +8,7 @@ import {
   updateServer,
 } from "../services/serverService";
 import type { Server } from "../types/server";
+import TitleBar from "../components/TitleBar";
 
 type ServersPageProps = {
   onOpenSessions?: () => void;
@@ -70,8 +71,12 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
 
   return (
     <div className="servers-page">
+      <TitleBar />
       <aside className="sidebar">
-        <h1 className="logo">quorthon</h1>
+        <h1 className="logo">
+          <img src="/src/assets/icons/logorgb.png" width="24" height="24" />
+          quorthon
+        </h1>
 
         <div className="sidebar-line" />
 
@@ -143,17 +148,6 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
         <div className="sidebar-line bottom-line" />
         <p className="version-text">ver. 0.2</p>
       </aside>
-
-      <main className="main-panel">
-        <div className="instructions">
-          <p>use left panel to:</p>
-          <ul>
-            <li>add servers</li>
-            <li>edit server info</li>
-            <li>remove servers</li>
-          </ul>
-        </div>
-      </main>
     </div>
   );
 }

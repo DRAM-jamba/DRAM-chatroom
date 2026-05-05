@@ -9,6 +9,7 @@ import {
   subscribeToMessages,
 } from "../services/chatService";
 import type { Message, Member } from "../types/message";
+import TitleBar from "../components/TitleBar";
 
 type ChatPageProps = {
   sessionName: string;
@@ -20,6 +21,8 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [showHelp, setShowHelp] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     getMessages().then((initialMsgs) => {
@@ -65,27 +68,66 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const offlineMembers = members.filter((m) => !m.online);
 
   return (
-    <div className="chat-page">
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <TitleBar showMaximize />
+      <div className="chat-page" style={{ flex: 1, minHeight: 0 }}>
       {/* Left sidebar */}
       <aside className="chat-left-sidebar">
         <div className="chat-logo-row">
+            <img src="/src/assets/icons/logorgb.png" width="18" height="18" />
           <span className="chat-logo-text">quorthon</span>
           <span className="chat-version">ver. 0.2</span>
         </div>
 
         <div className="chat-left-bottom">
-          <button
+            <div className="chat-left-actions">
+              <button
+                className={`chat-small-btn ${muted ? "active" : ""}`}
+                type="button"
+                onClick={() => {
+                  setMuted(prev => {
+                    const next = !prev;
+                    if (!next) setHidden(false);
+                    return next;
+                  });
+                }}
+              >
+                <img
+                  src={muted ? "/src/assets/icons/micoffbtnicon.svg" : "/src/assets/icons/micbtnicon.svg"}
+                  width="16"
+                  height="16"
+                />
+              </button>
+
+              <button
+                className={`chat-small-btn ${hidden ? "active" : ""}`}
+                type="button"
+                onClick={() => {
+                  setHidden(prev => {
+                    const next = !prev;
+                    if (next) setMuted(true);
+                    return next;
+                  });
+                }}
+              >
+                <img
+                  src={hidden ? "/src/assets/icons/headphonesoffbtnicon.svg" : "/src/assets/icons/headphonesbtnicon.svg"}
+                  width="16"
+                  height="16"
+                />
+              </button>
+
+              <button className="chat-settings-btn" type="button">
+                <img src="/src/assets/icons/settingbtnicon.svg" width="16" height="16" />
+              </button>
+
+              <button
             className="leave-session-btn"
             type="button"
             onClick={handleLeaveSession}
           >
-            leave session
-          </button>
-
-          <div className="chat-left-actions">
-            <button className="chat-small-btn" type="button">M</button>
-            <button className="chat-small-btn" type="button">H</button>
-            <button className="chat-settings-btn" type="button">settings</button>
+                <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
+              </button>
           </div>
         </div>
       </aside>
@@ -154,6 +196,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           </button>
         </div>
       </aside>
+    </div>
     </div>
   );
 }

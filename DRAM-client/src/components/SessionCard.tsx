@@ -74,7 +74,11 @@ function SessionCard({
         onClick={() => setExpanded(!expanded)}
       >
         <span className="server-title">{session.name}</span>
-        <span className="server-arrow">{expanded ? "⌃" : "⌄"}</span>
+        <img
+          src={expanded ? "/src/assets/icons/arrowupicon.svg" : "/src/assets/icons/arrowdownicon.svg"}
+          width="16"
+          height="16"
+        />
       </button>
 
       {expanded && (
@@ -127,7 +131,7 @@ function SessionCard({
                   onRemove(session.id);
                 }}
               >
-                ✓
+                <img src="/src/assets/icons/confirmbtnicon.svg" width="14" height="14" />
               </button>
 
               <button
@@ -135,7 +139,7 @@ function SessionCard({
                 type="button"
                 onClick={() => setConfirmAction(null)}
               >
-                ×
+                <img src="/src/assets/icons/cancelbtnicon.svg" width="14" height="14" />
               </button>
             </div>
           )}
@@ -152,7 +156,7 @@ function SessionCard({
                   onDelete(session.id);
                 }}
               >
-                ✓
+                <img src="/src/assets/icons/confirmbtnicon.svg" width="14" height="14" />
               </button>
 
               <button
@@ -160,7 +164,7 @@ function SessionCard({
                 type="button"
                 onClick={() => setConfirmAction(null)}
               >
-                ×
+                <img src="/src/assets/icons/cancelbtnicon.svg" width="14" height="14" />
               </button>
             </div>
           )}

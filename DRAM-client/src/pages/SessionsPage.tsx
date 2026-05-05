@@ -12,6 +12,7 @@ import {
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";
 import type { Session } from "../types/session";
+import TitleBar from "../components/TitleBar";
 
 type SessionsPageProps = {
   nickname: string;
@@ -38,7 +39,7 @@ function SessionsPage({
 
   const [sessionNameInput, setSessionNameInput] = useState("");
   const [sessionKeyInput, setSessionKeyInput] = useState("");
-  const [generatedSessionKey, setGeneratedSessionKey] = useState("");
+  const [generatedSessionKey, setGeneratedSessionKey] = useState(""); 
 
   useEffect(() => {
     getSessions().then(setSessions);
@@ -109,10 +110,6 @@ function SessionsPage({
     setView("list");
   };
 
-  const handleAddKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleAddConfirm();
-  };
-
   const handleCancel = () => {
     setSessionNameInput("");
     setSessionKeyInput("");
@@ -153,8 +150,12 @@ function SessionsPage({
 
   return (
     <div className="servers-page">
+      <TitleBar />
       <aside className="sidebar session-sidebar">
-        <h1 className="logo">quorthon</h1>
+        <h1 className="logo">
+          <img src="/src/assets/icons/logorgb.png" width="24" height="24" />
+          quorthon
+        </h1>
 
         <div className="sidebar-line" />
 
@@ -175,7 +176,7 @@ function SessionsPage({
                 onClick={handleNicknameConfirm}
                 title="Confirm nickname"
               >
-                ✓
+                <img src="/src/assets/icons/confirmbtnicon.svg" width="16" height="16" />
               </button>
             </div>
           ) : (
@@ -263,9 +264,54 @@ function SessionsPage({
             </div>
           )}
 
+          {view === "generated" && (
+            <div className="generated-session-box">
+              <div className="create-panel-header">
+                <span>Generated session key</span>
+              </div>
+
+              <div className="generated-key-row">
+                <div className="generated-key-text">{generatedSessionKey}</div>
+                <button
+                  className="copy-key-btn"
+                  type="button"
+                  onClick={handleCopyGeneratedKey}
+                >
+                  copy
+                </button>
+              </div>
+
+              <button
+                className="big-confirm-btn"
+                type="button"
+                onClick={handleCloseGenerated}
+              >
+                close
+              </button>
+            </div>
+          )}
+
           {view === "add" && (
             <div className="session-create-overlay">
               <div className="session-create-panels">
+                <div className="create-session-box">
+                  <div className="create-panel-header">
+                    <span>Session name</span>
+                    <button
+                      className="panel-close-btn"
+                      type="button"
+                      onClick={handleCancel}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <input
+                    className="server-input"
+                    value={sessionNameInput}
+                    onChange={(e) => setSessionNameInput(e.target.value)}
+                  />
+                </div>
+
                 <div className="create-session-box">
                   <div className="create-panel-header">
                     <span>Session key</span>
@@ -281,9 +327,6 @@ function SessionsPage({
                     className="server-input"
                     value={sessionKeyInput}
                     onChange={(e) => setSessionKeyInput(e.target.value)}
-                    onKeyDown={handleAddKeyDown}
-                    placeholder="enter session key..."
-                    autoFocus
                   />
                   <button
                     className="big-confirm-btn"
@@ -347,71 +390,31 @@ function SessionsPage({
             </div>
 
             <button className="settings-btn" type="button">
-              settings
+              <img src="/src/assets/icons/settingbtnicon.svg" width="16" height="16" />
             </button>
+
+            {onDisconnect && (
+              <button
+                className="small-btn disconnect-btn"
+                type="button"
+                onClick={async () => {
+                  try {
+                    await disconnectFromServer();
+                  } catch (error) {
+                    console.error("Failed to disconnect:", error);
+                  } finally {
+                    onDisconnect();
+                  }
+                }}
+              >
+                <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
+              </button>
+            )}
           </div>
 
           <p className="version-text">ver. 0.2</p>
         </div>
-
-        {onDisconnect && (
-          <button
-            className="back-to-servers-btn disconnect-btn"
-            type="button"
-            onClick={async () => {
-              try {
-                await disconnectFromServer();
-              } catch (error) {
-                console.error("Failed to disconnect:", error);
-              } finally {
-                onDisconnect();
-              }
-            }}
-          >
-            disconnect
-          </button>
-        )}
       </aside>
-
-      <main className="main-panel">
-        {view === "generated" ? (
-          <div className="generated-panel-preview">
-            <div className="generated-session-box generated-session-box-preview">
-              <div className="create-panel-header">
-                <span>Generated session key</span>
-              </div>
-
-              <div className="generated-key-row">
-                <div className="generated-key-text">{generatedSessionKey}</div>
-                <button
-                  className="copy-key-btn"
-                  type="button"
-                  onClick={handleCopyGeneratedKey}
-                >
-                  copy
-                </button>
-              </div>
-
-              <button
-                className="big-confirm-btn"
-                type="button"
-                onClick={handleCloseGenerated}
-              >
-                close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="instructions">
-            <p>use left panel to:</p>
-            <ul>
-              <li>add sessions</li>
-              <li>edit session info</li>
-              <li>remove sessions</li>
-            </ul>
-          </div>
-        )}
-      </main>
     </div>
   );
 }
