@@ -338,7 +338,7 @@ async fn connect_session(
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(true).unwrap();
     window.set_maximizable(true).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 800, height: 628 })).unwrap();
+    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 1100, height: 750 })).unwrap();
     Ok(())
 }
 
@@ -372,7 +372,7 @@ async fn leave_session(
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(false).unwrap();
     window.set_maximizable(false).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 360, height: 628 })).unwrap();
+    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 535, height: 900 })).unwrap();
     Ok(())
 }
 

@@ -423,10 +423,13 @@ button {
   height: 28px;
   border: none;
   color: #e5e5e5;
-    border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
     background: #1a1a1a;
   cursor: pointer;
   font-size: 18px;
+  display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .session-plus-option {
@@ -657,6 +660,9 @@ button {
   position: relative;
   flex: 1;
   min-height: 0;
+  display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .session-create-overlay {
@@ -696,9 +702,11 @@ button {
 
 .create-session-box .big-confirm-btn,
 .generated-session-box .big-confirm-btn {
-  width: 100%;
-  border-radius: 0;
-  height: 36px;
+  display: block;
+    width: calc(100% - 20px);
+    margin: 0 10px 12px;
+    border-radius: 6px;
+    height: 38px;
   font-size: 16px;
 }
 
@@ -850,9 +858,54 @@ button {
 }
 
 .chat-session-name {
-  font-size: 16px;
-  color: #e8e8e8;
+  font-size: 14px;
+    color: #a0a0a0;
   font-weight: 400;
+  background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 3px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  
+  .chat-session-name:hover {
+    border-color: #2a2a2a;
+    color: #d0d0d0;
+  }
+  
+  .copy-toast {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 1px solid #00aaff;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: #00aaff;
+    box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+    z-index: 50;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: toast-fade-in 0.15s ease;
+  }
+  
+  @keyframes toast-fade-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-4px);
+    }
+  
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
 }
 
 .chat-help-wrapper {
@@ -952,14 +1005,16 @@ t
 
 .message-author {
   font-size: 15px;
-  color: #c8c8c8;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .message-author-own {
   color: #7c4dff;
 }
 
+.message-author-other {
+  color: #e0e0e0;
+}
 .message-time {
   font-size: 12px;
   color: #555;
@@ -968,6 +1023,7 @@ t
 .message-content {
   margin: 0;
   font-size: 15px;
+  font-weight: 400;
   color: #d8d8d8;
   line-height: 1.5;
   word-break: break-word;

@@ -50,14 +50,12 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     }
   };
 
-
   const handleSaveEdit = async (ip: string, nickname: string) => {
     const updated = await updateServer(ip, { nickname });
     setServers((prev) =>
       prev.map((s) => (s.ipAddress === ip ? updated : s))
     );
   };
-
 
   const handleRemove = async (id: string) => {
     setError(null);
@@ -81,15 +79,21 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
         <div className="sidebar-line" />
 
         <div className="server-list-container">
-          {servers.map((server) => (
-            <ServerCard
-              key={server.id}
-              server={server}
-              onSaveEdit={handleSaveEdit}
-              onRemove={handleRemove}
-              onConnect={handleConnect}
-            />
-          ))}
+          {servers.length === 0 ? (
+            <p className="empty-list-text" style={{ textAlign: "center" }}>
+              Your server list is empty
+            </p>
+          ) : (
+            servers.map((server) => (
+              <ServerCard
+                key={server.id}
+                server={server}
+                onSaveEdit={handleSaveEdit}
+                onRemove={handleRemove}
+                onConnect={handleConnect}
+              />
+            ))
+          )}
         </div>
 
         {error && <p className="error-text">{error}</p>}

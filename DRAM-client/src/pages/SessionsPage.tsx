@@ -39,7 +39,7 @@ function SessionsPage({
 
   const [sessionNameInput, setSessionNameInput] = useState("");
   const [sessionKeyInput, setSessionKeyInput] = useState("");
-  const [generatedSessionKey, setGeneratedSessionKey] = useState(""); 
+  const [generatedSessionKey, setGeneratedSessionKey] = useState("");
 
   useEffect(() => {
     getSessions().then(setSessions);
@@ -95,7 +95,6 @@ function SessionsPage({
     }
   };
 
-
   const handleOpenAdd = () => {
     setShowPlusMenu(false);
     setSessionKeyInput("");
@@ -146,6 +145,8 @@ function SessionsPage({
     }
   };
 
+  const isFormView = view === "create" || view === "add" || view === "generated";
+
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
@@ -159,78 +160,81 @@ function SessionsPage({
 
         <div className="sidebar-line" />
 
-        <div className="session-top-row">
-          {isEditingNickname ? (
-            <div className="nickname-edit-row">
-              <input
-                className="server-input nickname-edit-input"
-                value={nicknameInput}
-                onChange={(e) => setNicknameInput(e.target.value)}
-                onKeyDown={handleNicknameKeyDown}
-                autoFocus
-                maxLength={32}
-              />
-              <button
-                className="nickname-confirm-inline-btn"
-                type="button"
-                onClick={handleNicknameConfirm}
-                title="Confirm nickname"
-              >
-                <img src="/src/assets/icons/confirmbtnicon.svg" width="16" height="16" />
-              </button>
-            </div>
-          ) : (
-            <button
-              className="session-user-box session-user-box-btn"
-              type="button"
-              onClick={() => {
-                setNicknameInput(nickname);
-                setIsEditingNickname(true);
-              }}
-              title="Click to edit nickname"
-            >
-              Hello {nickname}!
-            </button>
-          )}
-
-          <div className="session-plus-wrapper">
-            {!showPlusMenu ? (
-              <button
-                className="session-plus-button"
-                type="button"
-                onClick={() => setShowPlusMenu(true)}
-              >
-                +
-              </button>
-            ) : (
-              <div className="session-plus-menu">
+        {/* Only show nickname row and + button when not in a form view */}
+        {!isFormView && (
+          <div className="session-top-row">
+            {isEditingNickname ? (
+              <div className="nickname-edit-row">
+                <input
+                  className="server-input nickname-edit-input"
+                  value={nicknameInput}
+                  onChange={(e) => setNicknameInput(e.target.value)}
+                  onKeyDown={handleNicknameKeyDown}
+                  autoFocus
+                  maxLength={32}
+                />
                 <button
-                  className="session-plus-close"
+                  className="nickname-confirm-inline-btn"
                   type="button"
-                  onClick={() => setShowPlusMenu(false)}
+                  onClick={handleNicknameConfirm}
+                  title="Confirm nickname"
                 >
-                  ⌃
-                </button>
-
-                <button
-                  className="session-plus-option"
-                  type="button"
-                  onClick={handleOpenCreate}
-                >
-                  create
-                </button>
-
-                <button
-                  className="session-plus-option"
-                  type="button"
-                  onClick={handleOpenAdd}
-                >
-                  add
+                  <img src="/src/assets/icons/confirmbtnicon.svg" width="16" height="16" />
                 </button>
               </div>
+            ) : (
+              <button
+                className="session-user-box session-user-box-btn"
+                type="button"
+                onClick={() => {
+                  setNicknameInput(nickname);
+                  setIsEditingNickname(true);
+                }}
+                title="Click to edit nickname"
+              >
+                Hello {nickname}!
+              </button>
             )}
+
+            <div className="session-plus-wrapper">
+              {!showPlusMenu ? (
+                <button
+                  className="session-plus-button"
+                  type="button"
+                  onClick={() => setShowPlusMenu(true)}
+                >
+                  +
+                </button>
+              ) : (
+                <div className="session-plus-menu">
+                  <button
+                    className="session-plus-close"
+                    type="button"
+                    onClick={() => setShowPlusMenu(false)}
+                  >
+                      ∧
+                    </button>
+
+                    <button
+                      className="session-plus-option"
+                      type="button"
+                      onClick={handleOpenCreate}
+                    >
+                      create
+                    </button>
+
+                  <button
+                    className="session-plus-option"
+                    type="button"
+                    onClick={handleOpenAdd}
+                  >
+                    add
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="session-content-area">
           {view === "create" && (
@@ -251,6 +255,7 @@ function SessionsPage({
                     className="server-input"
                     value={sessionNameInput}
                     onChange={(e) => setSessionNameInput(e.target.value)}
+                    autoFocus
                   />
                   <button
                     className="big-confirm-btn"
@@ -265,53 +270,37 @@ function SessionsPage({
           )}
 
           {view === "generated" && (
-            <div className="generated-session-box">
-              <div className="create-panel-header">
-                <span>Generated session key</span>
-              </div>
+            <div className="session-create-overlay">
+              <div className="generated-session-box">
+                <div className="create-panel-header">
+                  <span>Generated session key</span>
+                </div>
 
-              <div className="generated-key-row">
-                <div className="generated-key-text">{generatedSessionKey}</div>
+                <div className="generated-key-row">
+                  <div className="generated-key-text">{generatedSessionKey}</div>
+                  <button
+                    className="copy-key-btn"
+                    type="button"
+                    onClick={handleCopyGeneratedKey}
+                  >
+                    copy
+                  </button>
+                </div>
+
                 <button
-                  className="copy-key-btn"
+                  className="big-confirm-btn"
                   type="button"
-                  onClick={handleCopyGeneratedKey}
+                  onClick={handleCloseGenerated}
                 >
-                  copy
+                  close
                 </button>
               </div>
-
-              <button
-                className="big-confirm-btn"
-                type="button"
-                onClick={handleCloseGenerated}
-              >
-                close
-              </button>
             </div>
           )}
 
           {view === "add" && (
             <div className="session-create-overlay">
               <div className="session-create-panels">
-                <div className="create-session-box">
-                  <div className="create-panel-header">
-                    <span>Session name</span>
-                    <button
-                      className="panel-close-btn"
-                      type="button"
-                      onClick={handleCancel}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    className="server-input"
-                    value={sessionNameInput}
-                    onChange={(e) => setSessionNameInput(e.target.value)}
-                  />
-                </div>
-
                 <div className="create-session-box">
                   <div className="create-panel-header">
                     <span>Session key</span>
@@ -327,6 +316,7 @@ function SessionsPage({
                     className="server-input"
                     value={sessionKeyInput}
                     onChange={(e) => setSessionKeyInput(e.target.value)}
+                    autoFocus
                   />
                   <button
                     className="big-confirm-btn"

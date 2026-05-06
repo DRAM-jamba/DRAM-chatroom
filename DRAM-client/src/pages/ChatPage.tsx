@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import {
@@ -23,13 +23,13 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [showHelp, setShowHelp] = useState(false);
   const [muted, setMuted] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getMessages().then((initialMsgs) => {
       setMessages((prev) => {
-        // Prevent unnecessary state that overwrites the message list
         if (initialMsgs.length === 0) return prev;
-        // list merging based on timestamp uniqueness to avoid duplicates from the initial fetch and the subscribeToMessages listener
         const existingTs = new Set(prev.map(m => m.timestamp));
         const uniqueNew = initialMsgs.filter(m => !existingTs.has(m.timestamp));
         return [...uniqueNew, ...prev];
@@ -37,24 +37,21 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     });
 
     getMembers().then(setMembers);
-    // Cleanup for listener
+
     const unlistenPromise = subscribeToMessages((msg) => {
       setMessages((prev) => {
         if (prev.some(m => m.timestamp === msg.timestamp && m.content === msg.content)) {
-            return prev;
+          return prev;
         }
         return [...prev, msg];
       });
     });
 
     return () => {
-      // Guaruantee clean up the listener on unmount
       unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
 
-  // Send the message text to the server. The echo will arrive via the
-  // "message" WebSocket event and be appended by subscribeToMessages.
   const handleSend = async (content: string) => {
     await sendMessage(content);
   };
@@ -64,6 +61,17 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     onLeaveSession();
   };
 
+  const handleCopySessionKey = async () => {
+    try {
+      await navigator.clipboard.writeText(sessionName);
+      setCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy session key:", error);
+    }
+  };
+
   const onlineMembers = members.filter((m) => m.online);
   const offlineMembers = members.filter((m) => !m.online);
 
@@ -71,15 +79,16 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <TitleBar showMaximize />
       <div className="chat-page" style={{ flex: 1, minHeight: 0 }}>
-      {/* Left sidebar */}
-      <aside className="chat-left-sidebar">
-        <div className="chat-logo-row">
-            <img src="/src/assets/icons/logorgb.png" width="18" height="18" />
-          <span className="chat-logo-text">quorthon</span>
-          <span className="chat-version">ver. 0.2</span>
-        </div>
 
-        <div className="chat-left-bottom">
+        {/* Left sidebar */}
+        <aside className="chat-left-sidebar">
+          <div className="chat-logo-row">
+            <img src="/src/assets/icons/logorgb.png" width="18" height="18" />
+            <span className="chat-logo-text">quorthon</span>
+            <span className="chat-version">ver. 0.2</span>
+          </div>
+
+          <div className="chat-left-bottom">
             <div className="chat-left-actions">
               <button
                 className={`chat-small-btn ${muted ? "active" : ""}`}
@@ -122,81 +131,94 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
               </button>
 
               <button
-            className="leave-session-btn"
-            type="button"
-            onClick={handleLeaveSession}
-          >
+                className="leave-session-btn"
+                type="button"
+                onClick={handleLeaveSession}
+              >
                 <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
               </button>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main chat area */}
-      <main className="chat-main">
-        <div className="chat-topbar">
-          <span className="chat-session-name">{sessionName}</span>
-
-          <div className="chat-help-wrapper">
+        {/* Main chat area */}
+        <main className="chat-main">
+          <div className="chat-topbar">
             <button
-              className="chat-help-btn"
+              className="chat-session-name"
               type="button"
-              onClick={() => setShowHelp((prev) => !prev)}
+              onClick={handleCopySessionKey}
+              title="Click to copy session key"
             >
-              ?
+              {sessionName}
             </button>
 
-            {showHelp && (
-              <div className="chat-help-popup" onClick={() => setShowHelp(false)}>
-                <div className="help-popup-content">
-                  <p>• M — mute microphone</p>
-                  <p>• H — hide / show camera</p>
-                  <p>• Call — start a voice/video call</p>
-                  <span className="help-popup-close-text">click to close</span>
-                </div>
+            {/* Copied toast */}
+            {copied && (
+              <div className="copy-toast">
+                session key copied!
               </div>
             )}
+
+            <div className="chat-help-wrapper">
+              <button
+                className="chat-help-btn"
+                type="button"
+                onClick={() => setShowHelp((prev) => !prev)}
+              >
+                ?
+              </button>
+
+              {showHelp && (
+                <div className="chat-help-popup" onClick={() => setShowHelp(false)}>
+                  <div className="help-popup-content">
+                    <p>• M — mute microphone</p>
+                    <p>• H — hide / show camera</p>
+                    <p>• Call — start a voice/video call</p>
+                    <span className="help-popup-close-text">click to close</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        <MessageList messages={messages} currentUsername={nickname} />
+          <MessageList messages={messages} currentUsername={nickname} />
+          <MessageInput currentUsername={nickname} onSend={handleSend} />
+        </main>
 
-        <MessageInput currentUsername={nickname} onSend={handleSend} />
-      </main>
+        {/* Right members sidebar */}
+        <aside className="chat-members-sidebar">
+          <div className="chat-members-header">members</div>
 
-      {/* Right members sidebar */}
-      <aside className="chat-members-sidebar">
-        <div className="chat-members-header">members</div>
+          {onlineMembers.length > 0 && (
+            <>
+              <div className="members-status-label">online</div>
+              {onlineMembers.map((member) => (
+                <div key={member.username} className="member-card">
+                  {member.username}
+                </div>
+              ))}
+            </>
+          )}
 
-        {onlineMembers.length > 0 && (
-          <>
-            <div className="members-status-label">online</div>
-            {onlineMembers.map((member) => (
-              <div key={member.username} className="member-card">
-                {member.username}
-              </div>
-            ))}
-          </>
-        )}
+          {offlineMembers.length > 0 && (
+            <>
+              <div className="members-status-label members-status-offline">offline</div>
+              {offlineMembers.map((member) => (
+                <div key={member.username} className="member-card member-card-offline">
+                  {member.username}
+                </div>
+              ))}
+            </>
+          )}
 
-        {offlineMembers.length > 0 && (
-          <>
-            <div className="members-status-label members-status-offline">offline</div>
-            {offlineMembers.map((member) => (
-              <div key={member.username} className="member-card member-card-offline">
-                {member.username}
-              </div>
-            ))}
-          </>
-        )}
-
-        <div className="chat-members-bottom">
-          <button className="call-btn" type="button">
-            call
-          </button>
-        </div>
-      </aside>
-    </div>
+          <div className="chat-members-bottom">
+            <button className="call-btn" type="button">
+              call
+            </button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
