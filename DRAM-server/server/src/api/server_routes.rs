@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::{Path, State}, routing::get};
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::server_logic::{l_add_user_to_server, l_connect_user_to_server, l_delete_user_from_server, l_set_user_nickname}, modules::server_state::ServerState};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::l_check_active_user, server_logic::{l_add_user_to_server, l_connect_user_to_server, l_delete_user_from_server, l_set_user_nickname}}, modules::server_state::ServerState};
 
 pub fn router() -> Router<ServerState> {
     Router::new()
@@ -52,6 +52,12 @@ async fn r_leave_server(State(_server_state): State<ServerState>) -> Result<Json
 }
 
 async fn r_forget_server(State(server_state): State<ServerState>, Path(user_key): Path<String>) -> Result<(), ApiError> {
+    
+    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+    
     match l_delete_user_from_server(server_state.db_pool.clone(), user_key).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e)

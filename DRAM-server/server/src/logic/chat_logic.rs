@@ -1,4 +1,4 @@
-use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::MessageObj, server_state::ServerState, user::User}};
+use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::{MessageObj, MessageType}, server_state::ServerState, user::User}};
 use axum::{extract::{WebSocketUpgrade, ws::{Message, WebSocket}}, response::IntoResponse};
 use futures_util::{SinkExt, StreamExt};
 
@@ -81,11 +81,21 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
         }
     });
 
+    let user_list= session_chat.users.read().await;
+    let json = match serde_json::to_string(&user_list.clone()) {
+        Ok(s) => s,
+        Err(e) => format!("Problem with message sending: {e}")
+    };
+    drop(user_list);
+
+    l_broadcast_message(&session_chat, MessageType::UserList, json, &user.nickname).await;
+    l_broadcast_message(&session_chat, MessageType::Connect, "".into(), &user.nickname).await;
+
     while let Some(result) = receiver.next().await {
         match result {
             Ok(msg) => match msg {
                 Message::Text(text) => {
-                    l_broadcast_message(&session_chat, text.to_string(), &user.nickname).await;
+                    l_broadcast_message(&session_chat, MessageType::Message, text.to_string(), &user.nickname).await;
                 },
                 Message::Binary(_bytes) => {}, // TODO: use this to send images. for later
                 Message::Ping(_) => {},
@@ -108,6 +118,8 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     }
 
     send_task.abort(); // it is not happening in moment, so tx.receiver_count think that it is still exits
+
+    l_broadcast_message(&session_chat, MessageType::Disconnect, "".into(), &user.nickname).await;
 
     // remove user from active_users, so user can join to other session
     let mut active_users = server_state.active_users.write().await;
@@ -136,9 +148,9 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
 }
 
-async fn l_broadcast_message(session_chat: &SessionChat, msg: String, nickname: &String) {
+async fn l_broadcast_message(session_chat: &SessionChat, m_type: MessageType,  msg: String, nickname: &String) {
     let ts = chrono::offset::Utc::now();
-    let new_msg: MessageObj = MessageObj { from: nickname.clone(), body: msg.clone(), ts: ts.timestamp() };
+    let new_msg: MessageObj = MessageObj { m_type: m_type, from: nickname.clone(), body: msg, ts: ts.timestamp() };
     let mut history = session_chat.history.write().await;
     if history.len() >= 100 { // messages limit
         history.pop_front();
