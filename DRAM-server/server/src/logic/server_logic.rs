@@ -1,10 +1,10 @@
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::{data_logic::{connection_data::{d_get_user_connections}, user_data::{d_add_user, d_get_user, d_get_user_list, d_remove_user, d_update_user}}, 
+use crate::{data_logic::{connection_data::d_get_user_connections, user_data::{d_add_user, d_get_user, d_get_user_list, d_remove_user, d_update_user}}, 
                         errors::api_error::ApiError, 
                         logic::{auth_logic::l_generate_auth_token, session_logic::{l_delete_session_by_owner_by_tx, l_forget_session_by_tx}}, 
-                        modules::user::User};
+                        modules::{active_sessions::SessionMap, user::User}};
 
 pub async fn l_add_user_to_server(db_pool: Pool<Postgres>) -> Result<String, ApiError> {
     let user_list = match d_get_user_list(db_pool.clone()).await {
@@ -42,7 +42,7 @@ pub async fn l_connect_user_to_server(db_pool: Pool<Postgres>, user_key: String)
     Ok(l_generate_auth_token())
 }
 
-pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, user_key: String) -> Result<(), ApiError> {
+pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, active_sessions: SessionMap, user_key: String) -> Result<(), ApiError> {
     let connections = match d_get_user_connections(db_pool.clone(), &user_key).await {
         Ok(c) => c,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
@@ -61,7 +61,7 @@ pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, user_key: String
             };
         }
         else if c.user_role == "owner" {
-                match l_delete_session_by_owner_by_tx(db_pool.clone(), &mut tx, &c.user_key, &c.session_key).await {
+                match l_delete_session_by_owner_by_tx(db_pool.clone(), active_sessions.clone(), &mut tx, &c.user_key, &c.session_key).await {
                 Ok(()) => (),
                 Err(e) => return Err(e)
             };
