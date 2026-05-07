@@ -1147,11 +1147,11 @@ t
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 320px;
+  width: 100%;
 }
 
 .nickname-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #e5e5e5;
   margin: 0 0 2px 0;
@@ -1164,7 +1164,16 @@ t
 }
 
 .nickname-input {
-  width: 100%;
+  width: 252px;
+  flex:   1;
+  margin-right: 2px;
+  margin-bottom: 0;
+}
+
+.nickname-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .nickname-error {
@@ -1174,12 +1183,11 @@ t
 }
 
 .nickname-confirm-btn {
-  margin-top: 4px;
-  width: auto;
-    align-self: flex-end;
-    padding: 0 28px;
+  width: 80px;
+    padding: 0 10px;
     flex: none;
     font-size: 15px;
+    white-space: nowrap;
 }
 
 /* Editable nickname in SessionsPage */
