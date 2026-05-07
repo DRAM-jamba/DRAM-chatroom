@@ -58,7 +58,7 @@ async fn r_forget_server(State(server_state): State<ServerState>, Path(user_key)
         Err(e) => return Err(e)
     }
     
-    match l_delete_user_from_server(server_state.db_pool.clone(), user_key).await {
+    match l_delete_user_from_server(server_state.db_pool.clone(), server_state.active_sessions.clone(), user_key).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
