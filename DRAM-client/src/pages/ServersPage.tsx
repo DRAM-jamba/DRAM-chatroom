@@ -151,7 +151,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
         )}
 
         <div className="sidebar-line bottom-line" />
-        <p className="version-text">ver. 0.2</p>
+        <p className="version-text">ver. 0.69</p>
       </aside>
     </div>
   );

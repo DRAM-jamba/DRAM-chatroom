@@ -101,7 +101,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           <div className="chat-logo-row">
             <img src={logoIcon} width="18" height="18" />
             <span className="chat-logo-text">quorthon</span>
-            <span className="chat-version">ver. 0.2</span>
+            <span className="chat-version">ver. 0.69</span>
           </div>
 
           <div className="chat-left-bottom">
@@ -153,7 +153,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         <main className="chat-main">
           <div className="chat-topbar">
             <div className="chat-session-key-wrapper">
-              <span className="chat-session-key-label">Session Key</span>
+              <span className="chat-session-key-label">session key</span>
               <button
                 className="chat-session-name"
                 type="button"
@@ -224,7 +224,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           )}
 
           {onlineMembers.length === 0 && offlineMembers.length === 0 && (
-            <div className="members-empty">NO MEMBERS</div>
+            <div className="members-empty">empty</div>
           )}
 
           <div className="chat-members-bottom">
