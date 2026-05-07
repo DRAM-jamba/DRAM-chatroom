@@ -1382,3 +1382,8 @@ body {
   .titlebar-close:hover {
     background: #cc0000;
 }
+.members-empty {
+  margin: 20px 0;
+  text-align: center;
+  color: #666;
+}

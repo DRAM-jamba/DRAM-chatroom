@@ -65,7 +65,7 @@ function payloadToMessage(p: MessagePayload): Message {
     content: p.body,
     timestamp: formatTimestamp(p.ts),
     date: formatDate(p.ts),
-    id: p.ts.toString()
+    id: `${p.from}-${p.ts}-${p.body}`,
   };
 }
 
@@ -116,53 +116,32 @@ export async function leaveSession(): Promise<void> {
 /**
  * Subscribes to real-time messages arriving over the WebSocket connection.
  */
-
-// TODO: validate if ts actualy works,
-// also adjust the received message object (remove ID)
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
-  return await listen<any>("message", (event) => {
-    const p = event.payload; 
+  return await listen<MessagePayload>("message", (event) => {
+    const p = event.payload;
 
     const msg: Message = {
-      authorUsername: p.from, // Map 'from' to 'authorUsername'[cite: 11]
-      content: p.body,        // Map 'body' to 'content'[cite: 11]
+      authorUsername: p.from,
+      content: p.body,
       timestamp: formatTimestamp(p.ts),
       date: formatDate(p.ts),
-      id: p.ts.toString(),    // Use the timestamp as a temporary key
+      id: `${p.from}-${p.ts}-${p.body}`,
     };
 
     onMessage(msg);
   });
-  
-  
-  const unlisten = await listen<string>("message", (event) => {
-    const raw = event.payload;
-    const colonIndex = raw.indexOf(": ");
+}
 
-    let authorUsername: string;
-    let content: string;
-
-    if (colonIndex !== -1) {
-      authorUsername = raw.slice(0, colonIndex);
-      content = raw.slice(colonIndex + 2);
-    } else {
-      authorUsername = "unknown";
-      content = raw;
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    const msg: Message = {
-      authorUsername,
-      content,
-      timestamp: formatTimestamp(now),
-      date: "Today",
-      id: now.toString(),
-    };
-
-    onMessage(msg);
+export async function subscribeToMembers(
+  onUpdate: (members: Member[]) => void
+): Promise<() => void> {
+  return await listen<SessionPayload>("session_update", (event) => {
+    const members = event.payload.participants.map((username) => ({
+      username,
+      online: true,
+    }));
+    onUpdate(members);
   });
-
-  return unlisten;
 }

@@ -7,6 +7,7 @@ import {
   sendMessage,
   leaveSession,
   subscribeToMessages,
+  subscribeToMembers,
 } from "../services/chatService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
@@ -34,28 +35,36 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Load initial messages and members from the session_update event
     getMessages().then((initialMsgs) => {
-      setMessages((prev) => {
-        if (initialMsgs.length === 0) return prev;
-        const existingTs = new Set(prev.map(m => m.timestamp));
-        const uniqueNew = initialMsgs.filter(m => !existingTs.has(m.timestamp));
-        return [...uniqueNew, ...prev];
-      });
+      if (initialMsgs.length > 0) {
+        setMessages(initialMsgs);
+      }
     });
 
-    getMembers().then(setMembers);
+    getMembers().then((initialMembers) => {
+      if (initialMembers.length > 0) {
+        setMembers(initialMembers);
+      }
+    });
 
-    const unlistenPromise = subscribeToMessages((msg) => {
+    // Subscribe to new incoming messages
+    const unlistenMsgPromise = subscribeToMessages((msg) => {
       setMessages((prev) => {
-        if (prev.some(m => m.timestamp === msg.timestamp && m.content === msg.content)) {
-          return prev;
-        }
+        // Deduplicate by id
+        if (prev.some((m) => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
     });
 
+    // Subscribe to member list updates (join/leave events)
+    const unlistenMembersPromise = subscribeToMembers((updatedMembers) => {
+      setMembers(updatedMembers);
+    });
+
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      unlistenMsgPromise.then((unlisten) => unlisten());
+      unlistenMembersPromise.then((unlisten) => unlisten());
     };
   }, []);
 
@@ -143,14 +152,17 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         {/* Main chat area */}
         <main className="chat-main">
           <div className="chat-topbar">
-            <button
-              className="chat-session-name"
-              type="button"
-              onClick={handleCopySessionKey}
-              title="Click to copy session key"
-            >
-              {sessionName}
-            </button>
+            <div className="chat-session-key-wrapper">
+              <span className="chat-session-key-label">Session Key</span>
+              <button
+                className="chat-session-name"
+                type="button"
+                onClick={handleCopySessionKey}
+                title="Click to copy session key"
+              >
+                {sessionName}
+              </button>
+            </div>
 
             {/* Copied toast */}
             {copied && (
@@ -209,6 +221,10 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                 </div>
               ))}
             </>
+          )}
+
+          {onlineMembers.length === 0 && offlineMembers.length === 0 && (
+            <div className="members-empty">NO MEMBERS</div>
           )}
 
           <div className="chat-members-bottom">
