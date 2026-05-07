@@ -18,6 +18,7 @@ import confirmIcon from "../assets/icons/confirmbtnicon.svg";
 import arrowUpIcon from "../assets/icons/arrowupicon.svg";
 import settingsIcon from "../assets/icons/settingbtnicon.svg";
 import exitIcon from "../assets/icons/exitbtnicon.svg";
+import cancelIcon from "../assets/icons/cancelbtnicon.svg";
 
 type SessionsPageProps = {
   nickname: string;
@@ -253,22 +254,24 @@ function SessionsPage({
                       type="button"
                       onClick={handleCancel}
                     >
-                      ×
+                      <img src={cancelIcon} width="16" height="16" />
                     </button>
                   </div>
-                  <input
-                    className="server-input"
-                    value={sessionNameInput}
-                    onChange={(e) => setSessionNameInput(e.target.value)}
-                    autoFocus
-                  />
-                  <button
-                    className="big-confirm-btn"
-                    type="button"
-                    onClick={handleCreateConfirm}
-                  >
-                    confirm
-                  </button>
+                  <div className="session-add-row">
+                    <input
+                      className="session-add-input"
+                      value={sessionNameInput}
+                      onChange={(e) => setSessionNameInput(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      className="session-add-confirm-btn"
+                      type="button"
+                      onClick={handleCreateConfirm}
+                    >
+                      confirm
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -314,22 +317,25 @@ function SessionsPage({
                       type="button"
                       onClick={handleCancel}
                     >
-                      ×
+                      <img src={cancelIcon} width="16" height="16" />
                     </button>
                   </div>
-                  <input
-                    className="server-input"
-                    value={sessionKeyInput}
-                    onChange={(e) => setSessionKeyInput(e.target.value)}
-                    autoFocus
-                  />
-                  <button
-                    className="big-confirm-btn"
-                    type="button"
-                    onClick={handleAddConfirm}
-                  >
-                    confirm
-                  </button>
+                  <div className="session-add-row">
+                    <input
+                      className="session-add-input"
+                      value={sessionKeyInput}
+                      onChange={(e) => setSessionKeyInput(e.target.value)}
+                      autoFocus
+                    />
+
+                    <button
+                      className="session-add-confirm-btn"
+                      type="button"
+                      onClick={handleAddConfirm}
+                    >
+                      confirm
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -31,10 +31,13 @@ function ServerCard({
 
   if (isEditing) {
     return (
-      <div className="server-card">
+      <div className="server-edit-card">
+        <div className="server-edit-header">
+          <span>Preferred server name</span>
+        </div>
         <div className="edit-box">
           <input
-            className="server-input"
+            className="server-edit-input"
             value={editedNickname}
             onChange={(e) => setEditedNickname(e.target.value)}
             placeholder="Server name"
