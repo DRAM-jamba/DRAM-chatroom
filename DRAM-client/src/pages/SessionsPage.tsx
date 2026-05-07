@@ -212,7 +212,7 @@ function SessionsPage({
                     type="button"
                     onClick={() => setShowPlusMenu(false)}
                   >
-                      ∧
+                      <img src="/src/assets/icons/arrowupicon.svg" width="16" height="16" />
                     </button>
 
                     <button

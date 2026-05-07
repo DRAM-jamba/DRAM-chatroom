@@ -372,7 +372,7 @@ async fn leave_session(
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(false).unwrap();
     window.set_maximizable(false).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 535, height: 900 })).unwrap();
+    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 360, height: 628 })).unwrap();
     Ok(())
 }
 

@@ -86,14 +86,6 @@ function SessionCard({
           {confirmAction === null && (
             <div className="server-actions">
               <button
-                className="small-btn edit-btn"
-                type="button"
-                onClick={() => setIsEditing(true)}
-              >
-                edit
-              </button>
-
-              <button
                 className="small-btn forget-btn"
                 type="button"
                 onClick={() => setConfirmAction("forget")}

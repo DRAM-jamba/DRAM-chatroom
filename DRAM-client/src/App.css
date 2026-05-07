@@ -383,12 +383,12 @@ button {
 
 .session-plus-wrapper {
   position: relative;
-  width: 46px;
+  width: 90px;
   flex-shrink: 0;
 }
 
 .session-plus-button {
-  width: 46px;
+  width: 90px;
   height: 38px;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
