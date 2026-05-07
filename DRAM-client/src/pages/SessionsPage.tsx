@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SessionCard from "../components/SessionCard";
 import {
   addSession,
@@ -18,7 +18,6 @@ import confirmIcon from "../assets/icons/confirmbtnicon.svg";
 import arrowUpIcon from "../assets/icons/arrowupicon.svg";
 import settingsIcon from "../assets/icons/settingbtnicon.svg";
 import exitIcon from "../assets/icons/exitbtnicon.svg";
-import cancelIcon from "../assets/icons/cancelbtnicon.svg";
 
 type SessionsPageProps = {
   nickname: string;
@@ -46,6 +45,8 @@ function SessionsPage({
   const [sessionNameInput, setSessionNameInput] = useState("");
   const [sessionKeyInput, setSessionKeyInput] = useState("");
   const [generatedSessionKey, setGeneratedSessionKey] = useState("");
+  const [keyCopied, setKeyCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getSessions().then(setSessions);
@@ -72,6 +73,7 @@ function SessionsPage({
     setSessionNameInput("");
     setSessionKeyInput("");
     setGeneratedSessionKey("");
+    setKeyCopied(false);
     setView("create");
   };
 
@@ -83,6 +85,7 @@ function SessionsPage({
     });
     setSessions((prev) => [...prev, result.session]);
     setGeneratedSessionKey(result.generatedKey);
+    setKeyCopied(false);
     setView("generated");
   };
 
@@ -90,12 +93,16 @@ function SessionsPage({
     setGeneratedSessionKey("");
     setSessionNameInput("");
     setSessionKeyInput("");
+    setKeyCopied(false);
     setView("list");
   };
 
   const handleCopyGeneratedKey = async () => {
     try {
       await navigator.clipboard.writeText(generatedSessionKey);
+      setKeyCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setKeyCopied(false), 2000);
     } catch (error) {
       console.error("Failed to copy session key:", error);
     }
@@ -254,24 +261,22 @@ function SessionsPage({
                       type="button"
                       onClick={handleCancel}
                     >
-                      <img src={cancelIcon} width="16" height="16" />
+                      ×
                     </button>
                   </div>
-                  <div className="session-add-row">
-                    <input
-                      className="session-add-input"
-                      value={sessionNameInput}
-                      onChange={(e) => setSessionNameInput(e.target.value)}
-                      autoFocus
-                    />
-                    <button
-                      className="session-add-confirm-btn"
-                      type="button"
-                      onClick={handleCreateConfirm}
-                    >
-                      confirm
-                    </button>
-                  </div>
+                  <input
+                    className="server-input"
+                    value={sessionNameInput}
+                    onChange={(e) => setSessionNameInput(e.target.value)}
+                    autoFocus
+                  />
+                  <button
+                    className="big-confirm-btn"
+                    type="button"
+                    onClick={handleCreateConfirm}
+                  >
+                    confirm
+                  </button>
                 </div>
               </div>
             </div>
@@ -284,15 +289,22 @@ function SessionsPage({
                   <span>Generated session key</span>
                 </div>
 
-                <div className="generated-key-row">
-                  <div className="generated-key-text">{generatedSessionKey}</div>
+                <div className="generated-key-row" style={{ position: "relative" }}>
                   <button
-                    className="copy-key-btn"
+                    className="generated-key-text"
                     type="button"
                     onClick={handleCopyGeneratedKey}
+                    title="Click to copy session key"
+                    style={{ cursor: "pointer", background: "none", border: "none", padding: 0, textAlign: "left", width: "100%" }}
                   >
-                    copy
+                    {generatedSessionKey}
                   </button>
+
+                  {keyCopied && (
+                    <div className="copy-toast">
+                      session key copied!
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -317,25 +329,22 @@ function SessionsPage({
                       type="button"
                       onClick={handleCancel}
                     >
-                      <img src={cancelIcon} width="16" height="16" />
+                      ×
                     </button>
                   </div>
-                  <div className="session-add-row">
-                    <input
-                      className="session-add-input"
-                      value={sessionKeyInput}
-                      onChange={(e) => setSessionKeyInput(e.target.value)}
-                      autoFocus
-                    />
-
-                    <button
-                      className="session-add-confirm-btn"
-                      type="button"
-                      onClick={handleAddConfirm}
-                    >
-                      confirm
-                    </button>
-                  </div>
+                  <input
+                    className="server-input"
+                    value={sessionKeyInput}
+                    onChange={(e) => setSessionKeyInput(e.target.value)}
+                    autoFocus
+                  />
+                  <button
+                    className="big-confirm-btn"
+                    type="button"
+                    onClick={handleAddConfirm}
+                  >
+                    confirm
+                  </button>
                 </div>
               </div>
             </div>
