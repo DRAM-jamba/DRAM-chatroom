@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { submitNickname, saveNickname } from "../services/nicknameService";
 import TitleBar from "../components/TitleBar";
+import logoIcon from "../assets/icons/logorgb.png";
 
 type NicknamePageProps = {
   onNicknameSet: (nickname: string) => void;
@@ -45,7 +46,7 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
   <TitleBar />
   <aside className="sidebar">
     <h1 className="logo">
-          <img src="/src/assets/icons/logorgb.png" width="24" height="24" />
+          <img src={logoIcon} width="24" height="24" />
           quorthon
         </h1>
     <div className="sidebar-line" />

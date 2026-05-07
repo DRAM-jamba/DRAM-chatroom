@@ -10,6 +10,13 @@ import {
 } from "../services/chatService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
+import micIcon from "../assets/icons/micbtnicon.svg";
+import micOffIcon from "../assets/icons/micoffbtnicon.svg";
+import headphonesIcon from "../assets/icons/headphonesbtnicon.svg";
+import headphonesOffIcon from "../assets/icons/headphonesoffbtnicon.svg";
+import settingsIcon from "../assets/icons/settingbtnicon.svg";
+import exitIcon from "../assets/icons/exitbtnicon.svg";
+import logoIcon from "../assets/icons/logorgb.png";
 
 type ChatPageProps = {
   sessionName: string;
@@ -83,7 +90,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         {/* Left sidebar */}
         <aside className="chat-left-sidebar">
           <div className="chat-logo-row">
-            <img src="/src/assets/icons/logorgb.png" width="18" height="18" />
+            <img src={logoIcon} width="18" height="18" />
             <span className="chat-logo-text">quorthon</span>
             <span className="chat-version">ver. 0.2</span>
           </div>
@@ -101,11 +108,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                   });
                 }}
               >
-                <img
-                  src={muted ? "/src/assets/icons/micoffbtnicon.svg" : "/src/assets/icons/micbtnicon.svg"}
-                  width="16"
-                  height="16"
-                />
+                <img src={muted ? micOffIcon : micIcon} width="16" height="16" />
               </button>
 
               <button
@@ -119,15 +122,11 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                   });
                 }}
               >
-                <img
-                  src={hidden ? "/src/assets/icons/headphonesoffbtnicon.svg" : "/src/assets/icons/headphonesbtnicon.svg"}
-                  width="16"
-                  height="16"
-                />
+                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" />
               </button>
 
               <button className="chat-settings-btn" type="button">
-                <img src="/src/assets/icons/settingbtnicon.svg" width="16" height="16" />
+                <img src={settingsIcon} width="16" height="16" />
               </button>
 
               <button
@@ -135,7 +134,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                 type="button"
                 onClick={handleLeaveSession}
               >
-                <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
+                <img src={exitIcon} width="16" height="16" />
               </button>
             </div>
           </div>

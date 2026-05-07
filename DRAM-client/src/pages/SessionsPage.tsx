@@ -13,6 +13,11 @@ import {
 import { updateNickname } from "../services/nicknameService";
 import type { Session } from "../types/session";
 import TitleBar from "../components/TitleBar";
+import logoIcon from "../assets/icons/logorgb.png";
+import confirmIcon from "../assets/icons/confirmbtnicon.svg";
+import arrowUpIcon from "../assets/icons/arrowupicon.svg";
+import settingsIcon from "../assets/icons/settingbtnicon.svg";
+import exitIcon from "../assets/icons/exitbtnicon.svg";
 
 type SessionsPageProps = {
   nickname: string;
@@ -154,7 +159,7 @@ function SessionsPage({
       <TitleBar />
       <aside className="sidebar session-sidebar">
         <h1 className="logo">
-          <img src="/src/assets/icons/logorgb.png" width="24" height="24" />
+          <img src={logoIcon} width="24" height="24" />
           quorthon
         </h1>
 
@@ -179,7 +184,7 @@ function SessionsPage({
                   onClick={handleNicknameConfirm}
                   title="Confirm nickname"
                 >
-                  <img src="/src/assets/icons/confirmbtnicon.svg" width="16" height="16" />
+                  <img src={confirmIcon} width="16" height="16" />
                 </button>
               </div>
             ) : (
@@ -212,7 +217,7 @@ function SessionsPage({
                     type="button"
                     onClick={() => setShowPlusMenu(false)}
                   >
-                      <img src="/src/assets/icons/arrowupicon.svg" width="16" height="16" />
+                      <img src={arrowUpIcon} width="16" height="16" />
                     </button>
 
                     <button
@@ -380,7 +385,7 @@ function SessionsPage({
             </div>
 
             <button className="settings-btn" type="button">
-              <img src="/src/assets/icons/settingbtnicon.svg" width="16" height="16" />
+              <img src={settingsIcon} width="16" height="16" />
             </button>
 
             {onDisconnect && (
@@ -397,7 +402,7 @@ function SessionsPage({
                   }
                 }}
               >
-                <img src="/src/assets/icons/exitbtnicon.svg" width="16" height="16" />
+                <img src={exitIcon} width="16" height="16" />
               </button>
             )}
           </div>

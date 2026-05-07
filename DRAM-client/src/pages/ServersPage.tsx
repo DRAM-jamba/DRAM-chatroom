@@ -9,6 +9,7 @@ import {
 } from "../services/serverService";
 import type { Server } from "../types/server";
 import TitleBar from "../components/TitleBar";
+import logoIcon from "../assets/icons/logorgb.png";
 
 type ServersPageProps = {
   onOpenSessions?: () => void;
@@ -72,7 +73,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
       <TitleBar />
       <aside className="sidebar">
         <h1 className="logo">
-          <img src="/src/assets/icons/logorgb.png" width="24" height="24" />
+          <img src={logoIcon} width="24" height="24" />
           quorthon
         </h1>
 

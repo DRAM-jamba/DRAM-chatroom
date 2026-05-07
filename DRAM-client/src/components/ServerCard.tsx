@@ -1,5 +1,9 @@
 import { useState } from "react";
 import type { Server } from "../types/server";
+import arrowUpIcon from "../assets/icons/arrowupicon.svg";
+import arrowDownIcon from "../assets/icons/arrowdownicon.svg";
+import confirmIcon from "../assets/icons/confirmbtnicon.svg";
+import cancelIcon from "../assets/icons/cancelbtnicon.svg";
 
 type ServerCardProps = {
   server: Server;
@@ -57,7 +61,7 @@ function ServerCard({
       >
         <span className="server-title">{server.name}</span>
         <img
-          src={expanded ? "/src/assets/icons/arrowupicon.svg" : "/src/assets/icons/arrowdownicon.svg"}
+          src={expanded ? arrowUpIcon : arrowDownIcon}
           width="16"
           height="16"
         />
@@ -108,7 +112,7 @@ function ServerCard({
                   onRemove(server.id);
                 }}
               >
-                <img src="/src/assets/icons/confirmbtnicon.svg" width="14" height="14" />
+                <img src={confirmIcon} width="14" height="14" />
               </button>
 
               <button
@@ -116,7 +120,7 @@ function ServerCard({
                 type="button"
                 onClick={() => setConfirmForget(false)}
               >
-                <img src="/src/assets/icons/cancelbtnicon.svg" width="14" height="14" />
+                <img src={cancelIcon} width="14" height="14" />
               </button>
             </div>
           )}

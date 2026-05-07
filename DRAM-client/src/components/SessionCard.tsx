@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { Session } from "../types/session";
-
+import arrowUpIcon from "../assets/icons/arrowupicon.svg";
+import arrowDownIcon from "../assets/icons/arrowdownicon.svg";
+import confirmIcon from "../assets/icons/confirmbtnicon.svg";
+import cancelIcon from "../assets/icons/cancelbtnicon.svg";
+  
 type SessionCardProps = {
   session: Session;
   onSaveEdit: (id: string, name: string) => void;
@@ -75,7 +79,7 @@ function SessionCard({
       >
         <span className="server-title">{session.name}</span>
         <img
-          src={expanded ? "/src/assets/icons/arrowupicon.svg" : "/src/assets/icons/arrowdownicon.svg"}
+          src={expanded ? arrowUpIcon : arrowDownIcon}
           width="16"
           height="16"
         />
@@ -123,7 +127,7 @@ function SessionCard({
                   onRemove(session.id);
                 }}
               >
-                <img src="/src/assets/icons/confirmbtnicon.svg" width="14" height="14" />
+                <img src={confirmIcon} width="14" height="14" />
               </button>
 
               <button
@@ -131,7 +135,7 @@ function SessionCard({
                 type="button"
                 onClick={() => setConfirmAction(null)}
               >
-                <img src="/src/assets/icons/cancelbtnicon.svg" width="14" height="14" />
+                <img src={cancelIcon} width="14" height="14" />
               </button>
             </div>
           )}
