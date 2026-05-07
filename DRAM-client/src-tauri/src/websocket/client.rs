@@ -6,7 +6,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
-use crate::events::{MessagePayload, SessionPayload, emit_message};
+use crate::events::{MessageType, MessagePayload, SessionPayload, MessageObj, emit_message, emit_member_update_joined, emit_member_update_disconnected, emit_session_update};
 use crate::events;
 use crate::state::Session;
 
@@ -31,13 +31,26 @@ impl WsClient {
             while let Some(Ok(msg)) = stream.next().await {
                 match msg {
                 Message::Text(text) => {
-                    match serde_json::from_str::<MessagePayload>(&text) {
-                        Ok(payload) => {
-                            println!("Received message!");
-                            emit_message(&app_clone, payload);
+                    match serde_json::from_str::<MessageObj>(&text) {
+                        Ok(obj) => {
+                            match obj.m_type { 
+                                MessageType::Message => {
+                                    emit_message(&app_clone, MessagePayload {
+                                        from: obj.from,
+                                        body: obj.body,
+                                        ts: obj.ts,
+                                    });
+                                }
+                                MessageType::Connect => {
+                                    emit_member_update_joined(&app_clone, obj);
+                                }
+                                MessageType::Disconnect => {
+                                    emit_member_update_disconnected(&app_clone, obj);
+                                }
+                            }
                         }
                         Err(e) => {
-                            eprintln!("Failed to parse incoming message: {} | Error: {}", text, e);
+                            eprintln!("Parse error: {} | Raw: {}", e, text);
                         }
                     }
                 }
