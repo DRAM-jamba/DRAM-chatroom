@@ -33,6 +33,7 @@ impl WsClient {
                         Ok(obj) => {
                             match obj.m_type {
                                 MessageType::Message => {
+                                    println!("Emitting message: {:?}", obj);
                                     emit_message(&app_clone, MessagePayload {
                                         from: obj.from,
                                         body: obj.body,
