@@ -42,8 +42,10 @@ impl WsClient {
                                 }
                                 MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
                                     if obj.body.is_empty() {
+                                        println!("Emitting user list: {:?}", obj);
                                         return; 
                                     }
+                                    println!("Emitting user list: {:?}", obj);
                                     match serde_json::from_str::<Vec<String>>(&obj.body) {
                                         Ok(participants) => {
                                             emit_member_list(&app_clone, participants);
