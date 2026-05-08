@@ -158,6 +158,7 @@ button {
     background: transparent;
       border: 1px solid #2a2a2a;
       color: #aaaaaa;
+      width: 75px;
     }
     
     .edit-btn:hover {
@@ -170,6 +171,7 @@ button {
     background: transparent;
       border: 1px solid #3a1a1a;
       color: #cc6666;
+      width: 85px;
     }
     
     .forget-btn:hover {
@@ -193,6 +195,7 @@ button {
     background: transparent;
       border: 1px solid #1a3a2a;
       color: #44cc88;
+      width: 110px;
     }
     
     .connect-btn:hover {
@@ -202,7 +205,10 @@ button {
 }
 
 .edit-box {
-  padding: 10px;
+  padding-top: 3px;
+  padding-bottom: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .server-input {
@@ -224,6 +230,24 @@ button {
   box-shadow: 0 0 6px rgba(0, 170, 255, 0.2);
 }
 
+.server-edit-input {
+  width: 100%;
+  height: 38px;
+  border-radius: 6px;
+  border: 1px solid #222;
+  background: #101010;
+  color: white;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.server-edit-header {
+  padding: 8px 10px 0;
+  color: #e5e5e5;
+  font-size: 14px;
+}
 .trusted-text {
   margin: 0 0 8px;
   text-align: center;
@@ -351,6 +375,17 @@ button {
   box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
 }
 
+.server-edit-card {
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  border-color: #00aaff;
+  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
+  margin-bottom: 12px;
+  background: rgba(15, 15, 15, 0.95);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
 .add-server-box {
   border: 1px solid #2a2a2a;
   border-color: #00aaff;
@@ -383,12 +418,12 @@ button {
 
 .session-plus-wrapper {
   position: relative;
-  width: 46px;
+  width: 90px;
   flex-shrink: 0;
 }
 
 .session-plus-button {
-  width: 46px;
+  width: 90px;
   height: 38px;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
@@ -423,10 +458,13 @@ button {
   height: 28px;
   border: none;
   color: #e5e5e5;
-    border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
     background: #1a1a1a;
   cursor: pointer;
   font-size: 18px;
+  display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .session-plus-option {
@@ -441,6 +479,48 @@ button {
 
 .session-plus-option:hover {
   background: #202020;
+}
+
+.session-add-input {
+  width: 232px;
+  height: 38px;
+  border-radius: 6px;
+  border: 1px solid #222;
+  background: #101010;
+  color: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  margin-top: 8px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.session-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-add-confirm-btn {
+  flex: 1;
+  height: 38px;
+  width: 140px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid #1a3a2a;
+  margin-bottom: 10px;
+  margin-top: 8px;
+  margin-right: 10px;
+  color: #44cc88;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.session-add-confirm-btn:hover {
+  border-color: #00cc77;
+  color: #00ee88;
+  box-shadow: 0 0 6px rgba(0, 200, 120, 0.2);
 }
 
 .session-delete-row {
@@ -657,6 +737,9 @@ button {
   position: relative;
   flex: 1;
   min-height: 0;
+  display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .session-create-overlay {
@@ -696,9 +779,11 @@ button {
 
 .create-session-box .big-confirm-btn,
 .generated-session-box .big-confirm-btn {
-  width: 100%;
-  border-radius: 0;
-  height: 36px;
+  display: block;
+    width: calc(100% - 20px);
+    margin: 0 10px 12px;
+    border-radius: 6px;
+    height: 38px;
   font-size: 16px;
 }
 
@@ -850,9 +935,54 @@ button {
 }
 
 .chat-session-name {
-  font-size: 16px;
-  color: #e8e8e8;
+  font-size: 14px;
+    color: #a0a0a0;
   font-weight: 400;
+  background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 3px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  
+  .chat-session-name:hover {
+    border-color: #2a2a2a;
+    color: #d0d0d0;
+  }
+  
+  .copy-toast {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 1px solid #00aaff;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: #00aaff;
+    box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+    z-index: 50;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: toast-fade-in 0.15s ease;
+  }
+  
+  @keyframes toast-fade-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-4px);
+    }
+  
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
 }
 
 .chat-help-wrapper {
@@ -952,14 +1082,16 @@ t
 
 .message-author {
   font-size: 15px;
-  color: #c8c8c8;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .message-author-own {
-  color: #7c4dff;
+  color: #00aaff;
 }
 
+.message-author-other {
+  color: #e0e0e0;
+}
 .message-time {
   font-size: 12px;
   color: #555;
@@ -968,6 +1100,7 @@ t
 .message-content {
   margin: 0;
   font-size: 15px;
+  font-weight: 400;
   color: #d8d8d8;
   line-height: 1.5;
   word-break: break-word;
@@ -1091,11 +1224,11 @@ t
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 320px;
+  width: 100%;
 }
 
 .nickname-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #e5e5e5;
   margin: 0 0 2px 0;
@@ -1108,7 +1241,16 @@ t
 }
 
 .nickname-input {
-  width: 100%;
+  width: 252px;
+  flex:   1;
+  margin-right: 2px;
+  margin-bottom: 0;
+}
+
+.nickname-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .nickname-error {
@@ -1118,12 +1260,11 @@ t
 }
 
 .nickname-confirm-btn {
-  margin-top: 4px;
-  width: auto;
-    align-self: flex-end;
-    padding: 0 28px;
+  width: 80px;
+    padding: 0 10px;
     flex: none;
     font-size: 15px;
+    white-space: nowrap;
 }
 
 /* Editable nickname in SessionsPage */
@@ -1240,4 +1381,10 @@ body {
   
   .titlebar-close:hover {
     background: #cc0000;
+}
+.members-empty {
+  margin: 20px 0;
+  text-align: center;
+  color: #666;
+  font-size: 15px;
 }

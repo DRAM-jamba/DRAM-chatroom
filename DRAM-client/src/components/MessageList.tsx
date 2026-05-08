@@ -7,10 +7,12 @@ type MessageListProps = {
 };
 
 function MessageList({ messages, currentUsername }: MessageListProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   // Group messages: inject date separators when the date changes
@@ -34,7 +36,7 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
   }
 
   return (
-    <div className="message-list">
+    <div className="message-list" ref={listRef}>
       {items.map((item, i) => {
         if (item.type === "separator") {
           return (
@@ -53,7 +55,7 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
           <div key={message.id} className={`message-item ${showAuthor ? "message-item-with-author" : ""}`}>
             {showAuthor && (
               <div className="message-author-row">
-                <span className={`message-author ${isOwn ? "message-author-own" : ""}`}>
+                <span className={`message-author ${isOwn ? "message-author-own" : "message-author-other"}`}>
                   {message.authorUsername}
                 </span>
                 <span className="message-time">{message.timestamp}</span>
@@ -63,7 +65,6 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
           </div>
         );
       })}
-      <div ref={bottomRef} />
     </div>
   );
 }
