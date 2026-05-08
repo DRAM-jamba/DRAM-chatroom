@@ -1,5 +1,9 @@
 import { useState } from "react";
 import type { Server } from "../types/server";
+import arrowUpIcon from "../assets/icons/arrowupicon.svg";
+import arrowDownIcon from "../assets/icons/arrowdownicon.svg";
+import confirmIcon from "../assets/icons/confirmbtnicon.svg";
+import cancelIcon from "../assets/icons/cancelbtnicon.svg";
 
 type ServerCardProps = {
   server: Server;
@@ -16,6 +20,7 @@ function ServerCard({
 }: ServerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [confirmForget, setConfirmForget] = useState(false);
   const [editedNickname, setEditedNickname] = useState(server.name);
 
   const handleConfirmEdit = () => {
@@ -26,10 +31,13 @@ function ServerCard({
 
   if (isEditing) {
     return (
-      <div className="server-card">
+      <div className="server-edit-card">
+        <div className="server-edit-header">
+          <span>Preferred server name</span>
+        </div>
         <div className="edit-box">
           <input
-            className="server-input"
+            className="server-edit-input"
             value={editedNickname}
             onChange={(e) => setEditedNickname(e.target.value)}
             placeholder="Server name"
@@ -56,7 +64,7 @@ function ServerCard({
       >
         <span className="server-title">{server.name}</span>
         <img
-          src={expanded ? "/src/assets/icons/arrowupicon.svg" : "/src/assets/icons/arrowdownicon.svg"}
+          src={expanded ? arrowUpIcon : arrowDownIcon}
           width="16"
           height="16"
         />
@@ -66,34 +74,59 @@ function ServerCard({
         <div className="server-details">
           <p className="server-ip">IP: {server.ipAddress}</p>
 
-          <div className="server-actions">
-            <button
-              className="small-btn edit-btn"
-              type="button"
-              onClick={() => {
-                setEditedNickname(server.name);
-                setIsEditing(true);
-              }}
-            >
-              edit
-            </button>
+          {!confirmForget ? (
+            <div className="server-actions">
+              <button
+                className="small-btn edit-btn"
+                type="button"
+                onClick={() => {
+                  setEditedNickname(server.name);
+                  setIsEditing(true);
+                }}
+              >
+                edit
+              </button>
 
-            <button
-              className="small-btn forget-btn"
-              type="button"
-              onClick={() => onRemove(server.id)}
-            >
-              forget
-            </button>
+              <button
+                className="small-btn forget-btn"
+                type="button"
+                onClick={() => setConfirmForget(true)}
+              >
+                forget
+              </button>
 
-            <button
-              className="small-btn connect-btn"
-              type="button"
-              onClick={() => onConnect(server.ipAddress)}
-            >
-              connect
-            </button>
-          </div>
+              <button
+                className="small-btn connect-btn"
+                type="button"
+                onClick={() => onConnect(server.ipAddress)}
+              >
+                connect
+              </button>
+            </div>
+          ) : (
+            <div className="session-delete-row">
+              <span className="session-delete-text">forget server?</span>
+
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => {
+                  setConfirmForget(false);
+                  onRemove(server.id);
+                }}
+              >
+                <img src={confirmIcon} width="14" height="14" />
+              </button>
+
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setConfirmForget(false)}
+              >
+                <img src={cancelIcon} width="14" height="14" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
