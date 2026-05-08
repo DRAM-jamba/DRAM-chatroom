@@ -40,6 +40,9 @@ impl WsClient {
                                     });
                                 }
                                 MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
+                                    if obj.body.is_empty() {
+                                        return; 
+                                    }
                                     match serde_json::from_str::<Vec<String>>(&obj.body) {
                                         Ok(participants) => {
                                             emit_member_list(&app_clone, participants);
