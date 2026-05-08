@@ -7,6 +7,7 @@ pub enum MessageType {
     Message,
     Connect,
     Disconnect,
+    UserList,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -17,7 +18,6 @@ pub struct MessageObj {
     pub ts: i64,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MessagePayload {
     pub from: String,
@@ -29,27 +29,22 @@ pub struct MessagePayload {
 pub struct SessionPayload {
     pub session_id: String,
     pub participants: Vec<String>,
-    pub chat_log:     Vec<MessagePayload>,
+    pub chat_log: Vec<MessagePayload>,
+}
+
+// Helper for simple member updates
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MemberListPayload {
+    pub participants: Vec<String>,
 }
 
 pub fn emit_message(app: &AppHandle, payload: MessagePayload) {
     let _ = app.emit("message", payload);
 }
 
-pub fn emit_joined_session(app: &AppHandle) {
-    let _ = app.emit("joined_session", ());
-}
-
-pub fn emit_member_list(app: &AppHandle, payload: MessageObj) {
-    let _ = app.emit("member_list", payload);
-}
-
-pub fn emit_member_update_joined(app: &AppHandle, payload: MessageObj) {
-    let _ = app.emit("member_update_joined", payload);
-}
-
-pub fn emit_member_update_disconnected(app: &AppHandle, payload: MessageObj) {
-    let _ = app.emit("member_update_disconnected", payload);
+// This matches what subscribeToMembers in chatService.ts expects
+pub fn emit_member_list(app: &AppHandle, participants: Vec<String>) {
+    let _ = app.emit("member_list", MemberListPayload { participants });
 }
 
 pub fn emit_session_update(app: &AppHandle, payload: SessionPayload) {
@@ -58,8 +53,4 @@ pub fn emit_session_update(app: &AppHandle, payload: SessionPayload) {
 
 pub fn emit_disconnected(app: &AppHandle) {
     let _ = app.emit("disconnected", ());
-}
-
-pub fn emit_connected(app: &AppHandle) {
-    let _ = app.emit("connected", ());
 }

@@ -6,9 +6,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
-use crate::events::{MessageType, MessagePayload, SessionPayload, MessageObj, emit_message, emit_member_update_joined, emit_member_update_disconnected, emit_session_update};
-use crate::events;
-use crate::state::Session;
+use crate::events::{self, MessageType, MessagePayload, MessageObj, emit_message, emit_member_list};
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
@@ -33,7 +31,7 @@ impl WsClient {
                 Message::Text(text) => {
                     match serde_json::from_str::<MessageObj>(&text) {
                         Ok(obj) => {
-                            match obj.m_type { 
+                            match obj.m_type {
                                 MessageType::Message => {
                                     emit_message(&app_clone, MessagePayload {
                                         from: obj.from,
@@ -41,11 +39,15 @@ impl WsClient {
                                         ts: obj.ts,
                                     });
                                 }
-                                MessageType::Connect => {
-                                    emit_member_update_joined(&app_clone, obj);
-                                }
-                                MessageType::Disconnect => {
-                                    emit_member_update_disconnected(&app_clone, obj);
+                                MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
+                                    match serde_json::from_str::<Vec<String>>(&obj.body) {
+                                        Ok(participants) => {
+                                            emit_member_list(&app_clone, participants);
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Failed to parse member list: {}", e);
+                                        }
+                                    }
                                 }
                             }
                         }

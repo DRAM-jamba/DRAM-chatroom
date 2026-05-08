@@ -137,7 +137,7 @@ export async function subscribeToMessages(
 export async function subscribeToMembers(
   onUpdate: (members: Member[]) => void
 ): Promise<() => void> {
-  return await listen<SessionPayload>("session_update", (event) => {
+  return await listen<SessionPayload>("member_list", (event) => {
     const members = event.payload.participants.map((username) => ({
       username,
       online: true,
