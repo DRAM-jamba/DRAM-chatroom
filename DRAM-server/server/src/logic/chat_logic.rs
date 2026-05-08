@@ -88,8 +88,7 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     };
     drop(user_list);
 
-    l_broadcast_message(&session_chat, MessageType::UserList, json, &user.nickname).await;
-    l_broadcast_message(&session_chat, MessageType::Connect, "".into(), &user.nickname).await;
+    l_broadcast_message(&session_chat, MessageType::Connect, json, &user.nickname).await;
 
     while let Some(result) = receiver.next().await {
         match result {
@@ -119,12 +118,18 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
     send_task.abort(); // it is not happening in moment, so tx.receiver_count think that it is still exits
 
-    l_broadcast_message(&session_chat, MessageType::Disconnect, "".into(), &user.nickname).await;
+    
 
     // remove user from active_users, so user can join to other session
     let mut active_users = server_state.active_users.write().await;
     active_users.remove(&user.user_key);
+    let json = match serde_json::to_string(&active_users.clone()) {
+        Ok(s) => s,
+        Err(e) => format!("Problem with message sending: {e}")
+    };
     drop(active_users);
+
+    l_broadcast_message(&session_chat, MessageType::Disconnect, json, &user.nickname).await;
 
     // remove user from session users list
     let mut s_users = session_chat.users.write().await;

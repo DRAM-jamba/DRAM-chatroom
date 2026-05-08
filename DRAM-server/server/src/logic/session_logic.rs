@@ -1,7 +1,7 @@
 use sqlx::{Pool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::{data_logic::{connection_data::{d_add_connection, d_get_user_role, d_get_user_sessions, d_remove_all_connections_to_session, d_remove_connection}, session_data::{d_add_session, d_get_session_list, d_remove_session}}, errors::api_error::ApiError, modules::{connection::Connection, session::{Session, SessionRole}}};
+use crate::{data_logic::{connection_data::{d_add_connection, d_get_user_role, d_get_user_sessions, d_remove_all_connections_to_session, d_remove_connection}, session_data::{d_add_session, d_get_session_list, d_remove_session}}, errors::api_error::ApiError, logic::auth_logic::l_check_active_session, modules::{active_sessions::SessionMap, connection::Connection, session::{Session, SessionRole}}};
 
 pub async fn l_get_session_list(db_pool: Pool<Postgres>, user_key: &String) -> Result<Vec<SessionRole>, ApiError> {
     let user_sessions = match d_get_user_sessions(db_pool.clone(), &user_key).await {
@@ -114,7 +114,12 @@ pub async fn l_forget_session_by_tx(db_pool: Pool<Postgres>, mut tx: &mut Transa
     }
 }
 
-pub async fn l_delete_session_by_owner(db_pool: Pool<Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+pub async fn l_delete_session_by_owner(db_pool: Pool<Postgres>, active_sessions: SessionMap, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+    
+    match l_check_active_session(active_sessions, &session_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
     
     let connection = match d_get_user_role(db_pool.clone(), &user_key, &session_key).await {
         Ok(c) => c,
@@ -148,8 +153,13 @@ pub async fn l_delete_session_by_owner(db_pool: Pool<Postgres>, user_key: &Strin
     Ok(())
 }
 
-pub async fn l_delete_session_by_owner_by_tx(db_pool: Pool<Postgres>, mut tx: &mut Transaction<'_, Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
+pub async fn l_delete_session_by_owner_by_tx(db_pool: Pool<Postgres>, active_sessions: SessionMap, mut tx: &mut Transaction<'_, Postgres>, user_key: &String, session_key: &String) -> Result<(), ApiError> {
     
+    match l_check_active_session(active_sessions, &session_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+
     let connection = match d_get_user_role(db_pool.clone(), &user_key, &session_key).await {
         Ok(c) => c,
         Err(e) => return Err(ApiError::InvalidInput(e.to_string()))

@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum MessageType {
     Message,
     Connect,
-    Disconnect,
-    UserList
+    Disconnect
 }
 
 #[derive(Serialize, Deserialize, Clone)]

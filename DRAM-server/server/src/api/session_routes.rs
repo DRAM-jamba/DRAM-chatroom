@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::{Path, State, WebSocketUpgrade}, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{auth_logic::{l_check_active_session, l_check_active_user}, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::server_state::ServerState};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::{l_check_active_user}, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::server_state::ServerState};
 
 pub fn router() -> Router<ServerState> {
     Router::new() // move user_key to body of request
@@ -99,13 +99,8 @@ async fn r_delete_session(State(server_state): State<ServerState>,
         Ok(()) => (),
         Err(e) => return Err(e)
     }
-
-    match l_check_active_session(server_state.active_sessions.clone(), &session_key).await {
-        Ok(()) => (),
-        Err(e) => return Err(e)
-    }
     
-    match l_delete_session_by_owner(server_state.db_pool.clone(), &user_key, &session_key).await {
+    match l_delete_session_by_owner(server_state.db_pool.clone(), server_state.active_sessions.clone(), &user_key, &session_key).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }
