@@ -1,39 +1,11 @@
 use tauri::AppHandle;
-use crate::websocket::WsClient;
 use tauri_plugin_store::StoreExt;
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PersistedServer {
-    pub id: String,
-    #[serde(rename = "ipAddress")]
-    pub ip: String,
-    #[serde(rename = "name")]
-    pub server_name: String,
-    pub user_key: String,
-    pub user_nickname: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Session {
-    pub id: String,
-    pub name: String,
-    pub user_role: String,
-}
-
-#[derive(Deserialize)]
-pub struct SessionList {
-    pub user_sessions: Vec<Session>,
-}
-
-#[derive(Deserialize)]
-pub struct SessionKey {
-    pub session_key: String,
-}
+use crate::models::PersistedServer;
+use crate::client::WsClient;
 
 #[derive(Debug, Clone)]
 pub enum ConnectionState {

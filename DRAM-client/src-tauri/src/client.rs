@@ -1,12 +1,12 @@
 use futures_util::{SinkExt, StreamExt};
-use serde_json::ser;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
-use crate::events::{self, MessageType, MessagePayload, MessageObj, emit_message, emit_member_list};
+use crate::events::{self, emit_message, emit_member_list};
+use crate::models::{MessageObj, MessageType, MessagePayload};
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
@@ -82,15 +82,6 @@ impl WsClient {
             .lock()
             .await
             .send(Message::Text(msg.to_string().into()))
-            .await
-            .map_err(|e| AppError::Network(e.to_string()))
-    }
-
-    pub async fn ping(&self) -> Result<(), AppError> {
-        self.sink
-            .lock()
-            .await
-            .send(Message::Ping(vec![].into()))
             .await
             .map_err(|e| AppError::Network(e.to_string()))
     }

@@ -1,20 +1,23 @@
 use crate::error::AppError;
-use crate::state::{AppState, ConnectionState, SessionKey, SessionState};
+use crate::state::AppState;
 use crate::api::ServerApi;
+use crate::models::{PersistedServer, Session, SessionKey, SessionList};
+use crate::state::{ConnectionState, SessionState};
+
 use tauri::{AppHandle, State, http, ipc};
 use tauri::Manager;
-use tokio_tungstenite::tungstenite::handshake::server;
 
 mod error;
 mod events;
 mod state;
 mod api;
-pub mod websocket;
+mod client;
+mod models;
 
 // Helper functions
 async fn get_server_context(
     state: &State<'_, AppState>
-) -> Result<(String, state::PersistedServer), AppError> {
+) -> Result<(String, models::PersistedServer), AppError> {
     let ip = state.current_ip.lock().await
         .as_ref()
         .cloned()
@@ -138,13 +141,13 @@ async fn set_nickname(
 #[tauri::command]
 async fn get_sessions(
     state: State<'_, AppState>,
-) -> Result<Vec<state::Session>, AppError> {
+) -> Result<Vec<Session>, AppError> {
     let (ip, server) = get_server_context(&state).await?;
     let api = ServerApi::new(&format!("http://{}", ip));
     
     let response = http_get(&api.session_list(&server.user_key)).await?;
     
-    let json_response: state::SessionList = response.json().await
+    let json_response: SessionList = response.json().await
         .map_err(|e| AppError::Protocol(format!("Invalid session list format: {}", e)))?;
     
     Ok(json_response.user_sessions)
@@ -189,7 +192,7 @@ async fn connect_session(
     let api = ServerApi::new(&format!("http://{}", ip));
 
     let ws_url = api.ws(&server.user_key, &session_key);
-    let ws_client = websocket::WsClient::connect(&ws_url, app.clone())
+    let ws_client = client::WsClient::connect(&ws_url, app.clone())
         .await
         .map_err(|e| AppError::Network(format!("Failed to open websocket: {}", e)))?;
 
@@ -269,7 +272,7 @@ async fn send_message(
 #[tauri::command]
 async fn get_servers(
     state: State<'_, AppState>
-) -> Result<Vec<state::PersistedServer>, AppError> {
+) -> Result<Vec<PersistedServer>, AppError> {
     Ok(state.servers.lock().await.clone())
 }
 
