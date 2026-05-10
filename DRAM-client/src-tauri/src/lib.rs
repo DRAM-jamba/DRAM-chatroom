@@ -2,9 +2,9 @@ use crate::error::AppError;
 use crate::state::AppState;
 use crate::api::ServerApi;
 use crate::models::{PersistedServer, Session, SessionKey, SessionList};
-use crate::state::{ConnectionState, SessionState};
+use crate::state::{ServerConnectionState, SessionState};
 
-use tauri::{AppHandle, State, http, ipc};
+use tauri::{AppHandle, State};
 use tauri::Manager;
 
 mod error;
@@ -18,7 +18,7 @@ mod models;
 async fn get_server_context(
     state: &State<'_, AppState>
 ) -> Result<(String, models::PersistedServer), AppError> {
-    let ip = state.current_ip.lock().await
+    let ip = state.get_current_ip().await
         .as_ref()
         .cloned()
         .ok_or_else(|| AppError::Session("Not connected to server".into()))?;
@@ -56,8 +56,8 @@ async fn add_server(
         .to_string();
     let temp_nick = "".to_string();
 
-    *state.current_ip.lock().await = Some(ip.clone());
-    *state.connection.lock().await = ConnectionState::JoinedServer;
+    state.set_connection_ip(ip.clone()).await;
+    state.set_connection_state(ServerConnectionState::Connected).await;
     
     state.add_server(ip, temp_nick, user_key).await
         .map_err(|e| AppError::Internal(format!("Failed to save: {}", e)))?;
@@ -80,8 +80,8 @@ async fn connect_server(
     
     http_get(&api.connect_server(&server.user_key)).await?;
     
-    *state.current_ip.lock().await = Some(ip.clone());
-    *state.connection.lock().await = ConnectionState::JoinedServer;
+    state.set_connection_ip(ip).await;
+    state.set_connection_state(ServerConnectionState::Connected).await;
 
     Ok(())
 }
@@ -90,13 +90,15 @@ async fn connect_server(
 async fn leave_server(
     state: State<'_, AppState>
 ) -> Result<(), AppError> {
-    let server = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", server.0));
+    let (ip, _server) = get_server_context(&state).await?;
+    let api = ServerApi::new(&format!("http://{}", ip));
 
     http_get(&api.leave_server()).await?;
+    let empty_ip = "0.0.0.0:0000";
 
-    *state.connection.lock().await = ConnectionState::Disconnected;
-    *state.session.lock().await = SessionState::Idle;
+    state.set_connection_ip(empty_ip.to_string()).await;
+    state.set_connection_state(ServerConnectionState::Disconnected).await;
+    state.set_session_state(SessionState::Idle).await;
     
     Ok(())
 }
@@ -196,7 +198,7 @@ async fn connect_session(
         .await
         .map_err(|e| AppError::Network(format!("Failed to open websocket: {}", e)))?;
 
-    *state.session.lock().await = SessionState::JoinedSession(ws_client);
+    state.set_session_state(SessionState::JoinedSession(ws_client)).await;
 
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(true).unwrap();
@@ -213,14 +215,14 @@ async fn leave_session(
     let (ip, _server) = get_server_context(&state).await?;
     let api = ServerApi::new(&format!("http://{}", ip));
 
-    if let SessionState::JoinedSession(ws_client) = &*state.session.lock().await {
+    if let SessionState::JoinedSession(ws_client) = &state.get_session_state().await {
         let _ = ws_client.close().await;
     }
 
     http_get(&api.leave_session()).await?;
 
-    *state.session.lock().await = SessionState::Idle;
-
+    state.set_session_state(SessionState::Idle).await;
+    
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(false).unwrap();
     window.set_maximizable(false).unwrap();
@@ -259,9 +261,9 @@ async fn send_message(
     body: String, 
     state: State<'_, AppState>
 ) -> Result<(), AppError> {
-    let session = state.session.lock().await;
+    let session = state.get_session_state();
 
-    if let SessionState::JoinedSession(ws_client) = &*session {
+    if let SessionState::JoinedSession(ws_client) = &session.await {
         ws_client.send(&body).await
             .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?;
     }
@@ -273,7 +275,7 @@ async fn send_message(
 async fn get_servers(
     state: State<'_, AppState>
 ) -> Result<Vec<PersistedServer>, AppError> {
-    Ok(state.servers.lock().await.clone())
+    Ok(state.get_all_servers().await)
 }
 
 #[tauri::command]
@@ -312,7 +314,9 @@ pub fn run() {
             let app_state = AppState::new(app_handle);
             let state_for_load = app_state.clone(); 
             tauri::async_runtime::block_on(async move {
-                state_for_load.load_persisted_data().await;
+                if let Err(e) = state_for_load.load_persisted_data().await {
+                    eprintln!("Failed to load persisted data: {}", e);
+                }
             });
             app.manage(app_state);
             Ok(())

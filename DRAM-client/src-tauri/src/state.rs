@@ -8,9 +8,8 @@ use crate::models::PersistedServer;
 use crate::client::WsClient;
 
 #[derive(Debug, Clone)]
-pub enum ConnectionState {
+pub enum ServerConnectionState {
     Disconnected,
-    JoinedServer,
     Connected,
 }
 
@@ -18,16 +17,14 @@ pub enum ConnectionState {
 pub enum SessionState {
     Idle,
     JoinedSession(WsClient),
-    Reconnecting,
 }
 
 #[derive(Clone)]
 pub struct AppState {
-    pub servers: Arc<Mutex<Vec<PersistedServer>>>,
-    pub current_ip: Arc<Mutex<Option<String>>>,
-    pub connection: Arc<Mutex<ConnectionState>>,
-    pub session: Arc<Mutex<SessionState>>,
-    pub heartbeat: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    servers: Arc<Mutex<Vec<PersistedServer>>>,
+    current_ip: Arc<Mutex<Option<String>>>,
+    connection: Arc<Mutex<ServerConnectionState>>,
+    session: Arc<Mutex<SessionState>>,
     app_handle: Option<AppHandle>,
 }
 
@@ -36,24 +33,54 @@ impl AppState {
         Self {
             servers: Arc::new(Mutex::new(Vec::new())),
             current_ip: Arc::new(Mutex::new(None)),
-            connection: Arc::new(Mutex::new(ConnectionState::Disconnected)),
+            connection: Arc::new(Mutex::new(ServerConnectionState::Disconnected)),
             session: Arc::new(Mutex::new(SessionState::Idle)),
-            heartbeat: Arc::new(Mutex::new(None)),
             app_handle: Some(app_handle),
         }
     }
 
-    pub async fn load_persisted_data(&self) {
-        if let Some(ref handle) = self.app_handle {
-            if let Ok(store) = handle.store("servers.json") {
-                if let Some(servers) = store.get("servers") {
-                    if let Ok(servers_vec) = serde_json::from_value::<Vec<PersistedServer>>(servers) {
-                        *self.servers.lock().await = servers_vec;
-                    }
-                }
-            }
-        }
+    // Getters
+    pub async fn get_all_servers(&self) -> Vec<PersistedServer> {
+        self.servers.lock().await.clone()
     }
+
+    pub async fn get_current_ip(&self) -> Option<String> {
+        self.current_ip.lock().await.clone()
+    }
+
+    pub async fn get_connection_state(&self) -> ServerConnectionState {
+        self.connection.lock().await.clone()
+    }
+
+    pub async fn get_session_state(&self) -> SessionState {
+        self.session.lock().await.clone()
+    }
+
+    // Setters
+    pub async fn set_connection_ip(&self, ip: String) {
+        *self.current_ip.lock().await = Some(ip);
+    }
+
+    pub async fn set_connection_state(&self, state: ServerConnectionState) {
+        *self.connection.lock().await = state;
+    }
+
+    pub async fn set_session_state(&self, state: SessionState) {
+        *self.session.lock().await = state;
+    }
+
+    pub async fn load_persisted_data(&self) -> Result<(), Box<dyn std::error::Error>> {
+    let handle = self.app_handle.as_ref()
+        .ok_or("AppHandle not initialized")?;
+    let store = handle.store("servers.json")?;
+    
+    if let Some(servers_val) = store.get("servers") {
+        let servers_vec: Vec<PersistedServer> = serde_json::from_value(servers_val)?;
+        *self.servers.lock().await = servers_vec;
+    }
+
+    Ok(())
+}
 
     pub async fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ref handle) = self.app_handle {
@@ -117,17 +144,5 @@ impl AppState {
 
     pub async fn get_server_by_id(&self, id: &str) -> Option<PersistedServer> {
         self.servers.lock().await.iter().find(|s| s.id == id).cloned()
-    }
-
-    #[cfg(test)]
-    pub fn new_test() -> Self {
-        Self {
-            servers: Arc::new(Mutex::new(Vec::new())),
-            current_ip: Arc::new(Mutex::new(None)),
-            connection: Arc::new(Mutex::new(ConnectionState::Disconnected)),
-            session: Arc::new(Mutex::new(SessionState::Idle)),
-            heartbeat: Arc::new(Mutex::new(None)),
-            app_handle: None,  // No app handle in tests
-        }
     }
 }
