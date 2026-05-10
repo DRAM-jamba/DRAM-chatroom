@@ -1,4 +1,6 @@
 import { Window } from "@tauri-apps/api/window";
+import fullscreenIcon from "../assets/icons/fullscreenbtnicon.svg";
+import closeIcon from "../assets/icons/closeappbtnicon.svg";
 
 type TitleBarProps = {
   showMaximize?: boolean;
@@ -26,7 +28,7 @@ function TitleBar({ showMaximize = false }: TitleBarProps) {
           onClick={handleMaximize}
           type="button"
         >
-          <img src="/src/assets/icons/fullscreenbtnicon.svg" width="12" height="12" />
+          <img src={fullscreenIcon} width="12" height="12" />
         </button>
       )}
       <button
@@ -35,7 +37,7 @@ function TitleBar({ showMaximize = false }: TitleBarProps) {
         onClick={handleClose}
         type="button"
       >
-        <img src="/src/assets/icons/closeappbtnicon.svg" width="14" height="14" />
+        <img src={closeIcon} width="14" height="14" />
       </button>
     </div>
   );

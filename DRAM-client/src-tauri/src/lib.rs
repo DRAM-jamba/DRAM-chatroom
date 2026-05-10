@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::events::{emit_joined_session, emit_session_update};
+//use crate::events::{emit_joined_session, emit_session_update};
 use crate::state::{AppState, ConnectionState, SessionState};
 use crate::api::ServerApi;
 use tauri::{AppHandle, State, ipc};
@@ -51,7 +51,7 @@ async fn add_server(
     state.add_server(ip.clone(), nickname, user_key)
         .await
         .map_err(|e| AppError::Network(format!("Failed to save server: {}", e)))?;
-    events::emit_connected(&app);
+    //events::emit_connected(&app);
     Ok(())
 }
 
@@ -96,7 +96,7 @@ async fn connect_server(
             .map_err(|e| AppError::Auth(format!("Server rejected nickname change: {}", e)))?;
     }
 
-    events::emit_connected(&app);
+    //events::emit_connected(&app);
     Ok(())
 }
 
@@ -334,11 +334,11 @@ async fn connect_session(
 
     *state.session.lock().await = SessionState::JoinedSession(ws_client);
 
-    emit_joined_session(&app);
+    //emit_joined_session(&app);
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(true).unwrap();
     window.set_maximizable(true).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 800, height: 628 })).unwrap();
+    window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1100.0, height: 750.0 })).unwrap();
     Ok(())
 }
 
@@ -372,7 +372,7 @@ async fn leave_session(
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(false).unwrap();
     window.set_maximizable(false).unwrap();
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 360, height: 628 })).unwrap();
+    window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 360.0, height: 628.0 })).unwrap();
     Ok(())
 }
 

@@ -6,9 +6,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
-use crate::events::{MessagePayload, SessionPayload, emit_message};
-use crate::events;
-use crate::state::Session;
+use crate::events::{self, MessageType, MessagePayload, MessageObj, emit_message, emit_member_list};
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
@@ -31,13 +29,36 @@ impl WsClient {
             while let Some(Ok(msg)) = stream.next().await {
                 match msg {
                 Message::Text(text) => {
-                    match serde_json::from_str::<MessagePayload>(&text) {
-                        Ok(payload) => {
-                            println!("Received message!");
-                            emit_message(&app_clone, payload);
+                    match serde_json::from_str::<MessageObj>(&text) {
+                        Ok(obj) => {
+                            match obj.m_type {
+                                MessageType::Message => {
+                                    println!("Emitting message: {:?}", obj);
+                                    emit_message(&app_clone, MessagePayload {
+                                        from: obj.from,
+                                        body: obj.body,
+                                        ts: obj.ts,
+                                    });
+                                }
+                                MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
+                                    if obj.body.is_empty() {
+                                        println!("Emitting user list: {:?}", obj);
+                                        return; 
+                                    }
+                                    println!("Emitting user list: {:?}", obj);
+                                    match serde_json::from_str::<Vec<String>>(&obj.body) {
+                                        Ok(participants) => {
+                                            emit_member_list(&app_clone, participants);
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Failed to parse member list: {}", e);
+                                        }
+                                    }
+                                }
+                            }
                         }
                         Err(e) => {
-                            eprintln!("Failed to parse incoming message: {} | Error: {}", text, e);
+                            eprintln!("Parse error: {} | Raw: {}", e, text);
                         }
                     }
                 }

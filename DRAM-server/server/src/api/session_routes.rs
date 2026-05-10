@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::{Path, State, WebSocketUpgrade}, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::{server_state::ServerState}};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::{l_check_active_user}, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::server_state::ServerState};
 
 pub fn router() -> Router<ServerState> {
     Router::new() // move user_key to body of request
@@ -16,6 +16,11 @@ pub fn router() -> Router<ServerState> {
 
 async fn r_get_session_list(State(server_state): State<ServerState>,
                           Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
+    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+    
     match l_get_session_list(server_state.db_pool.clone(), &user_key).await {
         Ok(session_list) => {
             Ok(Json(json!({
@@ -29,6 +34,11 @@ async fn r_get_session_list(State(server_state): State<ServerState>,
 async fn r_create_session(State(server_state): State<ServerState>,
                         Path((user_key, session_name)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
     
+    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+
     match l_create_session(server_state.db_pool.clone(), &user_key, &session_name).await {
         Ok(session_key) => Ok(Json(json!({
             "session_key": session_key
@@ -39,6 +49,12 @@ async fn r_create_session(State(server_state): State<ServerState>,
 
 async fn r_add_session(State(server_state): State<ServerState>,
                      Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
+    
+    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+    
     match l_add_session(server_state.db_pool.clone(), &user_key, &session_key).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
@@ -66,6 +82,11 @@ async fn r_leave_session(State(_server_state): State<ServerState>) -> Result<Jso
 
 async fn r_forget_session(State(server_state): State<ServerState>,
                        Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
+    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+    
     match l_forget_session(server_state.db_pool.clone(), &user_key, &session_key).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
@@ -74,7 +95,12 @@ async fn r_forget_session(State(server_state): State<ServerState>,
 
 async fn r_delete_session(State(server_state): State<ServerState>,
                         Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
-    match l_delete_session_by_owner(server_state.db_pool.clone(), &user_key, &session_key).await {
+    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }
+    
+    match l_delete_session_by_owner(server_state.db_pool.clone(), server_state.active_sessions.clone(), &user_key, &session_key).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e)
     }

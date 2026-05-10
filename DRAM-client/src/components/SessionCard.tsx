@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { Session } from "../types/session";
-
+import arrowUpIcon from "../assets/icons/arrowupicon.svg";
+import arrowDownIcon from "../assets/icons/arrowdownicon.svg";
+import confirmIcon from "../assets/icons/confirmbtnicon.svg";
+import cancelIcon from "../assets/icons/cancelbtnicon.svg";
+  
 type SessionCardProps = {
   session: Session;
   onSaveEdit: (id: string, name: string) => void;
@@ -20,6 +24,8 @@ function SessionCard({
   const [isEditing, setIsEditing] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"forget" | "delete" | null>(null);
   const [editedName, setEditedName] = useState(session.name);
+
+  const isOwner = session.userRole === "owner";
 
   const handleConfirmEdit = () => {
     if (!editedName.trim()) {
@@ -75,7 +81,7 @@ function SessionCard({
       >
         <span className="server-title">{session.name}</span>
         <img
-          src={expanded ? "/src/assets/icons/arrowupicon.svg" : "/src/assets/icons/arrowdownicon.svg"}
+          src={expanded ? arrowUpIcon : arrowDownIcon}
           width="16"
           height="16"
         />
@@ -85,37 +91,45 @@ function SessionCard({
         <div className="server-details">
           {confirmAction === null && (
             <div className="server-actions">
-              <button
-                className="small-btn edit-btn"
-                type="button"
-                onClick={() => setIsEditing(true)}
-              >
-                edit
-              </button>
+              {isOwner ? (
+                // Owner sees: delete + connect
+                <>
+                  <button
+                    className="small-btn delete-btn"
+                    type="button"
+                    onClick={() => setConfirmAction("delete")}
+                  >
+                    delete
+                  </button>
 
-              <button
-                className="small-btn forget-btn"
-                type="button"
-                onClick={() => setConfirmAction("forget")}
-              >
-                forget
-              </button>
+                  <button
+                    className="small-btn connect-btn"
+                    type="button"
+                    onClick={() => onConnect(session.id)}
+                  >
+                    connect
+                  </button>
+                </>
+              ) : (
+                // Member sees: forget + connect
+                <>
+                  <button
+                    className="small-btn forget-btn"
+                    type="button"
+                    onClick={() => setConfirmAction("forget")}
+                  >
+                    forget
+                  </button>
 
-              <button
-                className="small-btn delete-btn"
-                type="button"
-                onClick={() => setConfirmAction("delete")}
-              >
-                delete
-              </button>
-
-              <button
-                className="small-btn connect-btn"
-                type="button"
-                onClick={() => onConnect(session.id)}
-              >
-                connect
-              </button>
+                    <button
+                      className="small-btn connect-btn"
+                      type="button"
+                      onClick={() => onConnect(session.id)}
+                    >
+                      connect
+                    </button>
+                </>
+              )}
             </div>
           )}
 
@@ -131,7 +145,7 @@ function SessionCard({
                   onRemove(session.id);
                 }}
               >
-                <img src="/src/assets/icons/confirmbtnicon.svg" width="14" height="14" />
+                <img src={confirmIcon} width="14" height="14" />
               </button>
 
               <button
@@ -139,7 +153,7 @@ function SessionCard({
                 type="button"
                 onClick={() => setConfirmAction(null)}
               >
-                <img src="/src/assets/icons/cancelbtnicon.svg" width="14" height="14" />
+                <img src={cancelIcon} width="14" height="14" />
               </button>
             </div>
           )}
@@ -156,7 +170,7 @@ function SessionCard({
                   onDelete(session.id);
                 }}
               >
-                <img src="/src/assets/icons/confirmbtnicon.svg" width="14" height="14" />
+                <img src={confirmIcon} width="14" height="14" />
               </button>
 
               <button
@@ -164,7 +178,7 @@ function SessionCard({
                 type="button"
                 onClick={() => setConfirmAction(null)}
               >
-                <img src="/src/assets/icons/cancelbtnicon.svg" width="14" height="14" />
+                <img src={cancelIcon} width="14" height="14" />
               </button>
             </div>
           )}
