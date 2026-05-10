@@ -25,6 +25,11 @@ pub struct Session {
     pub user_role: String,
 }
 
+#[derive(Deserialize)]
+pub struct SessionList {
+    pub user_sessions: Vec<Session>,
+}
+
 #[derive(Debug, Clone)]
 pub enum ConnectionState {
     Disconnected,
