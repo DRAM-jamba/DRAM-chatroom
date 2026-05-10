@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // Client structs
+// It is ugly as hell but I needed to do this to fix the server data for the UI
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersistedServer {
     pub id: String,
@@ -12,11 +13,15 @@ pub struct PersistedServer {
     pub user_nickname: Option<String>,
 }
 
+// It is ugly as hell but I needed to do this to fix the session list for the UI
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Session {
+    #[serde(alias = "session_key")]
     pub id: String,
+    #[serde(alias = "session_name")]
     pub name: String,
+    #[serde(alias = "user_role")]
     pub user_role: String,
 }
 
@@ -28,6 +33,11 @@ pub struct SessionList {
 #[derive(Deserialize)]
 pub struct SessionKey {
     pub session_key: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct UserKey {
+    pub user_key: String,
 }
 
 // Websocket structs

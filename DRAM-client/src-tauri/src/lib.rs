@@ -1,11 +1,9 @@
 use crate::error::AppError;
-use crate::state::AppState;
 use crate::api::ServerApi;
-use crate::models::{PersistedServer, Session, SessionKey, SessionList};
-use crate::state::{ServerConnectionState, SessionState};
+use crate::models::{PersistedServer, Session, SessionKey, SessionList, UserKey};
+use crate::state::{ServerConnectionState, SessionState, AppState};
 
-use tauri::{AppHandle, State};
-use tauri::Manager;
+use tauri::{AppHandle, State, Manager};
 
 mod error;
 mod events;
@@ -48,18 +46,15 @@ async fn add_server(
 
     let api = ServerApi::new(&format!("http://{}", ip));
     let response = http_get(&api.add_server()).await?;
-    let json_body: serde_json::Value = response.json().await?;
-    let user_key = json_body
-        .get("user_key")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| AppError::Protocol("Server response missing 'user_key'".into()))?
-        .to_string();
+    let json_response: UserKey = response.json().await
+        .map_err(|e| AppError::Protocol(format!("Failed to parse user key: {}", e)))?;
+    
     let temp_nick = "".to_string();
 
     state.set_connection_ip(ip.clone()).await;
     state.set_connection_state(ServerConnectionState::Connected).await;
     
-    state.add_server(ip, temp_nick, user_key).await
+    state.add_server(ip, temp_nick, json_response.user_key).await
         .map_err(|e| AppError::Internal(format!("Failed to save: {}", e)))?;
     
     Ok(())
