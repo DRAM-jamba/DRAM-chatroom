@@ -5,7 +5,9 @@ pub struct ServerApi {
 impl ServerApi {
     // URL builders
     pub fn new(base_url: &str) -> Self {
-        Self { base_url: base_url.to_string() }
+        Self {
+            base_url: base_url.to_string(),
+        }
     }
 
     // Server commands
@@ -22,7 +24,10 @@ impl ServerApi {
         format!("{}/server/forget/{}", self.base_url, user_key)
     }
     pub fn set_nickname(&self, user_key: &str, nickname: &str) -> String {
-        format!("{}/server/set/nickname/{}/{}", self.base_url, user_key, nickname)
+        format!(
+            "{}/server/set/nickname/{}/{}",
+            self.base_url, user_key, nickname
+        )
     }
 
     // Session commands
@@ -39,14 +44,25 @@ impl ServerApi {
         format!("{}/session/leave", self.base_url)
     }
     pub fn delete_session(&self, user_key: &str, session_key: &str) -> String {
-        format!("{}/session/delete/{}/{}", self.base_url, user_key, session_key)
+        format!(
+            "{}/session/delete/{}/{}",
+            self.base_url, user_key, session_key
+        )
     }
     pub fn forget_session(&self, user_key: &str, session_key: &str) -> String {
-        format!("{}/session/forget/{}/{}", self.base_url, user_key, session_key)
+        format!(
+            "{}/session/forget/{}/{}",
+            self.base_url, user_key, session_key
+        )
     }
 
     // WebSocket URL
     pub fn ws(&self, user_key: &str, session_key: &str) -> String {
-        format!("{}/session/connect/{}/{}", self.base_url.replace("http", "ws"), user_key, session_key)
+        format!(
+            "{}/session/connect/{}/{}",
+            self.base_url.replace("http", "ws"),
+            user_key,
+            session_key
+        )
     }
 }
