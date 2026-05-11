@@ -104,7 +104,6 @@ async fn forget_server(
     ip: String, 
     state: State<'_, AppState>
 ) -> Result<(), AppError> {
-    println!("{}", ip);
     ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
