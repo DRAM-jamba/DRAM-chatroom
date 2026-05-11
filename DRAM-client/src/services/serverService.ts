@@ -31,6 +31,6 @@ export async function updateServer(
   return Promise.resolve({ id: "", ipAddress: ip, name: data.nickname, user_key: "" });
 }
 
-export async function removeServer(id: string): Promise<void> {
-  await invoke("forget_server", { id });
+export async function removeServer(ip: string): Promise<void> {
+  await invoke("forget_server", { ip });
 }

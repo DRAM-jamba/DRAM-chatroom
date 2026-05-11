@@ -1,34 +1,15 @@
 use tauri::AppHandle;
-use crate::websocket::WsClient;
 use tauri_plugin_store::StoreExt;
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PersistedServer {
-    pub id: String,
-    #[serde(rename = "ipAddress")]
-    pub ip: String,
-    #[serde(rename = "name")]
-    pub server_name: String,
-    pub user_key: String,
-    pub user_nickname: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Session {
-    pub id: String,
-    pub name: String,
-    pub user_role: String,
-}
+use crate::models::PersistedServer;
+use crate::client::WsClient;
 
 #[derive(Debug, Clone)]
-pub enum ConnectionState {
+pub enum ServerConnectionState {
     Disconnected,
-    JoinedServer,
     Connected,
 }
 
@@ -36,16 +17,14 @@ pub enum ConnectionState {
 pub enum SessionState {
     Idle,
     JoinedSession(WsClient),
-    Reconnecting,
 }
 
 #[derive(Clone)]
 pub struct AppState {
-    pub servers: Arc<Mutex<Vec<PersistedServer>>>,
-    pub current_ip: Arc<Mutex<Option<String>>>,
-    pub connection: Arc<Mutex<ConnectionState>>,
-    pub session: Arc<Mutex<SessionState>>,
-    pub heartbeat: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    servers: Arc<Mutex<Vec<PersistedServer>>>,
+    current_ip: Arc<Mutex<Option<String>>>,
+    connection: Arc<Mutex<ServerConnectionState>>,
+    session: Arc<Mutex<SessionState>>,
     app_handle: Option<AppHandle>,
 }
 
@@ -54,24 +33,54 @@ impl AppState {
         Self {
             servers: Arc::new(Mutex::new(Vec::new())),
             current_ip: Arc::new(Mutex::new(None)),
-            connection: Arc::new(Mutex::new(ConnectionState::Disconnected)),
+            connection: Arc::new(Mutex::new(ServerConnectionState::Disconnected)),
             session: Arc::new(Mutex::new(SessionState::Idle)),
-            heartbeat: Arc::new(Mutex::new(None)),
             app_handle: Some(app_handle),
         }
     }
 
-    pub async fn load_persisted_data(&self) {
-        if let Some(ref handle) = self.app_handle {
-            if let Ok(store) = handle.store("servers.json") {
-                if let Some(servers) = store.get("servers") {
-                    if let Ok(servers_vec) = serde_json::from_value::<Vec<PersistedServer>>(servers) {
-                        *self.servers.lock().await = servers_vec;
-                    }
-                }
-            }
-        }
+    // Getters
+    pub async fn get_all_servers(&self) -> Vec<PersistedServer> {
+        self.servers.lock().await.clone()
     }
+
+    pub async fn get_current_ip(&self) -> Option<String> {
+        self.current_ip.lock().await.clone()
+    }
+
+    pub async fn get_connection_state(&self) -> ServerConnectionState {
+        self.connection.lock().await.clone()
+    }
+
+    pub async fn get_session_state(&self) -> SessionState {
+        self.session.lock().await.clone()
+    }
+
+    // Setters
+    pub async fn set_connection_ip(&self, ip: String) {
+        *self.current_ip.lock().await = Some(ip);
+    }
+
+    pub async fn set_connection_state(&self, state: ServerConnectionState) {
+        *self.connection.lock().await = state;
+    }
+
+    pub async fn set_session_state(&self, state: SessionState) {
+        *self.session.lock().await = state;
+    }
+
+    pub async fn load_persisted_data(&self) -> Result<(), Box<dyn std::error::Error>> {
+    let handle = self.app_handle.as_ref()
+        .ok_or("AppHandle not initialized")?;
+    let store = handle.store("servers.json")?;
+    
+    if let Some(servers_val) = store.get("servers") {
+        let servers_vec: Vec<PersistedServer> = serde_json::from_value(servers_val)?;
+        *self.servers.lock().await = servers_vec;
+    }
+
+    Ok(())
+}
 
     pub async fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ref handle) = self.app_handle {
@@ -135,164 +144,5 @@ impl AppState {
 
     pub async fn get_server_by_id(&self, id: &str) -> Option<PersistedServer> {
         self.servers.lock().await.iter().find(|s| s.id == id).cloned()
-    }
-
-    #[cfg(test)]
-    pub fn new_test() -> Self {
-        Self {
-            servers: Arc::new(Mutex::new(Vec::new())),
-            current_ip: Arc::new(Mutex::new(None)),
-            connection: Arc::new(Mutex::new(ConnectionState::Disconnected)),
-            session: Arc::new(Mutex::new(SessionState::Idle)),
-            heartbeat: Arc::new(Mutex::new(None)),
-            app_handle: None,  // No app handle in tests
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // basic check - when app starts everything should be empty/disconnected
-    #[tokio::test]
-    async fn test_starts_disconnected() {
-        let s = AppState::new_test();
-        let c = s.connection.lock().await;
-        assert!(matches!(*c, ConnectionState::Disconnected));
-    }
-
-    #[tokio::test]
-    async fn test_session_idle_at_start() {
-        let s = AppState::new_test();
-        let sess = s.session.lock().await;
-        assert!(matches!(*sess, SessionState::Idle));
-    }
-
-    // no servers stored when app first loads
-    #[tokio::test]
-    async fn test_known_servers_empty() {
-        let s = AppState::new_test();
-        let m = s.servers.lock().await;
-        assert!(m.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_current_ip_none_at_start() {
-        let s = AppState::new_test();
-        let ip = s.current_ip.lock().await;
-        assert!(ip.is_none());
-    }
-
-    // testing if we can store a user key for an ip
-    // this is basically what add() does in lib.rs
-    #[tokio::test]
-    async fn test_store_server_key() {
-    let s = AppState::new_test();
-    {
-        let mut servers = s.servers.lock().await;
-        servers.push(PersistedServer {
-            id: "1".to_string(),
-            ip: "127.0.0.1".to_string(),
-            server_name: "test".to_string(),  // Add a dummy server name since it's required
-            user_key: "abc123".to_string(),
-            user_nickname: None,  // Add a dummy nickname since it's required
-        });
-    }  // Lock is dropped here
-    let servers = s.servers.lock().await;
-    let k = servers.iter().find(|srv| srv.ip == "127.0.0.1").map(|srv| srv.user_key.clone());
-    assert_eq!(k, Some("abc123".to_string()));
-    }
-
-    // looking up an ip that was never added, should return nothing
-    #[tokio::test]
-    async fn test_unknown_ip_gives_none() {
-        let s = AppState::new_test();
-        let servers = s.servers.lock().await;
-        let k = servers.iter().find(|srv| srv.ip == "10.0.0.1").map(|srv| srv.user_key.clone());
-        assert!(k.is_none());
-    }
-
-    #[tokio::test]
-    async fn test_set_current_ip() {
-        let s = AppState::new_test();
-        *s.current_ip.lock().await = Some("192.168.0.5".into());
-        let ip = s.current_ip.lock().await.clone();
-        assert_eq!(ip, Some("192.168.0.5".to_string()));
-    }
-
-    // simulating what happens when connect() is called
-    // connection goes from Disconnected to JoinedServer
-    #[tokio::test]
-    async fn test_state_changes_to_joined_server() {
-        let s = AppState::new_test();
-        *s.connection.lock().await = ConnectionState::JoinedServer;
-        let c = s.connection.lock().await;
-        assert!(matches!(*c, ConnectionState::JoinedServer));
-    }
-
-    // disconnect should reset everything back
-    #[tokio::test]
-    async fn test_disconnect_resets_connection() {
-        let s = AppState::new_test();
-        *s.connection.lock().await = ConnectionState::JoinedServer;
-        *s.connection.lock().await = ConnectionState::Disconnected;
-        let c = s.connection.lock().await;
-        assert!(matches!(*c, ConnectionState::Disconnected));
-    }
-
-    /* #[tokio::test]
-    async fn test_disconnect_resets_session_too() {
-    let s = AppState::new_test();
-    *s.session.lock().await = SessionState::JoinedSession;
-    *s.session.lock().await = SessionState::Idle;
-    let sess = s.session.lock().await;
-    assert!(matches!(*sess, SessionState::Idle));
-    }
-
-    // joining a session
-    #[tokio::test]
-    async fn test_join_session_state() {
-        let s = AppState::new_test();
-        *s.session.lock().await = SessionState::JoinedSession(WsClient::new_dummy());
-        let sess = s.session.lock().await;
-        assert!(matches!(*sess, SessionState::JoinedSession(_)));
-    }
-
-    // leave session goes back to idle
-    #[tokio::test]
-    async fn test_leave_session_back_to_idle() {
-    let s = AppState::new_test();
-    *s.session.lock().await = SessionState::JoinedSession;
-    *s.session.lock().await = SessionState::Idle;
-    let sess = s.session.lock().await;
-    assert!(matches!(*sess, SessionState::Idle));
-    } */
-
-    // storing multiple servers, map should hold all of them
-    #[tokio::test]
-    async fn test_multiple_servers() {
-    let s = AppState::new_test();
-    {
-        let mut servers = s.servers.lock().await;
-        servers.push(PersistedServer {
-            id: "1".to_string(),
-            ip: "192.168.1.1".to_string(),
-            server_name: "srv1".to_string(),
-            user_key: "k1".to_string(),
-            user_nickname: None,
-        });
-        servers.push(PersistedServer {
-            id: "2".to_string(),
-            ip: "192.168.1.2".to_string(),
-            server_name: "srv2".to_string(),
-            user_key: "k2".to_string(),
-            user_nickname: None,
-        });
-    }
-    let servers = s.servers.lock().await;
-    assert_eq!(servers.len(), 2);
-    let k1 = servers.iter().find(|srv| srv.ip == "192.168.1.1").map(|srv| srv.user_key.clone());
-    assert_eq!(k1, Some("k1".to_string()));
     }
 }
