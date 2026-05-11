@@ -43,21 +43,21 @@ async fn main() {
     let session_router = session_routes::router();
     let server_router = server_routes::router();
     
-    let cors_layer = CorsLayer::new().allow_methods(Any).allow_origin("http://127.0.0.1:8080".parse::<HeaderValue>().unwrap());
+    // let cors_layer = CorsLayer::new().allow_methods(Any).allow_origin("http://127.0.0.1:8080".parse::<HeaderValue>().unwrap());
 
     let app = Router::new()
         .route("/", get(server_check))
         .route("/error", get(error_check))
         .nest("/session", session_router)
         .nest("/server", server_router)
-        .layer(cors_layer)
+        // .layer(cors_layer)
         .with_state(server_state);
 
     let addr = "0.0.0.0:3000";
     let listener = TcpListener::bind(addr).await.unwrap();
 
-    axum::serve(listener, app).await.unwrap();
     println!("Server started");
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn server_check() -> impl IntoResponse {

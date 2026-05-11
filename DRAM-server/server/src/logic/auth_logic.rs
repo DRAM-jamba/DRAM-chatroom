@@ -3,26 +3,21 @@ use crate::{errors::api_error::ApiError, modules::{active_sessions::{SessionMap}
 pub fn l_generate_auth_token() -> String {
     // TODO: implement this function
 
-    return "^se_Sp##RoJec(t_33-anqt1hyp3_wh0lqe_1o77a_re|)d*".into();
+    "^se_Sp##RoJec(t_33-anqt1hyp3_wh0lqe_1o77a_re|)d*".into()
 }
 
-pub async fn l_check_active_user(active_users: UsersMap, user_key: &String) -> Result<(), ApiError> {
-    let active_users = active_users.read().await;
-    if active_users.contains_key(user_key) {
-        drop(active_users);
-        return Err(ApiError::InternalError);
+pub async fn l_ensure_user_not_in_session(active_users: UsersMap, user_key: &String) -> Result<(), ApiError> {
+    let contains = active_users.read().await.contains_key(user_key);
+    if contains {
+        return Err(ApiError::Forbidden("User in session. Leave session and try again.".into()));
     }
-    drop(active_users);
     Ok(())
 }
 
-pub async fn l_check_active_session(active_sessions: SessionMap, session_key: &String) -> Result<(), ApiError> {
-
-    let active_sessions = active_sessions.read().await;
-    if active_sessions.contains_key(session_key) {
-        drop(active_sessions);
-        return Err(ApiError::InternalError)
+pub async fn l_ensure_session_is_not_active(active_sessions: SessionMap, session_key: &String) -> Result<(), ApiError> {
+    let contains = active_sessions.read().await.contains_key(session_key);
+    if contains {
+        return Err(ApiError::Forbidden("Some users use this session right now. Wait until this session will not be active.".into()))
     }
-    drop(active_sessions);
     Ok(())
 }
