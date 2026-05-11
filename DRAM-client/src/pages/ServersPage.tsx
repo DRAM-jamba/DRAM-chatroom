@@ -58,11 +58,11 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     );
   };
 
-  const handleRemove = async (id: string) => {
+  const handleRemove = async (ip: string) => {
     setError(null);
     try {
-      await removeServer(id);
-      setServers((prev) => prev.filter((s) => s.id !== id));
+      await removeServer(ip);
+      setServers((prev) => prev.filter((s) => s.ipAddress !== ip));
     } catch (e: any) {
       setError(e?.message ?? String(e));
     }

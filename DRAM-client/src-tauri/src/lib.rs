@@ -30,6 +30,7 @@ async fn get_server_context(
 async fn http_get(
     url: &str
 ) -> Result<reqwest::Response, AppError> {
+    println!("{}", url);
     let client = reqwest::Client::new();
     let response = client.get(url).send().await?.error_for_status()?;
     Ok(response)
@@ -103,6 +104,7 @@ async fn forget_server(
     ip: String, 
     state: State<'_, AppState>
 ) -> Result<(), AppError> {
+    println!("{}", ip);
     ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
     
