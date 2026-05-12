@@ -8,7 +8,7 @@ import cancelIcon from "../assets/icons/cancelbtnicon.svg";
 type ServerCardProps = {
   server: Server;
   onSaveEdit: (ip: string, nickname: string) => void;
-  onRemove: (id: string) => void;
+  onRemove: (ip: string) => void;
   onConnect: (ip: string) => void;
 };
 
@@ -112,7 +112,7 @@ function ServerCard({
                 type="button"
                 onClick={() => {
                   setConfirmForget(false);
-                  onRemove(server.id);
+                  onRemove(server.ipAddress);
                 }}
               >
                 <img src={confirmIcon} width="14" height="14" />

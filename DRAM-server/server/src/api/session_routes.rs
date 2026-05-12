@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::{Path, State, WebSocketUpgrade}, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{auth_logic::{l_check_active_user}, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::server_state::ServerState};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::{l_ensure_user_not_in_session}, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::server_state::ServerState};
 
 pub fn router() -> Router<ServerState> {
     Router::new() // move user_key to body of request
@@ -16,7 +16,7 @@ pub fn router() -> Router<ServerState> {
 
 async fn r_get_session_list(State(server_state): State<ServerState>,
                           Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
-    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
@@ -34,7 +34,7 @@ async fn r_get_session_list(State(server_state): State<ServerState>,
 async fn r_create_session(State(server_state): State<ServerState>,
                         Path((user_key, session_name)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
     
-    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
@@ -50,7 +50,7 @@ async fn r_create_session(State(server_state): State<ServerState>,
 async fn r_add_session(State(server_state): State<ServerState>,
                      Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
     
-    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
@@ -64,6 +64,10 @@ async fn r_add_session(State(server_state): State<ServerState>,
 async fn r_connect_to_session(State(server_state): State<ServerState>, 
                             Path((user_key, session_key)): Path<(String, String)>, 
                             ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
+        Ok(()) => (),
+        Err(e) => return Err(e)
+    }               
     l_connection_handler(server_state.clone(), user_key, session_key, ws).await
 }
 
@@ -82,7 +86,7 @@ async fn r_leave_session(State(_server_state): State<ServerState>) -> Result<Jso
 
 async fn r_forget_session(State(server_state): State<ServerState>,
                        Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
-    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
@@ -95,7 +99,7 @@ async fn r_forget_session(State(server_state): State<ServerState>,
 
 async fn r_delete_session(State(server_state): State<ServerState>,
                         Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
-    match l_check_active_user(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }

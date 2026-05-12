@@ -6,52 +6,36 @@ pub async fn l_connection_handler(server_state: ServerState, user_key: String, s
                                 ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
     match d_get_session(server_state.db_pool.clone(), &session_key).await {
         Ok(_s) => (),
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
-    };
-    match d_get_user_role(server_state.db_pool.clone(), &user_key, &session_key).await {
-        Ok(_c) => (),
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+        Err(e) => return Err(e.into())
     };
     let user = match d_get_user(server_state.db_pool.clone(), &user_key).await {
         Ok(u) => u,
-        Err(e) => return Err(ApiError::InvalidInput(e.to_string()))
+        Err(e) => return Err(e.into())
+    };
+    match d_get_user_role(server_state.db_pool.clone(), &user_key, &session_key).await {
+        Ok(_c) => (),
+        Err(e) => return Err(e.into())
     };
 
-    let mut active_users = server_state.active_users.write().await;
-    if active_users.contains_key(user_key.as_str()) {
-        drop(active_users);
-        return Err(ApiError::InvalidInput("User already in session".into()))
-    }
-    else {
-        active_users.insert(user_key.clone(), session_key.clone());
-    }
-    drop(active_users);
-
+    // i check if user in active_users in session_routes, so he is not in active_users
+    server_state.active_users.write().await.insert(user_key.clone(), session_key.clone());
+    
     let session_chat: SessionChat = l_get_or_create_active_session(&server_state.active_sessions, &session_key).await;    
 
-    let mut s_users = session_chat.users.write().await;
-    s_users.push(user.nickname.clone());
-    drop(s_users);
-
-    let new_session_key = session_key.clone();
+    session_chat.users.write().await.push(user.nickname.clone());
 
     let response = ws.on_upgrade(move |socket| { 
-        l_handle_websocket(session_chat, socket, user, new_session_key, server_state.clone())
+        l_handle_websocket(session_chat, socket, user, session_key, server_state.clone())
     });
 
     Ok(response) 
 }
 
 async fn l_get_or_create_active_session(active_sessions: &SessionMap, session_key: &String) -> SessionChat {
-    let mut map = active_sessions.write().await;
-
-    let sc = map.entry(session_key.clone())
-       .or_insert_with(|| SessionChat::new())
-       .clone();
-    
-    drop(map);
-
-    sc
+    active_sessions.write().await
+                   .entry(session_key.clone())
+                   .or_insert_with(|| SessionChat::new())
+                   .clone()
 }
 
 async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: User, session_key: String, server_state: ServerState) {
@@ -66,7 +50,6 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
             return;
         }
     }
-    drop(history);
 
     let (mut sender, mut receiver) = ws.split();
     let mut rx = session_chat.tx.subscribe();
@@ -87,6 +70,8 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
         Err(e) => format!("Problem with message sending: {e}")
     };
     drop(user_list);
+
+    drop(history); // drop here, so no new messages will appear until user's stuff are prepared
 
     l_broadcast_message(&session_chat, MessageType::Connect, json, &user.nickname).await;
 
@@ -119,9 +104,7 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     send_task.abort(); // it is not happening in moment, so tx.receiver_count think that it is still exits
 
     // remove user from active_users, so user can join to other session
-    let mut active_users = server_state.active_users.write().await;
-    active_users.remove(&user.user_key);
-    drop(active_users);
+    server_state.active_users.write().await.remove(&user.user_key);
 
     // remove user from session users list
     let mut s_users = session_chat.users.write().await;

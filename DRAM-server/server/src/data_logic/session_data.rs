@@ -18,7 +18,7 @@ pub async fn d_get_session(db_pool: Pool<Postgres>, session_key: &String) -> Res
                     .map_err(|e| AppError::Database(e))
 }
 
-pub async fn d_add_session(tx: &mut Transaction<'_, Postgres>, session: &Session) -> Result<(), AppError> {
+pub async fn d_create_session(tx: &mut Transaction<'_, Postgres>, session: &Session) -> Result<(), AppError> {
 
     let _result = sqlx::query("INSERT INTO sessions (session_key, session_name) VALUES ($1, $2)")
                     .bind(&session.session_key)
@@ -30,7 +30,7 @@ pub async fn d_add_session(tx: &mut Transaction<'_, Postgres>, session: &Session
     Ok(())
 }
 
-pub async fn d_remove_session(tx: &mut Transaction<'_, Postgres>, session_key: &String) -> Result<(), AppError> {
+pub async fn d_delete_session(tx: &mut Transaction<'_, Postgres>, session_key: &String) -> Result<(), AppError> {
 
     let result = sqlx::query("DELETE FROM sessions WHERE session_key = $1")
                     .bind(&session_key)
