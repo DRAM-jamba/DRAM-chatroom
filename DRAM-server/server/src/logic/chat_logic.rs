@@ -108,13 +108,11 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
     // remove user from session users list
     let mut s_users = session_chat.users.write().await;
-    let index = match s_users.iter().position(|n| n == &user.nickname) {
-        Some(i) => i,
-        None => 99999999
+    match s_users.iter().position(|n| n == &user.nickname) {
+        Some(i) => s_users.remove(i),
+        None => "".to_string()
     };
-    if index != 99999999 {
-        s_users.remove(index);
-    }
+    let is_empty = s_users.is_empty();
     let json = match serde_json::to_string(&s_users.clone()) {
         Ok(s) => s,
         Err(e) => format!("Problem with message sending: {e}")
@@ -123,10 +121,12 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
     l_broadcast_message(&session_chat, MessageType::Disconnect, json, &user.nickname).await;
 
-    // TODO: not sure in this. but it works fine
-    if session_chat.tx.receiver_count() == 1 || session_chat.tx.receiver_count() == 0 { 
-        server_state.active_sessions.write().await.remove(&session_key);
+    if is_empty { 
+        let mut active_sessions = server_state.active_sessions.write().await;
+        active_sessions.remove(&session_key);
+        drop(active_sessions);
     }
+
 }
 
 async fn l_broadcast_message(session_chat: &SessionChat, m_type: MessageType,  msg: String, nickname: &String) {
