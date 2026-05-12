@@ -108,7 +108,10 @@ async fn leave_server(state: State<'_, AppState>) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
+async fn forget_server(
+    ip: String, 
+    state: State<'_, AppState>
+) -> Result<(), AppError> {
     ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
