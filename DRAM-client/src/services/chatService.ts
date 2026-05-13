@@ -14,6 +14,13 @@ type SessionPayload = {
   chat_log: MessagePayload[];
 };
 
+// Payload emitted by the backend for join/leave events
+type UserEventPayload = {
+  username: string;
+  event_type: "joined" | "left";
+  ts: number;
+};
+
 let cachedMessages: Message[] = [];
 let cachedMembers: Member[] = [];
 let sessionUpdateUnlisten: (() => void) | null = null;
@@ -143,5 +150,30 @@ export async function subscribeToMembers(
       online: true,
     }));
     onUpdate(members);
+  });
+}
+
+/**
+ * Subscribes to join/leave system events and injects them as system messages.
+ */
+export async function subscribeToUserEvents(
+  onMessage: (msg: Message) => void
+): Promise<() => void> {
+  return await listen<UserEventPayload>("user_event", (event) => {
+    const { username, event_type, ts } = event.payload;
+    const text = event_type === "joined"
+      ? `${username} joined the session`
+      : `${username} left the session`;
+
+    const msg: Message = {
+      authorUsername: "",
+      content: text,
+      timestamp: formatTimestamp(ts),
+      date: formatDate(ts),
+      id: `system-${username}-${event_type}-${ts}`,
+      system: true,
+    };
+
+    onMessage(msg);
   });
 }

@@ -8,6 +8,7 @@ import {
   leaveSession,
   subscribeToMessages,
   subscribeToMembers,
+  subscribeToUserEvents,
 } from "../services/chatService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
@@ -34,6 +35,14 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Helper to append a message deduplicating by id
+  const appendMessage = (msg: Message) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
+  };
+
   useEffect(() => {
     // Load initial messages and members from the session_update event
     getMessages().then((initialMsgs) => {
@@ -48,14 +57,11 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
       }
     });
 
-    // Subscribe to new incoming messages
-    const unlistenMsgPromise = subscribeToMessages((msg) => {
-      setMessages((prev) => {
-        // Deduplicate by id
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
-    });
+    // Subscribe to new incoming chat messages
+    const unlistenMsgPromise = subscribeToMessages(appendMessage);
+
+    // Subscribe to join/leave system messages
+    const unlistenUserEventsPromise = subscribeToUserEvents(appendMessage);
 
     // Subscribe to member list updates (join/leave events)
     const unlistenMembersPromise = subscribeToMembers((updatedMembers) => {
@@ -64,6 +70,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
 
     return () => {
       unlistenMsgPromise.then((unlisten) => unlisten());
+      unlistenUserEventsPromise.then((unlisten) => unlisten());
       unlistenMembersPromise.then((unlisten) => unlisten());
     };
   }, []);

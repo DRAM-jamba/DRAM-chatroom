@@ -1388,3 +1388,19 @@ body {
   color: #666;
   font-size: 15px;
 }
+/* System messages (join / leave notifications) */
+.system-message {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.system-message-text {
+  font-size: 12px;
+  color: #555;
+  background: #111;
+  border: 1px solid #1e1e1e;
+  border-radius: 20px;
+  padding: 3px 14px;
+  white-space: nowrap;
+}
