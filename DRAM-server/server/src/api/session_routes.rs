@@ -1,4 +1,5 @@
-use axum::{Json, Router, extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{delete, get, post, put}};
+use axum::{Json, Router, extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{delete, get, post}};
+use hyper::HeaderMap;
 use serde_json::{Value, json};
 use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::{request_bodies::{UserKey, UserKeySessionName, UserSessionKeys}, server_state::ServerState}};
 
@@ -7,7 +8,7 @@ pub fn router() -> Router<ServerState> {
         .route("/list", get(r_get_session_list))
         .route("/create", post(r_create_session))
         .route("/add", post(r_add_session))
-        .route("/connect", put(r_connect_to_session))
+        .route("/connect", get(r_connect_to_session))
         .route("/leave", delete(r_leave_session))
         .route("/forget", delete(r_forget_session))
         .route("/delete", delete(r_delete_session))
@@ -64,12 +65,22 @@ async fn r_add_session(State(server_state): State<ServerState>,
 
 async fn r_connect_to_session(State(server_state): State<ServerState>, 
                               ws: WebSocketUpgrade, 
-                              Json(payload): Json<UserSessionKeys>) -> Result<impl IntoResponse, ApiError> {
-    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
+                              headers: HeaderMap) -> Result<impl IntoResponse, ApiError> {
+
+    let user_key = headers.get("user_key")
+                                .and_then(|v| v.to_str().ok())
+                                .unwrap_or("")
+                                .to_string();
+    let session_key = headers.get("session_key")
+                                   .and_then(|v| v.to_str().ok())
+                                   .unwrap_or("")
+                                   .to_string();
+
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }               
-    l_connection_handler(server_state.clone(), payload.user_key, payload.session_key, ws).await
+    l_connection_handler(server_state.clone(), user_key, session_key, ws).await
 }
 
 // TODO: we don't need it. finish websocketing is just make close request to websocket
