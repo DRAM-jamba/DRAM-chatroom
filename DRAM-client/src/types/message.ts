@@ -4,7 +4,7 @@ export type Message = {
   timestamp: string;
   date: string;
   id: string;
-  system?: boolean;  // true for join/leave notifications
+  system?: boolean;
 };
 
 export type Member = {
