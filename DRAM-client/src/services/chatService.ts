@@ -63,7 +63,7 @@ export async function subscribeToMessages(
 }
 
 export async function subscribeToMemberUpdates(
-  onUpdate: (members: Member[]) => void, onMessage: (msg: Message) => void
+  onUpdate: (members: Member[]) => void
 ): Promise<() => void> {
   return await listen<MessageObj>("session_update", (event) => {
     try {
@@ -72,10 +72,17 @@ export async function subscribeToMemberUpdates(
         username,
         online: true,
       }));
-      onMessage(mapToUiMessage(event.payload));
       onUpdate(members);
     } catch (e) {
       console.error("Failed to parse member list from session_update", e);
     }
+  });
+}
+
+export async function subscribeToMemberEvents(
+  onMessage: (msg: Message) => void
+): Promise<() => void> {
+  return await listen<MessageObj>("session_update", (event) => {
+    onMessage(mapToUiMessage(event.payload));
   });
 }

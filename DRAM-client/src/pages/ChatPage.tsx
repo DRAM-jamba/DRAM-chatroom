@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import {
-  getMessages,
-  getMembers,
   sendMessage,
   leaveSession,
   subscribeToMessages,
-  subscribeToMembers,
-  subscribeToUserEvents,
+  subscribeToMemberUpdates,
+  subscribeToMemberEvents,
 } from "../services/chatService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
@@ -35,7 +33,6 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Helper to append a message deduplicating by id
   const appendMessage = (msg: Message) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === msg.id)) return prev;
@@ -44,34 +41,22 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   useEffect(() => {
-    // Load initial messages and members from the session_update event
-    getMessages().then((initialMsgs) => {
-      if (initialMsgs.length > 0) {
-        setMessages(initialMsgs);
-      }
-    });
+    const setupSubscriptions = async () => {
+      const unlistenMsgs = await subscribeToMessages(appendMessage);
+      const unlistenUserEvents = await subscribeToMemberEvents(appendMessage);
+      const unlistenMembers = await subscribeToMemberUpdates(setMembers);
 
-    getMembers().then((initialMembers) => {
-      if (initialMembers.length > 0) {
-        setMembers(initialMembers);
-      }
-    });
+      return () => {
+        unlistenMsgs();
+        unlistenUserEvents();
+        unlistenMembers();
+      };
+    };
 
-    // Subscribe to new incoming chat messages
-    const unlistenMsgPromise = subscribeToMessages(appendMessage);
-
-    // Subscribe to join/leave system messages
-    const unlistenUserEventsPromise = subscribeToUserEvents(appendMessage);
-
-    // Subscribe to member list updates (join/leave events)
-    const unlistenMembersPromise = subscribeToMembers((updatedMembers) => {
-      setMembers(updatedMembers);
-    });
+    const cleanupPromise = setupSubscriptions();
 
     return () => {
-      unlistenMsgPromise.then((unlisten) => unlisten());
-      unlistenUserEventsPromise.then((unlisten) => unlisten());
-      unlistenMembersPromise.then((unlisten) => unlisten());
+      cleanupPromise.then((cleanup) => cleanup());
     };
   }, []);
 
@@ -85,14 +70,10 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   const handleCopySessionKey = async () => {
-    try {
-      await navigator.clipboard.writeText(sessionName);
-      setCopied(true);
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy session key:", error);
-    }
+    await navigator.clipboard.writeText(sessionName);
+    setCopied(true);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   };
 
   const onlineMembers = members.filter((m) => m.online);
