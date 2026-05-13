@@ -1,5 +1,5 @@
 use keyring::Entry;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::Rng;
 
 pub fn get_or_create_master_key() -> Result<[u8; 32], Box<dyn std::error::Error>> {
     let service = "com.quorthon.app.vault";

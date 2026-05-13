@@ -32,8 +32,6 @@ async fn get_server_context(
     Ok((ip, server))
 }
 
-
-
 // Server commands
 #[tauri::command]
 async fn add_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
@@ -41,16 +39,16 @@ async fn add_server(ip: String, state: State<'_, AppState>) -> Result<(), AppErr
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     let api = ServerApi::new(&format!("http://{}", ip));
-
+    println!("Sending ADD Request");
     let response = ServerApi::http_post_empty(&api.add_server()).await?;
     let json_response: UserKey = response.json().await
         .map_err(|e| AppError::Protocol(format!("Failed to parse user key: {}", e)))?;
 
     let temp_nick = "".to_string();
-
+    println!("Sending ADD Request");
     state.set_connection_ip(ip.clone()).await;
     state.set_connection_state(ServerConnectionState::Connected).await;
-
+    println!("Saving server to list");
     state.add_server(ip, temp_nick, json_response.user_key).await
         .map_err(|e| AppError::Internal(format!("Failed to save: {}", e)))?;
 
@@ -303,29 +301,24 @@ async fn save_nickname(nickname: String, state: State<'_, AppState>) -> Result<(
     Ok(())
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let master_key = security::get_or_create_master_key()
         .expect("Failed to initialize secure system storage");
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_stronghold::Builder::new(move |_password| {
-            master_key.to_vec()
-        }).build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(move |app| {
             let app_handle = app.handle().clone();
-            let app_state = AppState::new(app_handle);
+            let app_state = AppState::new(app_handle.clone(), master_key);
+            app.manage(app_state.clone());
 
-            let state_for_load = app_state.clone();
-            tauri::async_runtime::block_on(async move {
-                if let Err(e) = state_for_load.load_persisted_data().await {
-                    eprintln!("Data Recovery Notice: Starting with fresh state. Details: {}", e);
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = app_state.load_persisted_data().await {
+                    eprintln!("Data Recovery Notice: {}", e);
                 }
             });
 
-            app.manage(app_state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

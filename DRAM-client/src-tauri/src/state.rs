@@ -1,15 +1,15 @@
 use std::sync::Arc;
 use tauri::AppHandle;
-use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use tauri::Manager;
+use aes_gcm::{Aes256Gcm, Key, Nonce, aead::{Aead, KeyInit}};
+use rand::Rng;
 
 use crate::client::WsClient;
 use crate::models::PersistedServer;
 
-const VAULT_PATH: &str = "server_vault";
-const CLIENT_NAME: &str = "secure_storage";
+pub const CLIENT_NAME: &str = "secure_storage";
 
 #[derive(Debug, Clone)]
 pub enum ServerConnectionState {
@@ -25,6 +25,7 @@ pub enum SessionState {
 
 #[derive(Clone)]
 pub struct AppState {
+    master_key: [u8; 32],
     servers: Arc<Mutex<Vec<PersistedServer>>>,
     current_ip: Arc<Mutex<Option<String>>>,
     connection: Arc<Mutex<ServerConnectionState>>,
@@ -33,8 +34,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(app_handle: AppHandle) -> Self {
+    pub fn new(app_handle: AppHandle, master_key: [u8; 32]) -> Self {
         Self {
+            master_key,
             servers: Arc::new(Mutex::new(Vec::new())),
             current_ip: Arc::new(Mutex::new(None)),
             connection: Arc::new(Mutex::new(ServerConnectionState::Disconnected)),
@@ -74,36 +76,62 @@ impl AppState {
     }
 
     pub async fn load_persisted_data(&self) -> Result<(), Box<dyn std::error::Error>> {
+        use tauri_plugin_store::StoreExt;
+
         let handle = self.app_handle.as_ref().ok_or("AppHandle not initialized")?;
+        let store = handle.store("app_data.json")?;
 
-        let stronghold = handle.state::<tauri_plugin_stronghold::stronghold::Stronghold>();
-        let client = stronghold.load_client(CLIENT_NAME)?;
-        let store = client.store();
+        let Some(val) = store.get("servers_list") else {
+            println!("[state] No servers_list found in store");
+            return Ok(());
+        };
 
-        if let Ok(Some(servers_bytes)) = store.get("servers_list".as_bytes()) {
-            let servers_vec: Vec<PersistedServer> = serde_json::from_slice(&servers_bytes)?;
-            *self.servers.lock().await = servers_vec;
+        let hex_str = val.as_str().ok_or("servers_list value is not a string")?;
+        let blob = hex::decode(hex_str)?;
+
+        if blob.len() < 12 {
+            return Err("Stored blob is too short to contain a nonce".into());
         }
+
+        let (nonce_bytes, ciphertext) = blob.split_at(12);
+        let key = Key::<Aes256Gcm>::from_slice(&self.master_key);
+        let cipher = Aes256Gcm::new(key);
+        let nonce = Nonce::from_slice(nonce_bytes);
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|e| format!("Decrypt error: {}", e))?;
+
+        let servers_vec = serde_json::from_slice::<Vec<PersistedServer>>(&plaintext)?;
+        println!("[state] Loaded {} servers from store", servers_vec.len());
+        *self.servers.lock().await = servers_vec;
 
         Ok(())
     }
 
     pub async fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(ref handle) = self.app_handle {
+        use tauri_plugin_store::StoreExt;
+
+        let handle = self.app_handle.as_ref().ok_or("AppHandle not initialized")?;
         let servers = self.servers.lock().await.clone();
-        
-        let stronghold = handle.state::<tauri_plugin_stronghold::stronghold::Stronghold>();
-        let client = stronghold.load_client(CLIENT_NAME)?;
-        let store = client.store();
+        let plaintext = serde_json::to_vec(&servers)?;
 
-        let data = serde_json::to_vec(&servers)?;
+        let key = Key::<Aes256Gcm>::from_slice(&self.master_key);
+        let cipher = Aes256Gcm::new(key);
+        let nonce_bytes = rand::thread_rng().gen::<[u8; 12]>();
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let ciphertext = cipher
+            .encrypt(nonce, plaintext.as_ref())
+            .map_err(|e| format!("Encrypt error: {}", e))?;
 
-        store.insert("servers_list".to_string().into_bytes(), data, None)?;
+        let mut blob = nonce_bytes.to_vec();
+        blob.extend(ciphertext);
 
-        stronghold.save()?;
+        let store = handle.store("app_data.json")?;
+        store.set("servers_list", hex::encode(&blob));
+        store.save()?;
+
+        Ok(())
     }
-    Ok(())
-}
 
     pub async fn add_server(
         &self,
