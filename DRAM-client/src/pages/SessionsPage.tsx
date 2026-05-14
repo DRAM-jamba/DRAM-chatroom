@@ -128,9 +128,8 @@ function SessionsPage({
     setView("list");
   };
 
-  const handleConnect = async (id: string) => {
-    const sessionName = await joinSession(id);
-    onConnectToSession?.(sessionName);
+  const handleConnect = (id: string) => {
+    onConnectToSession?.(id);
   };
 
   const handleSaveEdit = async (id: string, name: string) => {

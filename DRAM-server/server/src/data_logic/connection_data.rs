@@ -33,7 +33,20 @@ pub async fn d_get_user_role(db_pool: Pool<Postgres>, user_key: &String, session
                                 .map_err(|e| AppError::Database(e))
 }
 
-pub async fn d_add_connection(tx: &mut Transaction<'_, Postgres>, connection: &Connection) -> Result<(), AppError> {
+pub async fn d_create_connection(db_pool: Pool<Postgres>, connection: &Connection) -> Result<(), AppError> {
+  
+    let _result = sqlx::query("INSERT INTO user_session (user_key, session_key, user_role) VALUES ($1, $2, $3)")
+                                .bind(&connection.user_key)
+                                .bind(&connection.session_key)
+                                .bind(&connection.user_role)
+                                .execute(&db_pool).await?;
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
+
+    Ok(())
+}
+
+pub async fn d_create_connection_by_tx(tx: &mut Transaction<'_, Postgres>, connection: &Connection) -> Result<(), AppError> {
   
     let _result = sqlx::query("INSERT INTO user_session (user_key, session_key, user_role) VALUES ($1, $2, $3)")
                                 .bind(&connection.user_key)
@@ -46,7 +59,23 @@ pub async fn d_add_connection(tx: &mut Transaction<'_, Postgres>, connection: &C
     Ok(())
 }
 
-pub async fn d_remove_connection(tx: &mut Transaction<'_, Postgres>, user_key: &String, session_key: &String) -> Result<(), AppError> {
+pub async fn d_delete_connection(db_pool: Pool<Postgres>, user_key: &String, session_key: &String) -> Result<(), AppError> {
+  
+    let result = sqlx::query("DELETE FROM user_session WHERE user_key = $1 AND session_key = $2")
+                                .bind(&user_key)
+                                .bind(&session_key)
+                                .execute(&db_pool).await?;
+    // as i understood, if will be error, it will automatically change itself to 
+    // AppError::Database, so it should be fine
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::Database(sqlx::Error::RowNotFound));
+    }
+
+    Ok(())
+}
+
+pub async fn d_delete_connection_by_tx(tx: &mut Transaction<'_, Postgres>, user_key: &String, session_key: &String) -> Result<(), AppError> {
   
     let result = sqlx::query("DELETE FROM user_session WHERE user_key = $1 AND session_key = $2")
                                 .bind(&user_key)
@@ -62,7 +91,7 @@ pub async fn d_remove_connection(tx: &mut Transaction<'_, Postgres>, user_key: &
     Ok(())
 }
 
-pub async fn d_remove_all_connections_to_session(tx: &mut Transaction<'_, Postgres>, session_key: &String) -> Result<(), AppError> {
+pub async fn d_delete_all_connections_to_session(tx: &mut Transaction<'_, Postgres>, session_key: &String) -> Result<(), AppError> {
   
     let result = sqlx::query("DELETE FROM user_session WHERE session_key = $1")
                                 .bind(&session_key)
