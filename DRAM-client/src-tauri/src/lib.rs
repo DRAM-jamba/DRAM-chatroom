@@ -34,22 +34,19 @@ async fn get_server_context(
 
 // Server commands
 #[tauri::command]
-async fn add_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
+async fn add_server(ip: String, nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
     ip.parse::<std::net::SocketAddr>()
         .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     let api = ServerApi::new(&format!("http://{}", ip));
-    println!("Sending ADD Request");
     let response = ServerApi::http_post_empty(&api.add_server()).await?;
     let json_response: UserKey = response.json().await
         .map_err(|e| AppError::Protocol(format!("Failed to parse user key: {}", e)))?;
 
-    let temp_nick = "".to_string();
-    println!("Sending ADD Request");
     state.set_connection_ip(ip.clone()).await;
     state.set_connection_state(ServerConnectionState::Connected).await;
-    println!("Saving server to list");
-    state.add_server(ip, temp_nick, json_response.user_key).await
+
+    state.add_server(ip, nickname, json_response.user_key).await
         .map_err(|e| AppError::Internal(format!("Failed to save: {}", e)))?;
 
     Ok(())
@@ -187,8 +184,8 @@ async fn connect_session(
     let (ip, server) = get_server_context(&state).await?;
     let api = ServerApi::new(&format!("http://{}", ip));
 
-    let ws_url = api.ws(&server.user_key, &session_key);
-    let ws_client = client::WsClient::connect(&ws_url, app.clone())
+    let ws_url = api.ws();
+    let ws_client = client::WsClient::connect(&ws_url, &server.user_key, &session_key, app.clone())
         .await
         .map_err(|e| AppError::Network(format!("Failed to open websocket: {}", e)))?;
 

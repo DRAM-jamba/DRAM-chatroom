@@ -47,12 +47,10 @@ impl ServerApi {
     }
 
     // WebSocket URL
-    pub fn ws(&self, user_key: &str, session_key: &str) -> String {
+    pub fn ws(&self) -> String {
         format!(
-            "{}/session/connect/{}/{}",
-            self.base_url.replace("http", "ws"),
-            user_key,
-            session_key
+            "{}/session/connect",
+            self.base_url.replace("http", "ws")
         )
     }
 
