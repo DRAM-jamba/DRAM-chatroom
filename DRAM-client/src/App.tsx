@@ -3,14 +3,19 @@ import ServersPage from "./pages/ServersPage";
 import NicknamePage from "./pages/NicknamePage";
 import SessionsPage from "./pages/SessionsPage";
 import ChatPage from "./pages/ChatPage";
+import SettingsPage from "./pages/SettingsPage";
 import { getSavedNickname } from "./services/nicknameService";
+import { loadAllSettings } from "./services/settingsService";
 import "./App.css";
 
 type Page =
   | { name: "servers" }
   | { name: "nickname" }
   | { name: "sessions"; nickname: string }
-  | { name: "chat"; sessionName: string; nickname: string };
+  | { name: "chat"; sessionName: string; nickname: string }
+  | { name: "settings"; nickname: string };
+
+loadAllSettings();
 
 function App() {
   const [page, setPage] = useState<Page>({ name: "servers" });
@@ -46,6 +51,10 @@ function App() {
         onConnectToSession={(sessionName) =>
           setPage({ name: "chat", sessionName, nickname: page.nickname })
         }
+        onOpenSettings=
+        {
+          () => setPage({ name: "settings", nickname: page.nickname })
+        }
       />
     );
   }
@@ -54,6 +63,14 @@ function App() {
     return (
       <NicknamePage
         onNicknameSet={(nickname) => setPage({ name: "sessions", nickname })}
+      />
+    );
+  }
+
+  if (page.name === "settings") {
+    return (
+      <SettingsPage
+        onBack={() => setPage({ name: "sessions", nickname: page.nickname })}
       />
     );
   }

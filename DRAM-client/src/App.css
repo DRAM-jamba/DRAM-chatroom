@@ -1388,3 +1388,217 @@ body {
   color: #666;
   font-size: 15px;
 }
+.settings-sections .server-card:hover {
+  border-color: #2a2a2a;
+  box-shadow: none;
+}
+
+.settings-back-btn {
+  height: 35px;
+  padding: 0 16px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #d6d6d6;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.settings-back-btn:hover {
+  border-color: #00aaff;
+}
+
+.settings-option-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-option-btn {
+  flex: 1;
+  height: 34px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #aaaaaa;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.settings-option-btn:hover {
+  border-color: #00aaff;
+  color: #d0d0d0;
+}
+
+.settings-option-btn.active {
+  border-color: #00aaff;
+  color: #00aaff;
+}
+
+.settings-slider {
+  width: 100%;
+  accent-color: #00aaff;
+}
+
+.settings-slider-value {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #6a6a6a;
+  text-align: right;
+}
+
+select.server-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+  cursor: pointer;
+}
+
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.hotkey-row:last-child {
+  border-bottom: none;
+}
+
+.hotkey-label {
+  font-size: 14px;
+  color: #d0d0d0;
+}
+
+.hotkey-key {
+  font-size: 12px;
+  width: 30px;
+  height: 22px;
+  color: #00aaff;
+  border: 1px solid #00aaff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  font-family: inherit;
+}
+
+.hotkey-set-btn {
+  height: 22px;
+  width: 30px;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #aaaaaa;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hotkey-set-btn:hover {
+  border-color: #00aaff;
+  color: #d0d0d0;
+}
+
+.mic-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mic-device-btn {
+  width: 100%;
+  height: 34px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #aaaaaa;
+  cursor: pointer;
+  text-align: left;
+  padding: 0 10px;
+  font-size: 13px;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mic-device-btn:hover {
+  border-color: #00aaff;
+  color: #d0d0d0;
+}
+
+.mic-device-btn.active {
+  border-color: #00aaff;
+  color: #00aaff;
+}
+
+.custom-dropdown {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.custom-dropdown-trigger {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #222;
+  border-radius: 6px;
+  background: #101010;
+  color: #d0d0d0;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.2s ease;
+}
+
+.custom-dropdown-trigger:hover {
+  border-color: #00aaff;
+}
+
+.custom-dropdown-list {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  right: 0;
+  background: #141414;
+  border: 1px solid #00aaff;
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: 0 0 8px rgba(0, 170, 255, 0.35);
+}
+
+.custom-dropdown-item {
+  width: 100%;
+  height: 34px;
+  border: none;
+  background: #141414;
+  color: #aaaaaa;
+  cursor: pointer;
+  text-align: left;
+  padding: 0 10px;
+  font-size: 13px;
+  border-top: 1px solid #2a2a2a;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.custom-dropdown-item:first-child {
+  border-top: none;
+}
+
+.custom-dropdown-item:hover {
+  background: #202020;
+  color: #d0d0d0;
+}
+
+.custom-dropdown-item.active {
+  color: #00aaff;
+}
