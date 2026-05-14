@@ -1,11 +1,15 @@
-use tauri::AppHandle;
-use tauri_plugin_store::StoreExt;
-use tokio::sync::Mutex;
 use std::sync::Arc;
+use tauri::AppHandle;
+use tokio::sync::Mutex;
 use uuid::Uuid;
+use tauri::Manager;
+use aes_gcm::{Aes256Gcm, Key, Nonce, aead::{Aead, KeyInit}};
+use rand::Rng;
 
-use crate::models::PersistedServer;
 use crate::client::WsClient;
+use crate::models::PersistedServer;
+
+pub const CLIENT_NAME: &str = "secure_storage";
 
 #[derive(Debug, Clone)]
 pub enum ServerConnectionState {
@@ -21,6 +25,7 @@ pub enum SessionState {
 
 #[derive(Clone)]
 pub struct AppState {
+    master_key: [u8; 32],
     servers: Arc<Mutex<Vec<PersistedServer>>>,
     current_ip: Arc<Mutex<Option<String>>>,
     connection: Arc<Mutex<ServerConnectionState>>,
@@ -29,8 +34,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(app_handle: AppHandle) -> Self {
+    pub fn new(app_handle: AppHandle, master_key: [u8; 32]) -> Self {
         Self {
+            master_key,
             servers: Arc::new(Mutex::new(Vec::new())),
             current_ip: Arc::new(Mutex::new(None)),
             connection: Arc::new(Mutex::new(ServerConnectionState::Disconnected)),
@@ -70,29 +76,69 @@ impl AppState {
     }
 
     pub async fn load_persisted_data(&self) -> Result<(), Box<dyn std::error::Error>> {
-    let handle = self.app_handle.as_ref()
-        .ok_or("AppHandle not initialized")?;
-    let store = handle.store("servers.json")?;
-    
-    if let Some(servers_val) = store.get("servers") {
-        let servers_vec: Vec<PersistedServer> = serde_json::from_value(servers_val)?;
-        *self.servers.lock().await = servers_vec;
-    }
+        use tauri_plugin_store::StoreExt;
 
-    Ok(())
-}
+        let handle = self.app_handle.as_ref().ok_or("AppHandle not initialized")?;
+        let store = handle.store("app_data.json")?;
 
-    pub async fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(ref handle) = self.app_handle {
-            let servers = self.servers.lock().await.clone();
-            let store = handle.store("servers.json")?;
-            store.set("servers", serde_json::to_value(&servers)?);
-            store.save()?;
+        let Some(val) = store.get("servers_list") else {
+            println!("[state] No servers_list found in store");
+            return Ok(());
+        };
+
+        let hex_str = val.as_str().ok_or("servers_list value is not a string")?;
+        let blob = hex::decode(hex_str)?;
+
+        if blob.len() < 12 {
+            return Err("Stored blob is too short to contain a nonce".into());
         }
+
+        let (nonce_bytes, ciphertext) = blob.split_at(12);
+        let key = Key::<Aes256Gcm>::from_slice(&self.master_key);
+        let cipher = Aes256Gcm::new(key);
+        let nonce = Nonce::from_slice(nonce_bytes);
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|e| format!("Decrypt error: {}", e))?;
+
+        let servers_vec = serde_json::from_slice::<Vec<PersistedServer>>(&plaintext)?;
+        println!("[state] Loaded {} servers from store", servers_vec.len());
+        *self.servers.lock().await = servers_vec;
+
         Ok(())
     }
 
-    pub async fn add_server(&self, ip: String, server_name: String, user_key: String) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn save_servers(&self) -> Result<(), Box<dyn std::error::Error>> {
+        use tauri_plugin_store::StoreExt;
+
+        let handle = self.app_handle.as_ref().ok_or("AppHandle not initialized")?;
+        let servers = self.servers.lock().await.clone();
+        let plaintext = serde_json::to_vec(&servers)?;
+
+        let key = Key::<Aes256Gcm>::from_slice(&self.master_key);
+        let cipher = Aes256Gcm::new(key);
+        let nonce_bytes = rand::thread_rng().gen::<[u8; 12]>();
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let ciphertext = cipher
+            .encrypt(nonce, plaintext.as_ref())
+            .map_err(|e| format!("Encrypt error: {}", e))?;
+
+        let mut blob = nonce_bytes.to_vec();
+        blob.extend(ciphertext);
+
+        let store = handle.store("app_data.json")?;
+        store.set("servers_list", hex::encode(&blob));
+        store.save()?;
+
+        Ok(())
+    }
+
+    pub async fn add_server(
+        &self,
+        ip: String,
+        server_name: String,
+        user_key: String,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut servers = self.servers.lock().await;
 
         let new_id = Uuid::new_v4().to_string();
@@ -101,12 +147,12 @@ impl AppState {
             return Err("Server already exists".into());
         }
 
-        let new_server = PersistedServer { 
-            id: new_id.clone(), 
-            ip, 
-            server_name, 
-            user_key, 
-            user_nickname: None
+        let new_server = PersistedServer {
+            id: new_id.clone(),
+            ip,
+            server_name,
+            user_key,
+            user_nickname: None,
         };
         servers.push(new_server);
         drop(servers);
@@ -122,7 +168,11 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn save_nickname(&self, ip: &str, nickname: String) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn save_nickname(
+        &self,
+        ip: &str,
+        nickname: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut servers = self.servers.lock().await;
         if let Some(server) = servers.iter_mut().find(|s| s.ip == ip) {
             server.user_nickname = Some(nickname);
@@ -135,14 +185,29 @@ impl AppState {
     }
 
     pub async fn get_nickname(&self, ip: &str) -> Option<String> {
-        self.servers.lock().await.iter().find(|s| s.ip == ip).map(|s| s.user_nickname.clone().unwrap_or_default())
+        self.servers
+            .lock()
+            .await
+            .iter()
+            .find(|s| s.ip == ip)
+            .map(|s| s.user_nickname.clone().unwrap_or_default())
     }
 
     pub async fn get_server(&self, ip: &str) -> Option<PersistedServer> {
-        self.servers.lock().await.iter().find(|s| s.ip == ip).cloned()
+        self.servers
+            .lock()
+            .await
+            .iter()
+            .find(|s| s.ip == ip)
+            .cloned()
     }
 
     pub async fn get_server_by_id(&self, id: &str) -> Option<PersistedServer> {
-        self.servers.lock().await.iter().find(|s| s.id == id).cloned()
+        self.servers
+            .lock()
+            .await
+            .iter()
+            .find(|s| s.id == id)
+            .cloned()
     }
 }

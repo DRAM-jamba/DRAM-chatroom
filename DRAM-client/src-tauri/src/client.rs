@@ -1,12 +1,17 @@
+use crate::error::AppError;
+use crate::events::{self, emit_member_list, emit_message};
+use crate::models::{MessageObj, MessagePayload, MessageType};
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
-use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
-use crate::error::AppError;
-use crate::events::{self, emit_message, emit_member_list};
-use crate::models::{MessageObj, MessageType, MessagePayload};
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{client::IntoClientRequest, http::HeaderValue, Message},
+    MaybeTlsStream,
+    WebSocketStream,
+};
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
@@ -16,8 +21,18 @@ pub struct WsClient {
 }
 
 impl WsClient {
-    pub async fn connect(url: &str, app: AppHandle) -> Result<Self, AppError> {
-        let (ws_stream, _) = connect_async(url)
+    pub async fn connect(url: &str, user_key: &str, session_key: &str, app: AppHandle) -> Result<Self, AppError> {
+        let mut request = url.into_client_request()
+            .map_err(|e| AppError::Network(e.to_string()))?;
+        
+        let headers = request.headers_mut();
+        
+        headers.insert("user_key", HeaderValue::from_str(user_key)
+            .map_err(|e| AppError::Network(e.to_string()))?);
+        headers.insert("session_key", HeaderValue::from_str(session_key)
+            .map_err(|e| AppError::Network(e.to_string()))?);
+
+        let (ws_stream, _) = connect_async(request)
             .await
             .map_err(|e| AppError::Network(e.to_string()))?;
 
@@ -37,22 +52,24 @@ impl WsClient {
             }
         });
 
-        Ok(Self { sink: Arc::new(Mutex::new(sink)), })
+        Ok(Self {
+            sink: Arc::new(Mutex::new(sink)),
+        })
     }
 
-    fn handle_incoming(
-        app: &AppHandle, 
-        text: &str
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_incoming(app: &AppHandle, text: &str) -> Result<(), Box<dyn std::error::Error>> {
         let obj: MessageObj = serde_json::from_str(text)?;
 
         match obj.m_type {
             MessageType::Message => {
-                emit_message(app, MessagePayload {
-                    from: obj.from,
-                    body: obj.body,
-                    ts: obj.ts,
-                });
+                emit_message(
+                    app,
+                    MessagePayload {
+                        from: obj.from,
+                        body: obj.body,
+                        ts: obj.ts,
+                    },
+                );
             }
             MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
                 if !obj.body.is_empty() {

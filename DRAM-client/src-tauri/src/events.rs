@@ -1,5 +1,5 @@
+use crate::models::{MemberListPayload, MessagePayload, SessionPayload};
 use tauri::{AppHandle, Emitter};
-use crate::models::{MessagePayload, MemberListPayload, SessionPayload};
 
 pub fn emit_message(app: &AppHandle, payload: MessagePayload) {
     let _ = app.emit("message", payload);
