@@ -5,8 +5,8 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::error::AppError;
-use crate::events::{self, emit_message, emit_member_list};
-use crate::models::{MessageObj, MessageType, MessagePayload};
+use crate::events::{self, emit_message, emit_session_update};
+use crate::models::{MessageObj, MessageType};
 
 type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 
@@ -48,17 +48,20 @@ impl WsClient {
 
         match obj.m_type {
             MessageType::Message => {
-                emit_message(app, MessagePayload {
+                emit_message(app, MessageObj {
+                    m_type: obj.m_type,
                     from: obj.from,
                     body: obj.body,
                     ts: obj.ts,
                 });
             }
-            MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
-                if !obj.body.is_empty() {
-                    let participants: Vec<String> = serde_json::from_str(&obj.body)?;
-                    emit_member_list(app, participants);
-                }
+            MessageType::Connect | MessageType::Disconnect => {
+                emit_session_update(app, MessageObj{
+                    m_type: obj.m_type,
+                    from: obj.from,
+                    body: obj.body,
+                    ts: obj.ts,
+                });
             }
         }
         Ok(())

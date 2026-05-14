@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
+import { joinSession } from "../services/sessionService";
 import {
-  getMessages,
-  getMembers,
   sendMessage,
   leaveSession,
   subscribeToMessages,
-  subscribeToMembers,
+  subscribeToMemberUpdates,
+  subscribeToMemberEvents,
 } from "../services/chatService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
@@ -34,39 +34,47 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const appendMessage = (msg: Message) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
+  };
+
   useEffect(() => {
-    // Load initial messages and members from the session_update event
-    getMessages().then((initialMsgs) => {
-      if (initialMsgs.length > 0) {
-        setMessages(initialMsgs);
+  if (!sessionName) {
+    console.warn("ChatPage mounted without a sessionName (key). Waiting...");
+    return;
+  }
+
+  let unlistenFuncs: Array<() => void> = [];
+  let isMounted = true;
+
+  const setupChat = async () => {
+    try {
+      const unlistenMsgs = await subscribeToMessages(appendMessage);
+      const unlistenUserEvents = await subscribeToMemberEvents(appendMessage);
+      const unlistenMembers = await subscribeToMemberUpdates(setMembers);
+
+        if (!isMounted) return;
+        unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers];
+        
+        await joinSession(sessionName);
+
+      } catch (err) {
+        if (isMounted) {
+          console.error("Failed to connect to session:", err);
+        }
       }
-    });
+    };
 
-    getMembers().then((initialMembers) => {
-      if (initialMembers.length > 0) {
-        setMembers(initialMembers);
-      }
-    });
-
-    // Subscribe to new incoming messages
-    const unlistenMsgPromise = subscribeToMessages((msg) => {
-      setMessages((prev) => {
-        // Deduplicate by id
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
-    });
-
-    // Subscribe to member list updates (join/leave events)
-    const unlistenMembersPromise = subscribeToMembers((updatedMembers) => {
-      setMembers(updatedMembers);
-    });
+  setupChat();
 
     return () => {
-      unlistenMsgPromise.then((unlisten) => unlisten());
-      unlistenMembersPromise.then((unlisten) => unlisten());
+      isMounted = false;
+      unlistenFuncs.forEach((unlisten) => unlisten());
     };
-  }, []);
+}, [sessionName]);
 
   const handleSend = async (content: string) => {
     await sendMessage(content);
@@ -78,18 +86,11 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   const handleCopySessionKey = async () => {
-    try {
-      await navigator.clipboard.writeText(sessionName);
-      setCopied(true);
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy session key:", error);
-    }
+    await navigator.clipboard.writeText(sessionName);
+    setCopied(true);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   };
-
-  const onlineMembers = members.filter((m) => m.online);
-  const offlineMembers = members.filter((m) => !m.online);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -201,10 +202,9 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         <aside className="chat-members-sidebar">
           <div className="chat-members-header">members</div>
 
-          {onlineMembers.length > 0 && (
+          {members.length > 0 && (
             <>
-              <div className="members-status-label">online</div>
-              {onlineMembers.map((member) => (
+              {members.map((member) => (
                 <div key={member.username} className="member-card">
                   {member.username}
                 </div>
@@ -212,18 +212,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
             </>
           )}
 
-          {offlineMembers.length > 0 && (
-            <>
-              <div className="members-status-label members-status-offline">offline</div>
-              {offlineMembers.map((member) => (
-                <div key={member.username} className="member-card member-card-offline">
-                  {member.username}
-                </div>
-              ))}
-            </>
-          )}
-
-          {onlineMembers.length === 0 && offlineMembers.length === 0 && (
+          {members.length === 0 && (
             <div className="members-empty">empty</div>
           )}
 

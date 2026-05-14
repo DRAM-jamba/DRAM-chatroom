@@ -40,6 +40,7 @@ async fn http_get(
 #[tauri::command]
 async fn add_server(
     ip: String,
+    nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     ip.parse::<std::net::SocketAddr>()
@@ -49,13 +50,11 @@ async fn add_server(
     let response = http_get(&api.add_server()).await?;
     let json_response: UserKey = response.json().await
         .map_err(|e| AppError::Protocol(format!("Failed to parse user key: {}", e)))?;
-    
-    let temp_nick = "".to_string();
 
     state.set_connection_ip(ip.clone()).await;
     state.set_connection_state(ServerConnectionState::Connected).await;
     
-    state.add_server(ip, temp_nick, json_response.user_key).await
+    state.add_server(ip, nickname, json_response.user_key).await
         .map_err(|e| AppError::Internal(format!("Failed to save: {}", e)))?;
     
     Ok(())
