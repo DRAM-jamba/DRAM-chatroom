@@ -42,7 +42,7 @@ function mapToUiMessage(p: MessageObj): Message {
     case "connect": {
       return {
         authorUsername: "",
-        content: `${p.from} joined the session.`,
+        content: `${p.from} joined the session`,
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
@@ -51,7 +51,7 @@ function mapToUiMessage(p: MessageObj): Message {
     case "disconnect": {
       return {
         authorUsername: "",
-        content: `${p.from} left the session.`,
+        content: `${p.from} left the session`,
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
