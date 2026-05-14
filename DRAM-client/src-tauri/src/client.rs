@@ -1,6 +1,6 @@
 use crate::error::AppError;
-use crate::events::{self, emit_member_list, emit_message};
-use crate::models::{MessageObj, MessagePayload, MessageType};
+use crate::events::{self, emit_message, emit_session_update};
+use crate::models::{MessageObj, MessageType};
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
 use tauri::AppHandle;

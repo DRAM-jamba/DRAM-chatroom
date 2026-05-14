@@ -2,14 +2,11 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use tauri::Manager;
 use aes_gcm::{Aes256Gcm, Key, Nonce, aead::{Aead, KeyInit}};
 use rand::Rng;
 
 use crate::client::WsClient;
 use crate::models::PersistedServer;
-
-pub const CLIENT_NAME: &str = "secure_storage";
 
 #[derive(Debug, Clone)]
 pub enum ServerConnectionState {
@@ -52,10 +49,6 @@ impl AppState {
 
     pub async fn get_current_ip(&self) -> Option<String> {
         self.current_ip.lock().await.clone()
-    }
-
-    pub async fn get_connection_state(&self) -> ServerConnectionState {
-        self.connection.lock().await.clone()
     }
 
     pub async fn get_session_state(&self) -> SessionState {
@@ -199,15 +192,6 @@ impl AppState {
             .await
             .iter()
             .find(|s| s.ip == ip)
-            .cloned()
-    }
-
-    pub async fn get_server_by_id(&self, id: &str) -> Option<PersistedServer> {
-        self.servers
-            .lock()
-            .await
-            .iter()
-            .find(|s| s.id == id)
             .cloned()
     }
 }
