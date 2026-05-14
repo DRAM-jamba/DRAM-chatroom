@@ -62,20 +62,20 @@ impl WsClient {
 
         match obj.m_type {
             MessageType::Message => {
-                emit_message(
-                    app,
-                    MessagePayload {
-                        from: obj.from,
-                        body: obj.body,
-                        ts: obj.ts,
-                    },
-                );
+                emit_message(app, MessageObj {
+                    m_type: obj.m_type,
+                    from: obj.from,
+                    body: obj.body,
+                    ts: obj.ts,
+                });
             }
-            MessageType::Connect | MessageType::Disconnect | MessageType::UserList => {
-                if !obj.body.is_empty() {
-                    let participants: Vec<String> = serde_json::from_str(&obj.body)?;
-                    emit_member_list(app, participants);
-                }
+            MessageType::Connect | MessageType::Disconnect => {
+                emit_session_update(app, MessageObj{
+                    m_type: obj.m_type,
+                    from: obj.from,
+                    body: obj.body,
+                    ts: obj.ts,
+                });
             }
         }
         Ok(())

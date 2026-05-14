@@ -2,42 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Message, Member } from "../types/message";
 
-type MessagePayload = {
+type MessageObj = {
+  m_type: "message" | "connect" | "disconnect";
   from: string;
   body: string;
   ts: number;
 };
-
-type SessionPayload = {
-  session_id: string;
-  participants: string[];
-  chat_log: MessagePayload[];
-};
-
-let cachedMessages: Message[] = [];
-let cachedMembers: Member[] = [];
-let sessionUpdateUnlisten: (() => void) | null = null;
-
-(async () => {
-  sessionUpdateUnlisten = await listen<SessionPayload>(
-    "session_update",
-    (event) => {
-      const payload = event.payload;
-
-      cachedMessages = payload.chat_log.map(payloadToMessage);
-
-      cachedMembers = payload.participants.map((username) => ({
-        username,
-        online: true,
-      }));
-
-      // One-shot: stop listening after the first event.
-      sessionUpdateUnlisten?.();
-      sessionUpdateUnlisten = null;
-    }
-  );
-})();
-
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleTimeString("en-GB", {
@@ -59,89 +29,77 @@ function formatDate(ts: number): string {
   return d.toLocaleDateString("en-GB");
 }
 
-function payloadToMessage(p: MessagePayload): Message {
-  return {
-    authorUsername: p.from,
-    content: p.body,
-    timestamp: formatTimestamp(p.ts),
-    date: formatDate(p.ts),
-    id: `${p.from}-${p.ts}-${p.body}`,
-  };
-}
-
-export async function getMessages(): Promise<Message[]> {
-  if (cachedMessages.length > 0 || sessionUpdateUnlisten === null) {
-    return cachedMessages;
-  }
-
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => resolve([]), 3000);
-
-    const origUnlisten = sessionUpdateUnlisten;
-    sessionUpdateUnlisten = () => {
-      origUnlisten?.();
-      clearTimeout(timeout);
-      resolve(cachedMessages);
-    };
-  });
-}
-
-export async function getMembers(): Promise<Member[]> {
-  if (cachedMembers.length > 0 || sessionUpdateUnlisten === null) {
-    return cachedMembers;
-  }
-
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => resolve([]), 3000);
-
-    const origUnlisten = sessionUpdateUnlisten;
-    sessionUpdateUnlisten = () => {
-      origUnlisten?.();
-      clearTimeout(timeout);
-      resolve(cachedMembers);
-    };
-  });
-}
-
 export async function sendMessage(content: string): Promise<void> {
-  await invoke<void>("send_message", { body: content });
+  await invoke("send_message", { body: content });
 }
 
 export async function leaveSession(): Promise<void> {
-  await invoke<void>("leave_session");
-  cachedMessages = [];
-  cachedMembers = [];
+  await invoke("leave_session");
 }
 
-/**
- * Subscribes to real-time messages arriving over the WebSocket connection.
- */
+function mapToUiMessage(p: MessageObj): Message {
+  switch (p.m_type) {
+    case "connect": {
+      return {
+        authorUsername: "",
+        content: `${p.from} joined the session`,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      }
+    }
+    case "disconnect": {
+      return {
+        authorUsername: "",
+        content: `${p.from} left the session`,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      }
+    }
+    case "message": {
+      return {
+        authorUsername: p.from,
+        content: p.body,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      }
+    }
+  }
+}
+
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
-  return await listen<MessagePayload>("message", (event) => {
-    const p = event.payload;
-
-    const msg: Message = {
-      authorUsername: p.from,
-      content: p.body,
-      timestamp: formatTimestamp(p.ts),
-      date: formatDate(p.ts),
-      id: `${p.from}-${p.ts}-${p.body}`,
-    };
-
-    onMessage(msg);
+  return await listen<MessageObj>("message", (event) => {
+    console.log(event.payload);
+    onMessage(mapToUiMessage(event.payload));
   });
 }
 
-export async function subscribeToMembers(
+export async function subscribeToMemberUpdates(
   onUpdate: (members: Member[]) => void
 ): Promise<() => void> {
-  return await listen<SessionPayload>("member_list", (event) => {
-    const members = event.payload.participants.map((username) => ({
-      username,
-      online: true,
-    }));
-    onUpdate(members);
+  return await listen<MessageObj>("session_update", (event) => {
+    console.log(event.payload);
+    try {
+      const usernames: string[] = JSON.parse(event.payload.body);
+      const members: Member[] = usernames.map((username) => ({
+        username,
+      }));
+      onUpdate(members);
+    } catch (e) {
+      console.error("Failed to parse member list from session_update", e);
+    }
+  });
+}
+
+export async function subscribeToMemberEvents(
+  onMessage: (msg: Message) => void
+): Promise<() => void> {
+  return await listen<MessageObj>("session_update", (event) => {
+    console.log(event.payload);
+    onMessage(mapToUiMessage(event.payload));
   });
 }

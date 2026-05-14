@@ -1,15 +1,11 @@
-use crate::models::{MemberListPayload, MessagePayload, SessionPayload};
 use tauri::{AppHandle, Emitter};
+use crate::models::MessageObj;
 
-pub fn emit_message(app: &AppHandle, payload: MessagePayload) {
+pub fn emit_message(app: &AppHandle, payload: MessageObj) {
     let _ = app.emit("message", payload);
 }
 
-pub fn emit_member_list(app: &AppHandle, participants: Vec<String>) {
-    let _ = app.emit("member_list", MemberListPayload { participants });
-}
-
-pub fn emit_session_update(app: &AppHandle, payload: SessionPayload) {
+pub fn emit_session_update(app: &AppHandle, payload: MessageObj) {
     let _ = app.emit("session_update", payload);
 }
 
