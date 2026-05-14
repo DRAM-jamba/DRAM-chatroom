@@ -9,6 +9,5 @@ export type Message = {
 
 export type Member = {
   username: string;
-  online: boolean;
 };
 

@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { Message, Member } from "../types/message";
 
 type MessageObj = {
-  m_type: "Message" | "Connect" | "Disconnect";
+  m_type: "message" | "connect" | "disconnect";
   from: string;
   body: string;
   ts: number;
@@ -38,26 +38,42 @@ export async function leaveSession(): Promise<void> {
 }
 
 function mapToUiMessage(p: MessageObj): Message {
-  const isSystem = p.m_type !== "Message";
-  let content = p.body;
-
-  if (p.m_type === "Connect") content = `${p.from} joined the session`;
-  if (p.m_type === "Disconnect") content = `${p.from} left the session`;
-
-  return {
-    authorUsername: isSystem ? "" : p.from,
-    content: content,
-    timestamp: formatTimestamp(p.ts),
-    date: formatDate(p.ts),
-    id: `${p.from}-${p.ts}-${p.m_type}`,
-    system: isSystem,
-  };
+  switch (p.m_type) {
+    case "connect": {
+      return {
+        authorUsername: "",
+        content: `${p.from} joined the session.`,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      }
+    }
+    case "disconnect": {
+      return {
+        authorUsername: "",
+        content: `${p.from} left the session.`,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      }
+    }
+    case "message": {
+      return {
+        authorUsername: p.from,
+        content: p.body,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      }
+    }
+  }
 }
 
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
   return await listen<MessageObj>("message", (event) => {
+    console.log(event.payload);
     onMessage(mapToUiMessage(event.payload));
   });
 }
@@ -66,11 +82,11 @@ export async function subscribeToMemberUpdates(
   onUpdate: (members: Member[]) => void
 ): Promise<() => void> {
   return await listen<MessageObj>("session_update", (event) => {
+    console.log(event.payload);
     try {
       const usernames: string[] = JSON.parse(event.payload.body);
       const members: Member[] = usernames.map((username) => ({
         username,
-        online: true,
       }));
       onUpdate(members);
     } catch (e) {
@@ -83,6 +99,7 @@ export async function subscribeToMemberEvents(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
   return await listen<MessageObj>("session_update", (event) => {
+    console.log(event.payload);
     onMessage(mapToUiMessage(event.payload));
   });
 }

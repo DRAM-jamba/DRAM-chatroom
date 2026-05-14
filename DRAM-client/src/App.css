@@ -1106,6 +1106,17 @@ t
   word-break: break-word;
 }
 
+.message-system {
+  text-align: center;
+  font-style: bold;
+}
+
+.message-system .message-content {
+  font-size: 13px;
+  color: #6a6a6a;
+  padding: 4px 12px;
+}
+
 /* Message input */
 .message-input-wrapper {
   flex-shrink: 0;

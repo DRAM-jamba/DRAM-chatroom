@@ -58,8 +58,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
 
         if (!isMounted) return;
         unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers];
-
-        console.log("Connecting to session with key:", sessionName);
+        
         await joinSession(sessionName);
 
       } catch (err) {
@@ -92,9 +91,6 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   };
-
-  const onlineMembers = members.filter((m) => m.online);
-  const offlineMembers = members.filter((m) => !m.online);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -206,10 +202,9 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         <aside className="chat-members-sidebar">
           <div className="chat-members-header">members</div>
 
-          {onlineMembers.length > 0 && (
+          {members.length > 0 && (
             <>
-              <div className="members-status-label">online</div>
-              {onlineMembers.map((member) => (
+              {members.map((member) => (
                 <div key={member.username} className="member-card">
                   {member.username}
                 </div>
@@ -217,18 +212,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
             </>
           )}
 
-          {offlineMembers.length > 0 && (
-            <>
-              <div className="members-status-label members-status-offline">offline</div>
-              {offlineMembers.map((member) => (
-                <div key={member.username} className="member-card member-card-offline">
-                  {member.username}
-                </div>
-              ))}
-            </>
-          )}
-
-          {onlineMembers.length === 0 && offlineMembers.length === 0 && (
+          {members.length === 0 && (
             <div className="members-empty">empty</div>
           )}
 
