@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import TitleBar from "../components/TitleBar";
 import logoIcon from "../assets/icons/logorgb.png";
+import arrowUpIcon from "../assets/icons/arrowupicon.svg";
+import arrowDownIcon from "../assets/icons/arrowdownicon.svg";
 import {
   saveTheme, loadTheme,
   saveFont, loadFont,
@@ -16,9 +18,10 @@ import {
 
 type SettingsPageProps = {
   onBack: () => void;
+  hideHeader?: boolean;
 };
 
-function SettingsPage({ onBack }: SettingsPageProps) {
+function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
   const [theme, setTheme] = useState<Theme>(loadTheme());
   const [font, setFont] = useState<Font>(loadFont());
   const [micDevice, setMicDevice] = useState(loadMicDevice());
@@ -30,7 +33,8 @@ function SettingsPage({ onBack }: SettingsPageProps) {
   const [speakerDevice, setSpeakerDevice] = useState(loadSpeakerDevice());
   const [speakerLevel, setSpeakerLevel] = useState(loadSpeakerLevel());
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
-  
+  const [micDropdownOpen, setMicDropdownOpen] = useState(false);
+  const [speakerDropdownOpen, setSpeakerDropdownOpen] = useState(false);
 
 
   useEffect(() => {
@@ -39,14 +43,19 @@ function SettingsPage({ onBack }: SettingsPageProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
       const key = e.key.toUpperCase();
+
       if (listeningFor === "mic") {
+        if (key === headphonesHotkey) return; // already used
         setMicHotkey(key);
         saveMicHotkey(key);
       }
+
       if (listeningFor === "headphones") {
+        if (key === micHotkey) return; // already used
         setHeadphonesHotkey(key);
         saveHeadphonesHotkey(key);
       }
+
       setListeningFor(null);
     };
 
@@ -92,13 +101,17 @@ function SettingsPage({ onBack }: SettingsPageProps) {
 
   return (
     <div className="servers-page">
-      <TitleBar />
+      {!hideHeader && <TitleBar />}
       <aside className="sidebar">
-        <h1 className="logo">
-          <img src={logoIcon} width="24" height="24" />
-          quorthon
-        </h1>
-        <div className="sidebar-line" />
+        {!hideHeader && (
+          <>
+            <h1 className="logo">
+              <img src={logoIcon} width="24" height="24" />
+              quorthon
+            </h1>
+            <div className="sidebar-line" />
+          </>
+        )}
 
         <div className="server-list-container settings-sections">
 
@@ -153,22 +166,35 @@ function SettingsPage({ onBack }: SettingsPageProps) {
             </div>
             <div className="server-details">
                 <p className="input-label">Microphone device</p>
-                <div className="mic-device-list">
-                    {micDevices.length === 0 ? (
-                    <p className="settings-slider-value">No microphones found</p>
-                    ) : (
-                    micDevices.map((device) => (
-                        <button
+              <div className="custom-dropdown">
+                <button
+                  className="custom-dropdown-trigger"
+                  type="button"
+                  onClick={() => setMicDropdownOpen((prev) => !prev)}
+                >
+                  <span>{micDevices.find((d) => d.deviceId === micDevice)?.label || "Windows default"}</span>
+                  <img src={micDropdownOpen ? arrowUpIcon : arrowDownIcon} width="14" height="14" />
+                </button>
+
+                {micDropdownOpen && (
+                  <div className="custom-dropdown-list">
+                    {micDevices.map((device) => (
+                      <button
                         key={device.deviceId}
-                        className={`mic-device-btn ${micDevice === device.deviceId ? "active" : ""}`}
+                      className={`custom-dropdown-item ${micDevice === device.deviceId ? "active" : ""}`}
                         type="button"
-                        onClick={() => { setMicDevice(device.deviceId); saveMicDevice(device.deviceId); }}
-                        >
-                        {device.label || "Microphone"}
-                        </button>
-                    ))
-                    )}
-                </div>
+                      onClick={() => {
+                        setMicDevice(device.deviceId);
+                        saveMicDevice(device.deviceId);
+                        setMicDropdownOpen(false);
+                      }}
+                    >
+                      {device.label || (device.deviceId === "default" ? "Windows default" : "Microphone")}
+                    </button>
+                  ))}
+                  </div>
+                )}
+              </div>
 
                 <p className="input-label">Microphone level</p>
                 <input
@@ -195,19 +221,32 @@ function SettingsPage({ onBack }: SettingsPageProps) {
             <div className="server-details">
                 <p className="input-label">Speaker device</p>
                 <div className="mic-device-list">
-                {speakerDevices.length === 0 ? (
-                    <p className="settings-slider-value">No speakers found</p>
-                ) : (
-                    speakerDevices.map((device) => (
+                <button
+                  className="custom-dropdown-trigger"
+                  type="button"
+                  onClick={() => setSpeakerDropdownOpen((prev) => !prev)}
+                >
+                  <span>{speakerDevices.find((d) => d.deviceId === speakerDevice)?.label || "Windows default"}</span>
+                  <img src={speakerDropdownOpen ? arrowUpIcon : arrowDownIcon} width="14" height="14" />
+                </button>
+
+                {speakerDropdownOpen && (
+                  <div className="custom-dropdown-list">
+                    {speakerDevices.map((device) => (
                     <button
-                        key={device.deviceId}
-                        className={`mic-device-btn ${speakerDevice === device.deviceId ? "active" : ""}`}
+                      key={device.deviceId}
+                      className={`custom-dropdown-item ${speakerDevice === device.deviceId ? "active" : ""}`}
                         type="button"
-                        onClick={() => { setSpeakerDevice(device.deviceId); saveSpeakerDevice(device.deviceId); }}
+                      onClick={() => {
+                        setSpeakerDevice(device.deviceId);
+                        saveSpeakerDevice(device.deviceId);
+                        setSpeakerDropdownOpen(false);
+                      }}
                     >
                         {device.label || (device.deviceId === "default" ? "Windows default" : "Speaker")}
                     </button>
-                    ))
+                  ))}
+                  </div>
                 )}
                 </div>
 
