@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
+import { joinSession } from "../services/sessionService";
 import {
   sendMessage,
   leaveSession,
@@ -41,24 +42,40 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   useEffect(() => {
-    const setupSubscriptions = async () => {
+  if (!sessionName) {
+    console.warn("ChatPage mounted without a sessionName (key). Waiting...");
+    return;
+  }
+
+  let unlistenFuncs: Array<() => void> = [];
+  let isMounted = true;
+
+  const setupChat = async () => {
+    try {
       const unlistenMsgs = await subscribeToMessages(appendMessage);
       const unlistenUserEvents = await subscribeToMemberEvents(appendMessage);
       const unlistenMembers = await subscribeToMemberUpdates(setMembers);
 
-      return () => {
-        unlistenMsgs();
-        unlistenUserEvents();
-        unlistenMembers();
-      };
+        if (!isMounted) return;
+        unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers];
+
+        console.log("Connecting to session with key:", sessionName);
+        await joinSession(sessionName);
+
+      } catch (err) {
+        if (isMounted) {
+          console.error("Failed to connect to session:", err);
+        }
+      }
     };
 
-    const cleanupPromise = setupSubscriptions();
+  setupChat();
 
     return () => {
-      cleanupPromise.then((cleanup) => cleanup());
+      isMounted = false;
+      unlistenFuncs.forEach((unlisten) => unlisten());
     };
-  }, []);
+}, [sessionName]);
 
   const handleSend = async (content: string) => {
     await sendMessage(content);
