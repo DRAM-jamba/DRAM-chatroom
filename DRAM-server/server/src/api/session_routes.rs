@@ -1,27 +1,27 @@
-use axum::{Json, Router, extract::{Path, State, WebSocketUpgrade}, response::IntoResponse, routing::get};
+use axum::{Json, Router, extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{delete, get, post}};
+use hyper::HeaderMap;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{auth_logic::{l_ensure_user_not_in_session}, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::server_state::ServerState};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::{request_bodies::{UserKey, UserKeySessionName, UserSessionKeys}, server_state::ServerState}};
 
 pub fn router() -> Router<ServerState> {
     Router::new() // move user_key to body of request
-        .route("/list/{user_key}", get(r_get_session_list))
-        .route("/create/{user_key}/{session_name}", get(r_create_session))
-        .route("/add/{user_key}/{session_key}", get(r_add_session))
-        .route("/connect/{user_key}/{session_key}", get(r_connect_to_session))
-        .route("/leave", get(r_leave_session))
-        .route("/forget/{user_key}/{session_key}", get(r_forget_session))
-        // user_key to proof that session is created by user
-        .route("/delete/{user_key}/{session_key}", get(r_delete_session))
+        .route("/list", get(r_get_session_list))
+        .route("/create", post(r_create_session))
+        .route("/add", post(r_add_session))
+        .route("/connect", get(r_connect_to_session))
+        .route("/leave", delete(r_leave_session))
+        .route("/forget", delete(r_forget_session))
+        .route("/delete", delete(r_delete_session))
 }
 
 async fn r_get_session_list(State(server_state): State<ServerState>,
-                          Path(user_key): Path<String>) -> Result<Json<Value>, ApiError> {
-    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
+                            Json(payload): Json<UserKey>) -> Result<Json<Value>, ApiError> {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
     
-    match l_get_session_list(server_state.db_pool.clone(), &user_key).await {
+    match l_get_session_list(server_state.db_pool.clone(), &payload.user_key).await {
         Ok(session_list) => {
             Ok(Json(json!({
                 "user_sessions": session_list
@@ -32,14 +32,14 @@ async fn r_get_session_list(State(server_state): State<ServerState>,
 }
 
 async fn r_create_session(State(server_state): State<ServerState>,
-                        Path((user_key, session_name)): Path<(String, String)>) -> Result<Json<Value>, ApiError> {
+                          Json(payload): Json<UserKeySessionName>) -> Result<Json<Value>, ApiError> {
     
-    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
 
-    match l_create_session(server_state.db_pool.clone(), &user_key, &session_name).await {
+    match l_create_session(server_state.db_pool.clone(), &payload.user_key, &payload.session_name).await {
         Ok(session_key) => Ok(Json(json!({
             "session_key": session_key
         }))),
@@ -48,22 +48,34 @@ async fn r_create_session(State(server_state): State<ServerState>,
 }
 
 async fn r_add_session(State(server_state): State<ServerState>,
-                     Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
+                       Json(payload): Json<UserSessionKeys>) -> Result<Json<Value>, ApiError> {
     
-    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
     
-    match l_add_session(server_state.db_pool.clone(), &user_key, &session_key).await {
-        Ok(()) => Ok(()),
+    match l_add_session(server_state.db_pool.clone(), &payload.user_key, &payload.session_key).await {
+        Ok(()) => Ok(Json(json!({
+            "respose": "session was added successfully"
+        }))),
         Err(e) => Err(e)
     }
 }
 
 async fn r_connect_to_session(State(server_state): State<ServerState>, 
-                            Path((user_key, session_key)): Path<(String, String)>, 
-                            ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
+                              ws: WebSocketUpgrade, 
+                              headers: HeaderMap) -> Result<impl IntoResponse, ApiError> {
+
+    let user_key = headers.get("user_key")
+                                .and_then(|v| v.to_str().ok())
+                                .unwrap_or("")
+                                .to_string();
+    let session_key = headers.get("session_key")
+                                   .and_then(|v| v.to_str().ok())
+                                   .unwrap_or("")
+                                   .to_string();
+
     match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
@@ -85,27 +97,32 @@ async fn r_leave_session(State(_server_state): State<ServerState>) -> Result<Jso
 }
 
 async fn r_forget_session(State(server_state): State<ServerState>,
-                       Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
-    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
+                          Json(payload): Json<UserSessionKeys>) -> Result<Json<Value>, ApiError> {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
     
-    match l_forget_session(server_state.db_pool.clone(), &user_key, &session_key).await {
-        Ok(()) => Ok(()),
+    match l_forget_session(server_state.db_pool.clone(), &payload.user_key, &payload.session_key).await {
+        Ok(()) => Ok(Json(json!({
+            "respose": "session was forgotten successfully"
+        }))),
         Err(e) => Err(e)
     }
 }
 
 async fn r_delete_session(State(server_state): State<ServerState>,
-                        Path((user_key, session_key)): Path<(String, String)>) -> Result<(), ApiError> {
-    match l_ensure_user_not_in_session(server_state.active_users.clone(), &user_key).await {
+                          Json(payload): Json<UserSessionKeys>) -> Result<Json<Value>, ApiError> {
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
         Ok(()) => (),
         Err(e) => return Err(e)
     }
     
-    match l_delete_session_by_owner(server_state.db_pool.clone(), server_state.active_sessions.clone(), &user_key, &session_key).await {
-        Ok(()) => Ok(()),
+    match l_delete_session_by_owner(server_state.db_pool.clone(), server_state.active_sessions.clone(), 
+                                    &payload.user_key, &payload.session_key).await {
+        Ok(()) => Ok(Json(json!({
+            "respose": "session was deleted successfully"
+        }))),
         Err(e) => Err(e)
     }
 }
