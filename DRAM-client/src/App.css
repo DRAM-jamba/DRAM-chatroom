@@ -1212,6 +1212,18 @@ button {
   word-break: break-word;
 }
 
+.message-system {
+  text-align: center;
+  font-style: bold;
+}
+
+.message-system .message-content {
+  font-size: 13px;
+  color: #6a6a6a;
+  padding: 4px 12px;
+}
+
+/* Message input */
 .message-input-wrapper {
   flex-shrink: 0;
   padding: 12px 8px;
@@ -1766,4 +1778,19 @@ select.server-input {
 .settings-modal-close:hover {
   background: var(--close-hover);
   color: var(--text-primary);
+/* System messages (join / leave notifications) */
+.system-message {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.system-message-text {
+  font-size: 12px;
+  color: #555;
+  background: #111;
+  border: 1px solid #1e1e1e;
+  border-radius: 20px;
+  padding: 3px 14px;
+  white-space: nowrap;
 }
