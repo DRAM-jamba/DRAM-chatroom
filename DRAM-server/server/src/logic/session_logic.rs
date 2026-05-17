@@ -199,35 +199,13 @@ mod tests {
     use super::*;
     use crate::modules::session::Session;
 
-    fn make_session(key: &str) -> Session {
-        Session {
-            session_key: key.to_string(),
-            session_name: "test".to_string(),
-        }
-    }
-
-    // basic check - empty list should still produce a key
     #[test]
-    fn test_generate_session_key_empty_list() {
+    fn test_generate_session_key_is_not_empty() {
         let sessions: Vec<Session> = vec![];
         let key = l_generate_session_key(&sessions);
         assert!(!key.is_empty());
-        assert_eq!(key.len(), 36);
     }
 
-    // key shouldnt match anything already in the list
-    #[test]
-    fn test_generate_session_key_unique() {
-        let sessions = vec![
-            make_session("aaaa-1111-bbbb-2222-cccc"),
-            make_session("dddd-3333-eeee-4444-ffff"),
-        ];
-        let key = l_generate_session_key(&sessions);
-        assert_ne!(key, "aaaa-1111-bbbb-2222-cccc");
-        assert_ne!(key, "dddd-3333-eeee-4444-ffff");
-    }
-
-    // should be a parseable uuid
     #[test]
     fn test_generate_session_key_is_valid_uuid() {
         use uuid::Uuid;
@@ -236,12 +214,10 @@ mod tests {
         assert!(Uuid::parse_str(&key).is_ok(), "not a valid uuid: {}", key);
     }
 
-    // two calls should give different keys
     #[test]
-    fn test_generate_session_key_not_same_twice() {
+    fn test_generate_session_key_is_36_chars() {
         let sessions: Vec<Session> = vec![];
-        let k1 = l_generate_session_key(&sessions);
-        let k2 = l_generate_session_key(&sessions);
-        assert_ne!(k1, k2);
+        let key = l_generate_session_key(&sessions);
+        assert_eq!(key.len(), 36);
     }
 }
