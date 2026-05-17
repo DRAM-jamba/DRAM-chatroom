@@ -1,4 +1,4 @@
-use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::{MessageObj, MessageType}, server_state::ServerState, user::User}};
+use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::{BackMessageObj, MessageObj, MessageType}, server_state::ServerState, user::User}};
 use axum::{extract::{WebSocketUpgrade, ws::{Message, WebSocket}}, response::IntoResponse};
 use futures_util::{SinkExt, StreamExt};
 
@@ -54,8 +54,6 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     let (mut sender, mut receiver) = ws.split();
     let mut rx = session_chat.tx.subscribe();
 
-    //TODO: add ping logic to check connection
-
     let send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             if sender.send(Message::Text(msg.into())).await.is_err() {
@@ -64,6 +62,8 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
         }
     });
 
+
+    // Send starting messages.
     let user_list= session_chat.users.read().await;
     let json = match serde_json::to_string(&user_list.clone()) {
         Ok(s) => s,
@@ -71,15 +71,26 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     };
     drop(user_list);
 
+    let voice_list= session_chat.voice_users.read().await;
+    let json_voice = match serde_json::to_string(&voice_list.clone()) {
+        Ok(s) => s,
+        Err(e) => format!("Problem with message sending: {e}")
+    };
+    drop(voice_list);
+
     drop(history); // drop here, so no new messages will appear until user's stuff are prepared
 
-    l_broadcast_message(&session_chat, MessageType::Connect, json, &user.nickname).await;
+    l_broadcast_message(&session_chat, MessageType::Connect, "".into(), &user.nickname, true).await;
+    l_broadcast_message(&session_chat, MessageType::UserList, json, &user.nickname, false).await;
+    l_broadcast_message(&session_chat, MessageType::VoiceList, json_voice, &user.nickname, false).await;
 
+
+    // Handling message from client
     while let Some(result) = receiver.next().await {
         match result {
             Ok(msg) => match msg {
                 Message::Text(text) => {
-                    l_broadcast_message(&session_chat, MessageType::Message, text.to_string(), &user.nickname).await;
+                    l_handle_message(&session_chat, text.to_string(), &user.nickname).await;
                 },
                 Message::Binary(_bytes) => {}, // TODO: use this to send images. for later
                 Message::Ping(_) => {},
@@ -101,7 +112,7 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
         }
     }
 
-    send_task.abort(); // it is not happening in moment, so tx.receiver_count think that it is still exits
+    send_task.abort();
 
     // remove user from active_users, so user can join to other session
     server_state.active_users.write().await.remove(&user.user_key);
@@ -119,7 +130,20 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     };
     drop(s_users);
 
-    l_broadcast_message(&session_chat, MessageType::Disconnect, json, &user.nickname).await;
+    let mut s_voice_users = session_chat.voice_users.write().await;
+    match s_voice_users.iter().position(|n| n == &user.nickname) {
+        Some(i) => s_voice_users.remove(i),
+        None => "".to_string()
+    };
+    let json_voice = match serde_json::to_string(&s_voice_users.clone()) {
+        Ok(s) => s,
+        Err(e) => format!("Problem with message sending: {e}")
+    };
+    drop(s_voice_users);
+
+    l_broadcast_message(&session_chat, MessageType::Disconnect, "".into(), &user.nickname, true).await;
+    l_broadcast_message(&session_chat, MessageType::UserList, json, &user.nickname, false).await;
+    l_broadcast_message(&session_chat, MessageType::VoiceList, json_voice, &user.nickname, false).await;
 
     if is_empty { 
         let mut active_sessions = server_state.active_sessions.write().await;
@@ -129,15 +153,58 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
 }
 
-async fn l_broadcast_message(session_chat: &SessionChat, m_type: MessageType,  msg: String, nickname: &String) {
+async fn l_handle_message(session_chat: &SessionChat, text: String, nickname: &String) {
+    let msg: BackMessageObj = match serde_json::from_str(&text) {
+        Ok(m) => m,
+        Err(e) => BackMessageObj {m_type: MessageType::Message, body: format!("Problem with message sending: {e}").into()}
+    };
+    match msg.m_type {
+        MessageType::Message => l_broadcast_message(session_chat, MessageType::Message, msg.body, nickname, true).await,
+        MessageType::VoiceStart => {
+            let mut voice_users = session_chat.voice_users.write().await;
+            voice_users.push(nickname.clone());
+            let voice_users_list = voice_users.clone();
+            drop(voice_users);
+
+            let json_voice = match serde_json::to_string(&voice_users_list.clone()) {
+                Ok(s) => s,
+                Err(e) => format!("Problem with message sending: {e}")
+            };
+
+            l_broadcast_message(&session_chat, MessageType::VoiceList, json_voice, nickname, false).await;
+        },
+        MessageType::VoiceEnd => {
+            let mut voice_users = session_chat.voice_users.write().await;
+            match voice_users.iter().position(|n| n == nickname) {
+                Some(i) => voice_users.remove(i),
+                None => "".to_string()
+            };
+            let voice_users_list = voice_users.clone();
+            drop(voice_users);
+
+            let json_voice = match serde_json::to_string(&voice_users_list.clone()) {
+                Ok(s) => s,
+                Err(e) => format!("Problem with message sending: {e}")
+            };
+            
+            l_broadcast_message(&session_chat, MessageType::VoiceList, json_voice, nickname, false).await;
+        },
+        _ => {},
+    }
+
+}
+
+async fn l_broadcast_message(session_chat: &SessionChat, m_type: MessageType,  msg: String, nickname: &String, in_history: bool) {
     let ts = chrono::offset::Utc::now();
     let new_msg: MessageObj = MessageObj { m_type: m_type, from: nickname.clone(), body: msg, ts: ts.timestamp() };
-    let mut history = session_chat.history.write().await;
-    if history.len() >= 100 { // messages limit
-        history.pop_front();
+    if in_history == true {
+        let mut history = session_chat.history.write().await;
+        if history.len() >= 100 { // messages limit
+            history.pop_front();
+        }
+        history.push_back(new_msg.clone());
+        drop(history);
     }
-    history.push_back(new_msg.clone());
-    drop(history);
     let json = match serde_json::to_string(&new_msg) {
         Ok(s) => s,
         Err(e) => format!("Problem with message sending: {e}")

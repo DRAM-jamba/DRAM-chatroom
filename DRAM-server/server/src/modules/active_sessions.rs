@@ -9,7 +9,8 @@ pub type SessionMap = Arc<RwLock<HashMap<String, SessionChat>>>;
 pub struct SessionChat {
     pub tx: Sender<String>,
     pub history: Arc<RwLock<VecDeque<MessageObj>>>,
-    pub users: Arc<RwLock<Vec<String>>>
+    pub users: Arc<RwLock<Vec<String>>>,
+    pub voice_users: Arc<RwLock<Vec<String>>>
 }
 
 impl SessionChat {
@@ -18,7 +19,8 @@ impl SessionChat {
         Self {
             tx,
             history: Arc::new(RwLock::new(VecDeque::new())),
-            users: Arc::new(RwLock::new(Vec::new()))
+            users: Arc::new(RwLock::new(Vec::new())),
+            voice_users: Arc::new(RwLock::new(Vec::new()))
         }
     }
 }
