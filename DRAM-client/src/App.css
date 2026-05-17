@@ -14,7 +14,6 @@
 
   --success: #00ee88;
   --success-dim: #44cc88;
-  --success-border: #1a3a2a;
   --success-glow: rgba(0, 200, 120, 0.2);
   --success-bright: #00cc77;
 
@@ -37,11 +36,14 @@
   --bg-input: #101010;
   --bg-topbar: #080808;
   --bg-delete-row: #1a1a1a;
+  --bg-hover: #202020;
 
   --border-primary: #262626;
   --border-secondary: #2a2a2a;
   --border-tertiary: #1e1e1e;
   --border-input: #222;
+  --danger-border: #3a1a1a;
+    --success-border: #1a3a2a;
 
   --text-primary: #ffffff;
   --text-secondary: #f2f2f2;
@@ -89,19 +91,22 @@
   --bg-secondary: #e8e8e8;
   --bg-card: rgba(255, 255, 255, 0.95);
   --bg-card-alt: rgba(255, 255, 255, 0.98);
-  --bg-sidebar: #dcdcdc;
-  --bg-sidebar2: #cccccc;
+  --bg-sidebar: #f2f2f2;
+    --bg-sidebar2: #e8e8e8;
   --bg-element: #e0e0e0;
   --bg-element2: #d8d8d8;
   --bg-element3: #e4e4e4;
   --bg-input: #ffffff;
   --bg-topbar: #ebebeb;
   --bg-delete-row: #e0e0e0;
+  --bg-hover: #d0d0d0;
 
   --border-primary: #bbbbbb;
   --border-secondary: #c0c0c0;
   --border-tertiary: #cccccc;
   --border-input: #aaaaaa;
+  --danger-border: #cc6666;
+    --success-border: #44cc88;
 
   --text-primary: #111111;
   --text-secondary: #1a1a1a;
@@ -422,7 +427,6 @@ button {
 .plus-button:hover {
   border-color: var(--accent);
     box-shadow: 0 0 8px var(--accent-glow);
-  background: #202020;
 }
 
 .add-server-actions {
@@ -1423,7 +1427,7 @@ button {
   width: 35px;
     padding: 0 10px;
   background: var(--bg-element);
-    border: 1px solid var(--danger-border);
+    border: 1px solid var(--border-secondary);
     color: var(--danger-dim);
   display: flex;
   align-items: center;
@@ -1520,6 +1524,22 @@ body {
   overflow: visible;
 }
 
+/* System messages (join / leave notifications) */
+.system-message {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.system-message-text {
+  font-size: 12px;
+  color: #555;
+  background: #111;
+  border: 1px solid #1e1e1e;
+  border-radius: 20px;
+  padding: 3px 14px;
+  white-space: nowrap;
+}
 /* ── Settings page ───────────────────────────────────────────── */
 .settings-back-btn {
   height: 35px;
@@ -1778,19 +1798,20 @@ select.server-input {
 .settings-modal-close:hover {
   background: var(--close-hover);
   color: var(--text-primary);
-/* System messages (join / leave notifications) */
-.system-message {
-  display: flex;
-  justify-content: center;
-  margin: 10px 0;
 }
 
-.system-message-text {
-  font-size: 12px;
-  color: #555;
-  background: #111;
-  border: 1px solid #1e1e1e;
-  border-radius: 20px;
-  padding: 3px 14px;
-  white-space: nowrap;
+[data-theme="light"] .icon-img,
+[data-theme="light"] .chat-settings-btn img,
+[data-theme="light"] .settings-btn img,
+[data-theme="light"] .tiny-square-btn img,
+[data-theme="light"] .icon-btn img,
+[data-theme="light"] .session-plus-button img,
+[data-theme="light"] .session-plus-close img,
+[data-theme="light"] .nickname-confirm-inline-btn img,
+[data-theme="light"] .titlebar-btn img,
+[data-theme="light"] .hotkey-set-btn img,
+[data-theme="light"] .panel-close-btn img,
+[data-theme="light"] .server-header img,
+[data-theme="light"] .custom-dropdown-trigger img {
+  filter: invert(1);
 }

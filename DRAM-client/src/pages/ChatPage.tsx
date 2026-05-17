@@ -146,7 +146,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                   });
                 }}
               >
-                <img src={muted ? micOffIcon : micIcon} width="16" height="16" />
+                <img src={muted ? micOffIcon : micIcon} width="16" height="16" className={muted ? "" : "icon-img"} />
               </button>
 
               <button
@@ -160,7 +160,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                   });
                 }}
               >
-                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" />
+                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={hidden ? "" : "icon-img"} />
               </button>
 
               <button className="chat-settings-btn" type="button" onClick={() => setShowSettings(true)}>
