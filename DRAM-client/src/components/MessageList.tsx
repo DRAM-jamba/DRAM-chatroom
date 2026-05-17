@@ -15,7 +15,6 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Group messages: inject date separators when the date changes
   const items: Array<{ type: "separator"; date: string } | { type: "message"; message: Message; showAuthor: boolean }> = [];
 
   let lastDate = "";
@@ -27,11 +26,14 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
       lastDate = msg.date;
       lastAuthor = "";
     }
+    const isSystem = msg.authorUsername === "";
+
     items.push({
       type: "message",
       message: msg,
-      showAuthor: msg.authorUsername !== lastAuthor,
+      showAuthor: !isSystem && msg.authorUsername !== lastAuthor,
     });
+
     lastAuthor = msg.authorUsername;
   }
 
@@ -50,9 +52,13 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
 
         const { message, showAuthor } = item;
         const isOwn = message.authorUsername === currentUsername;
+        const isSystem = message.authorUsername === "";
 
         return (
-          <div key={message.id} className={`message-item ${showAuthor ? "message-item-with-author" : ""}`}>
+          <div 
+            key={message.id} 
+            className={`message-item ${showAuthor ? "message-item-with-author" : ""} ${isSystem ? "message-system" : ""}`}
+          >
             {showAuthor && (
               <div className="message-author-row">
                 <span className={`message-author ${isOwn ? "message-author-own" : "message-author-other"}`}>
