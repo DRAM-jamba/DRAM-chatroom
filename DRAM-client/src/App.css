@@ -8,15 +8,20 @@
   --danger-border: #3a1a1a;
   --danger-glow: rgba(255, 68, 68, 0.2);
   --danger-glow-lg: rgba(255, 68, 68, 0.3);
+  --danger-bright: #ff6666;
+    --close-hover: #cc0000;
+    --error: #ff4f4f;
 
   --success: #00ee88;
   --success-dim: #44cc88;
   --success-border: #1a3a2a;
   --success-glow: rgba(0, 200, 120, 0.2);
+  --success-bright: #00cc77;
 
   --gray-dim: #aaaaaa;
   --gray-mid: #cccccc;
   --gray-glow: rgba(170, 170, 170, 0.2);
+
 }
 
 [data-theme="dark"] {
@@ -316,7 +321,7 @@ button {
   }
 .forget-btn:hover {
   border-color: var(--danger);
-    color: #ff6666;
+    color: var(--danger-bright);
   box-shadow: 0 0 6px var(--danger-glow);
 }
 
@@ -327,10 +332,10 @@ button {
   }
 .delete-btn:hover {
   border-color: var(--danger);
-    color: #ff6666;
+    color: var(--danger-bright);
   box-shadow: 0 0 6px var(--danger-glow);
 }
-
+  
 .connect-btn {
   background: transparent;
   border: 1px solid var(--success-border);
@@ -338,8 +343,8 @@ button {
     width: 110px;
   }
 .connect-btn:hover {
-  border-color: #00cc77;
-  color: var(--success);
+  border-color: var(--success);
+    color: var(--success-bright);
     box-shadow: 0 0 6px var(--success-glow);
 }
 
@@ -451,7 +456,7 @@ button {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .big-confirm-btn:hover {
-  border-color: #00cc77;
+  border-color: var(--success-bright);
   color: var(--success);
     box-shadow: 0 0 6px var(--success-glow);
 }
@@ -568,7 +573,7 @@ button {
 .session-plus-button:hover {
   border-color: var(--accent);
     box-shadow: 0 0 8px var(--accent-glow);
-  background: #202020;
+  background: var(--bg-element2);
 }
 
 .session-plus-menu {
@@ -608,7 +613,7 @@ button {
   cursor: pointer;
 }
 .session-plus-option:hover {
-  background: #202020;
+  background: var(--bg-element2);
 }
 
 .session-plus-option.active {
@@ -1071,7 +1076,7 @@ button {
     padding: 6px 16px;
     font-size: 13px;
   color: var(--accent);
-    box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+    box-shadow: var(--accent-glow);
     z-index: 50;
     pointer-events: none;
     white-space: nowrap;
@@ -1348,7 +1353,7 @@ button {
 
 .nickname-error {
   font-size: 12px;
-  color: #ff4f4f;
+  color: var(--error);
   margin: 0;
 }
 
@@ -1414,7 +1419,7 @@ button {
 }
 .disconnect-btn:hover {
   border-color: var(--danger);
-  color: #ff6666;
+  color: var(--danger-bright);
   box-shadow: 0 0 6px var(--danger-glow);
 }
 
@@ -1483,7 +1488,7 @@ body {
   }
   
   .titlebar-close:hover {
-    background: #cc0000;
+    background: var (--close-hover);
 }
 /* ── Misc ────────────────────────────────────────────────────── */
 .members-empty {
@@ -1708,7 +1713,7 @@ select.server-input {
 }
 
 .custom-dropdown-item:hover {
-  background: #202020;
+  background: var(--bg-element2);
   color: var(--text-muted);
 }
 
@@ -1739,14 +1744,11 @@ select.server-input {
   box-shadow: 0 0 20px var(--shadow-modal);
   }
   
-  .settings-modal .server-list-container {
-    max-height: calc(90vh - 120px);
-    overflow-y: auto;
-}
+
 
 .settings-modal-close {
   position: absolute;
-  top: 8px;
+  top: 36px;
   right: 8px;
   width: 24px;
   height: 24px;
@@ -1762,6 +1764,6 @@ select.server-input {
   border-radius: 4px;
 }
 .settings-modal-close:hover {
-  background: #cc0000;
+  background: var(--close-hover);
   color: var(--text-primary);
 }
