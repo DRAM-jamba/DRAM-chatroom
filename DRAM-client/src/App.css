@@ -92,10 +92,10 @@
   --bg-card: rgba(255, 255, 255, 0.95);
   --bg-card-alt: rgba(255, 255, 255, 0.98);
   --bg-sidebar: #f2f2f2;
-    --bg-sidebar2: #e8e8e8;
-  --bg-element: #e0e0e0;
-  --bg-element2: #d8d8d8;
-  --bg-element3: #e4e4e4;
+  --bg-sidebar2: #e8e8e8;
+  --bg-element: #e8e8e8;
+    --bg-element2: #f0f0f0;
+    --bg-element3: #ececec;
   --bg-input: #ffffff;
   --bg-topbar: #ebebeb;
   --bg-delete-row: #e0e0e0;

@@ -225,6 +225,7 @@ async fn leave_session(
     window.set_resizable(false).unwrap();
     window.set_maximizable(false).unwrap();
     window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 360.0, height: 628.0 })).unwrap();
+    
 
     Ok(())
 }
