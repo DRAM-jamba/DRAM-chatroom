@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ServersPage from "./pages/ServersPage";
 import NicknamePage from "./pages/NicknamePage";
 import SessionsPage from "./pages/SessionsPage";
@@ -19,6 +19,15 @@ loadAllSettings();
 
 function App() {
   const [page, setPage] = useState<Page>({ name: "servers" });
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+      })
+      .catch((err) => {
+        console.warn("Microphone permission denied:", err);
+      });
+  }, []);
   const handleServerConnected = async () => {
     const saved = await getSavedNickname();
     if (saved) {
