@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
+import SettingsPage from "./SettingsPage";
 import { joinSession } from "../services/sessionService";
 import {
   sendMessage,
@@ -9,6 +10,7 @@ import {
   subscribeToMemberUpdates,
   subscribeToMemberEvents,
 } from "../services/chatService";
+import { loadMicHotkey, loadHeadphonesHotkey } from "../services/settingsService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
 import micIcon from "../assets/icons/micbtnicon.svg";
@@ -33,6 +35,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [hidden, setHidden] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const appendMessage = (msg: Message) => {
     setMessages((prev) => {
@@ -76,6 +79,32 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     };
 }, [sessionName]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const micKey = loadMicHotkey();
+      const headphonesKey = loadHeadphonesHotkey();
+
+      if (micKey && e.key.toUpperCase() === micKey) {
+        setMuted((prev) => {
+          const next = !prev;
+          if (!next) setHidden(false);
+          return next;
+        });
+      }
+
+      if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
+        setHidden((prev) => {
+          const next = !prev;
+          if (next) setMuted(true);
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleSend = async (content: string) => {
     await sendMessage(content);
   };
@@ -102,7 +131,6 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           <div className="chat-logo-row">
             <img src={logoIcon} width="18" height="18" />
             <span className="chat-logo-text">quorthon</span>
-            <span className="chat-version">ver. 0.69</span>
           </div>
 
           <div className="chat-left-bottom">
@@ -118,7 +146,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                   });
                 }}
               >
-                <img src={muted ? micOffIcon : micIcon} width="16" height="16" />
+                <img src={muted ? micOffIcon : micIcon} width="16" height="16" className={muted ? "" : "icon-img"} />
               </button>
 
               <button
@@ -132,10 +160,10 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                   });
                 }}
               >
-                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" />
+                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={hidden ? "" : "icon-img"} />
               </button>
 
-              <button className="chat-settings-btn" type="button">
+              <button className="chat-settings-btn" type="button" onClick={() => setShowSettings(true)}>
                 <img src={settingsIcon} width="16" height="16" />
               </button>
 
@@ -223,6 +251,13 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           </div>
         </aside>
       </div>
+      {showSettings && (
+        <div className="settings-modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <SettingsPage onBack={() => setShowSettings(false)} hideHeader />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
