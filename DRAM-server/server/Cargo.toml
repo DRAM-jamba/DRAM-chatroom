@@ -8,6 +8,8 @@ axum = { version="0.8.8", features = ["ws"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 futures-util = "0.3.32"
 hyper = { version = "1.8.1", features = ["full"] }
+livekit = "0.7.40"
+livekit-api = "0.4.23"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono"] }
