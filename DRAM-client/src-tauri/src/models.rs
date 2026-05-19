@@ -38,6 +38,20 @@ pub struct UserKey {
     pub user_key: String,
 }
 
+// Voice-chat structs
+#[derive(Deserialize)]
+pub struct VoiceToken {
+    pub token: String,
+}
+
+
+#[derive(Serialize)]
+pub struct VoiceChatInfo {
+    pub token: String,
+    pub url: String,
+}
+
+
 // Websocket structs
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -45,7 +59,14 @@ pub enum MessageType {
     Message,
     Connect,
     Disconnect,
+    // Server
+    UserList,
+    VoiceList,
+    // Client
+    VoiceStart,
+    VoiceEnd,
 }
+
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MessageObj {

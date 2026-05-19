@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::events::{self, emit_message, emit_session_update};
+use crate::events::{self, emit_message, emit_session_update, emit_user_list, emit_voice_list};
 use crate::models::{MessageObj, MessageType};
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
@@ -24,9 +24,8 @@ impl WsClient {
     pub async fn connect(url: &str, user_key: &str, session_key: &str, app: AppHandle) -> Result<Self, AppError> {
         let mut request = url.into_client_request()
             .map_err(|e| AppError::Network(e.to_string()))?;
-        
+
         let headers = request.headers_mut();
-        
         headers.insert("user_key", HeaderValue::from_str(user_key)
             .map_err(|e| AppError::Network(e.to_string()))?);
         headers.insert("session_key", HeaderValue::from_str(session_key)
@@ -62,21 +61,18 @@ impl WsClient {
 
         match obj.m_type {
             MessageType::Message => {
-                emit_message(app, MessageObj {
-                    m_type: obj.m_type,
-                    from: obj.from,
-                    body: obj.body,
-                    ts: obj.ts,
-                });
+                emit_message(app, obj);
             }
             MessageType::Connect | MessageType::Disconnect => {
-                emit_session_update(app, MessageObj{
-                    m_type: obj.m_type,
-                    from: obj.from,
-                    body: obj.body,
-                    ts: obj.ts,
-                });
+                emit_session_update(app, obj);
             }
+            MessageType::UserList => {
+                emit_user_list(app, obj);
+            }
+            MessageType::VoiceList => {
+                emit_voice_list(app, obj);
+            }
+            MessageType::VoiceStart | MessageType::VoiceEnd => {}
         }
         Ok(())
     }
