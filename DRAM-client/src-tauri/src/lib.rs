@@ -314,8 +314,7 @@ async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Res
         .json()
         .await
         .map_err(|e| AppError::Protocol(format!("Invalid voice token response: {}", e)))?;
- 
-    // LiveKit runs on port 7880 on the same host as the app server
+    
     let host = ip.split(':').next().unwrap_or(&ip);
     let lk_url = format!("ws://{}:7880", host);
  
