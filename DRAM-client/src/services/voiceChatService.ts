@@ -1,8 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Room, RoomEvent, RemoteParticipant } from "livekit-client";
-
-type VoiceListPayload = { m_type: string; from: string; body: string; ts: number };
+import type { MessageObj } from "./chatService";
 
 let _room: Room | null = null;
 let _isDeafened = false;
@@ -17,7 +16,6 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
 
   _room = new Room();
 
-  // If the user is already deafened when they join, apply it to future participants too
   _room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
     if (_isDeafened) participant.setVolume(0);
   });
@@ -40,17 +38,28 @@ export async function setMicMuted(muted: boolean): Promise<void> {
   await _room.localParticipant.setMicrophoneEnabled(!muted);
 }
 
-// Deafen = mute all incoming audio without leaving the voice channel
 export async function setDeafened(deafened: boolean): Promise<void> {
   _isDeafened = deafened;
   if (!_room) return;
   _room.remoteParticipants.forEach((p) => p.setVolume(deafened ? 0 : 1));
 }
 
+export async function subscribeToVoiceUsers(
+  onUpdate: (voiceUsers: string[]) => void
+): Promise<() => void> {
+  return listen<MessageObj>("user_list", (event) => {
+    try {
+      onUpdate(JSON.parse(event.payload.body) as string[]);
+    } catch (e) {
+      console.error("Failed to parse user_list payload", e);
+    }
+  });
+}
+
 export async function subscribeToVoiceList(
   onUpdate: (voiceUsers: string[]) => void
 ): Promise<() => void> {
-  return listen<VoiceListPayload>("voice_list", (event) => {
+  return listen<MessageObj>("voice_list", (event) => {
     try {
       onUpdate(JSON.parse(event.payload.body) as string[]);
     } catch (e) {
@@ -59,7 +68,7 @@ export async function subscribeToVoiceList(
   });
 }
 
-async function _sendVoiceSignal(m_type: string): Promise<void> {
+async function _sendVoiceSignal(m_type: "voicestart" | "voiceend"): Promise<void> {
   try {
     await invoke("send_message", { body: JSON.stringify({ m_type, body: "" }) });
   } catch (e) {
