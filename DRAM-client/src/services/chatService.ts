@@ -2,8 +2,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Message, Member } from "../types/message";
 
-type MessageObj = {
-  m_type: "message" | "connect" | "disconnect";
+export type MessageType =
+  | "message"
+  | "connect"
+  | "disconnect"
+  | "userlist"
+  | "voicelist"
+  | "voicestart"
+  | "voiceend";
+
+export type MessageObj = {
+  m_type: MessageType;
   from: string;
   body: string;
   ts: number;
@@ -46,7 +55,7 @@ function mapToUiMessage(p: MessageObj): Message {
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
-      }
+      };
     }
     case "disconnect": {
       return {
@@ -55,7 +64,7 @@ function mapToUiMessage(p: MessageObj): Message {
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
-      }
+      };
     }
     case "message": {
       return {
@@ -64,7 +73,16 @@ function mapToUiMessage(p: MessageObj): Message {
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
-      }
+      };
+    }
+    default: {
+      return {
+        authorUsername: p.from,
+        content: p.body,
+        timestamp: formatTimestamp(p.ts),
+        date: formatDate(p.ts),
+        id: `${p.from}-${p.ts}-${p.m_type}`,
+      };
     }
   }
 }
