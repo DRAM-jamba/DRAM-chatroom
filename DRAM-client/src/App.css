@@ -203,7 +203,7 @@ button {
 }
 
 .logo {
-  margin: 0 0 18px;
+  margin: 0 0 13px;
   text-align: center;
   font-size: 28px;
   font-weight: 400;
@@ -1269,7 +1269,6 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--border-tertiary);
   font-size: 15px;
   color: var(--text-members);
   font-weight: 400;
