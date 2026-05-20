@@ -44,18 +44,6 @@ export async function setDeafened(deafened: boolean): Promise<void> {
   _room.remoteParticipants.forEach((p) => p.setVolume(deafened ? 0 : 1));
 }
 
-export async function subscribeToVoiceUsers(
-  onUpdate: (voiceUsers: string[]) => void
-): Promise<() => void> {
-  return listen<MessageObj>("user_list", (event) => {
-    try {
-      onUpdate(JSON.parse(event.payload.body) as string[]);
-    } catch (e) {
-      console.error("Failed to parse user_list payload", e);
-    }
-  });
-}
-
 export async function subscribeToVoiceList(
   onUpdate: (voiceUsers: string[]) => void
 ): Promise<() => void> {
@@ -68,10 +56,11 @@ export async function subscribeToVoiceList(
   });
 }
 
-async function _sendVoiceSignal(m_type: "voicestart" | "voiceend"): Promise<void> {
+// Uses a dedicated Tauri command so the signal isn't re-wrapped as MessageType::Message
+async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {
   try {
-    await invoke("send_message", { body: JSON.stringify({ m_type, body: "" }) });
+    await invoke("send_voice_signal", { mType });
   } catch (e) {
-    console.error(`Failed to send ${m_type} signal:`, e);
+    console.error(`Failed to send ${mType} signal:`, e);
   }
 }

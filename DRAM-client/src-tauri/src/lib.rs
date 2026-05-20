@@ -331,6 +331,31 @@ async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Res
     })
 }
 
+#[tauri::command]
+async fn send_voice_signal(m_type: String, state: State<'_, AppState>) -> Result<(), AppError> {
+    let msg_type = match m_type.as_str() {
+        "voicestart" => MessageType::VoiceStart,
+        "voiceend" => MessageType::VoiceEnd,
+        _ => return Err(AppError::Protocol(format!("Invalid voice signal type: {}", m_type))),
+    };
+ 
+    let session = state.get_session_state();
+    if let SessionState::JoinedSession(ws_client) = &session.await {
+        let payload = BackMessageObj {
+            m_type: msg_type,
+            body: String::new(),
+        };
+        let serialized = serde_json::to_string(&payload)
+            .map_err(|e| AppError::Network(format!("Failed to serialize voice signal: {}", e)))?;
+        ws_client
+            .send(&serialized)
+            .await
+            .map_err(|e| AppError::Network(format!("Failed to send voice signal: {}", e)))?;
+    }
+    Ok(())
+}
+
+
 
 // Client commands
 #[tauri::command]
@@ -400,6 +425,7 @@ pub fn run() {
             send_message,
             //
             join_voice_chat,
+            send_voice_signal,
             // Client commands
             get_servers,
             get_nickname,

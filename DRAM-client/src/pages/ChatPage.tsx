@@ -156,19 +156,18 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           <div className="voicechat-members-sidebar">
             <div className="chat-members-header">voice members</div>
 
-            {voiceMembers.length > 0 && (
-              <>
-                {voiceMembers.map((username) => (
-                  <div key={`voice-${username}`} className="member-card">
-                    {username}
+            <div className="voice-members-list">
+              {voiceMembers.length > 0 ? (
+                voiceMembers.map((username) => (
+                  <div key={`voice-${username}`} className="voice-member-card">
+                    <span className="voice-indicator-dot" />
+                    <span className="voice-member-username">{username}</span>
                   </div>
-                ))}
-              </>
-            )}
-
-            {voiceMembers.length === 0 && (
-              <div className="members-empty">empty</div>
-            )}
+                ))
+              ) : (
+                <div className="members-empty">empty</div>
+              )}
+            </div>
           </div>
 
           <div className="chat-left-bottom">
