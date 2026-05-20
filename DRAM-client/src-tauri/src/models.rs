@@ -75,3 +75,9 @@ pub struct MessageObj {
     pub body: String,
     pub ts: i64,
 }
+
+#[derive(Serialize)]
+pub struct BackMessageObj {
+    pub m_type: MessageType,
+    pub body: String,
+}

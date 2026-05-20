@@ -1,6 +1,6 @@
 use crate::api::ServerApi;
 use crate::error::AppError;
-use crate::models::{PersistedServer, Session, SessionKey, SessionList, UserKey};
+use crate::models::{PersistedServer, Session, SessionKey, SessionList, UserKey, BackMessageObj, MessageType};
 use crate::state::{AppState, ServerConnectionState, SessionState};
 
 use tauri::{AppHandle, Manager, State};
@@ -290,10 +290,17 @@ async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), Ap
     let session = state.get_session_state();
 
     if let SessionState::JoinedSession(ws_client) = &session.await {
+        let payload = BackMessageObj {
+            m_type: MessageType::Message,
+            body,
+        };
+
+        let serialized_body = serde_json::to_string(&payload)
+            .map_err(|e| AppError::Network(format!("Failed to serialize message: {}", e)))?;
         ws_client
-            .send(&body)
+            .send(&serialized_body)
             .await
-            .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?;
+            .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?; 
     }
     Ok(())
 }
