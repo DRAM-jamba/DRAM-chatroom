@@ -99,15 +99,15 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
       if (micKey && e.key.toUpperCase() === micKey) {
         setMuted((prev) => {
           const next = !prev;
-          if (!next) setHidden(false);
+          if (!next) setMuted(false);
           return next;
         });
       }
 
       if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
-        setHidden((prev) => {
+        setDeafened((prev) => {
           const next = !prev;
-          if (next) setMuted(true);
+          if (next) setDeafened(true);
           return next;
         });
       }
@@ -215,7 +215,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                 onClick={handleToggleDeafen}
                 title="Deafen/Undeafen"
               >
-                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={hidden ? "" : "icon-img"} />
+                <img src={deafened ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={deafened ? "" : "icon-img"} />
               </button>
 
               <button className="chat-settings-btn" type="button" onClick={() => setShowSettings(true)}>
