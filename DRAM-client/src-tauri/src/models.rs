@@ -53,7 +53,7 @@ pub struct VoiceChatInfo {
 
 
 // Websocket structs
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum MessageType {
     Message,
