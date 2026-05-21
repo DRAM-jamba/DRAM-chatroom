@@ -333,6 +333,7 @@ async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Res
 
 #[tauri::command]
 async fn send_voice_signal(m_type: String, state: State<'_, AppState>) -> Result<(), AppError> {
+    print!("Voice signal: {}", m_type);
     let msg_type = match m_type.as_str() {
         "voicestart" => MessageType::VoiceStart,
         "voiceend" => MessageType::VoiceEnd,

@@ -7,7 +7,6 @@ import {
   disconnectFromServer,
   forgetSession,
   getSessions,
-  joinSession,
   updateSession,
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";

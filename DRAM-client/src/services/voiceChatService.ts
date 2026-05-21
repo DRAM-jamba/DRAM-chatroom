@@ -14,22 +14,46 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
     { sessionKey }
   );
 
-  _room = new Room();
+  const room = new Room();
 
-  _room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+  room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
     if (_isDeafened) participant.setVolume(0);
   });
 
-  await _room.connect(url, token);
-  await _room.localParticipant.setMicrophoneEnabled(true);
-  await _sendVoiceSignal("voicestart");
+  room.on(RoomEvent.Disconnected, () => {
+    _room = null;
+    _isDeafened = false;
+  });
+
+  try {
+    await room.connect(url, token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    _room = room;
+    await _sendVoiceSignal("voicestart");
+  } catch (error) {
+    console.error("Voice chat connection failed:", error);
+    try {
+      await room.disconnect();
+    } catch (disconnectError) {
+      console.warn("Failed to clean up failed voice chat room:", disconnectError);
+    }
+    throw error;
+  }
 }
 
 export async function leaveVoiceChat(): Promise<void> {
   if (!_room) return;
-  await _room.disconnect();
+
+  const room = _room;
   _room = null;
   _isDeafened = false;
+
+  try {
+    await room.disconnect();
+  } catch (error) {
+    console.warn("Error disconnecting voice chat room:", error);
+  }
+
   await _sendVoiceSignal("voiceend");
 }
 
