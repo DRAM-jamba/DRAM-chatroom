@@ -95,7 +95,6 @@ export async function subscribeToVoiceList(
   });
 }
 
-// Uses a dedicated Tauri command so the signal isn't re-wrapped as MessageType::Message
 async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {
   try {
     await invoke("send_voice_signal", { mType });
