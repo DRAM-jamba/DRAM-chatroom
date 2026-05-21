@@ -4,8 +4,13 @@ services:
     build: .
     ports:
       - "3000:3000"
+    depends_on:
+      - livekit
     environment:
       DATABASE_URL: postgres://antihype:W440Qh6qWJ5JsY184@quorthon_db:5432/quorthon_api
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: quorthon_key
+      LIVEKIT_API_SECRET: mP9vkR==zvRN8vZHpH7kxXf5jpPhWfm4I=49RyWk
   db:
     image: postgres:15
     container_name: quorthon_db
@@ -15,6 +20,14 @@ services:
       POSTGRES_DB: quorthon_api
     volumes:
       - quorthon_data:/var/lib/postgresql/data
-
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"       # HTTP/WebSocket
+      - "7881:7881"       # RTC TCP
+      - "50000-50050:50000-50050/udp"  # RTC UDP (media)
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    command: --config /etc/livekit.yaml
 volumes:
   quorthon_data:

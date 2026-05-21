@@ -1,9 +1,8 @@
 use std::{env, process::exit, sync::Arc};
 
-use axum::{Json, Router, http::HeaderValue, response::IntoResponse, routing::get};
+use axum::{Json, Router, response::IntoResponse, routing::get};
 use serde_json::{Value, json};
 use tokio::{net::TcpListener};
-use tower_http::cors::{Any, CorsLayer};
 use sqlx::{postgres::PgPoolOptions};
 
 use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::{server_state::{ServerInfo, ServerState}}};
