@@ -10,6 +10,13 @@ import {
   subscribeToMemberUpdates,
   subscribeToMemberEvents,
 } from "../services/chatService";
+import { 
+  joinVoiceChat, 
+  leaveVoiceChat, 
+  setMicMuted, 
+  setDeafened as setServiceDeafened, 
+  subscribeToVoiceList,
+} from "../services/voiceChatService.ts";
 import { loadMicHotkey, loadHeadphonesHotkey } from "../services/settingsService";
 import type { Message, Member } from "../types/message";
 import TitleBar from "../components/TitleBar";
@@ -30,12 +37,16 @@ type ChatPageProps = {
 function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [voiceMembers, setVoiceMembers] = useState<string[]>([]);
+  
   const [showHelp, setShowHelp] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  const [isInVoiceCall, setIsInVoiceCall] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [deafened, setDeafened] = useState(false);
 
   const appendMessage = (msg: Message) => {
     setMessages((prev) => {
@@ -45,25 +56,25 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   useEffect(() => {
-  if (!sessionName) {
-    console.warn("ChatPage mounted without a sessionName (key). Waiting...");
-    return;
-  }
+    if (!sessionName) {
+      console.warn("ChatPage mounted without a sessionName (key). Waiting...");
+      return;
+    }
 
-  let unlistenFuncs: Array<() => void> = [];
-  let isMounted = true;
+    let unlistenFuncs: Array<() => void> = [];
+    let isMounted = true;
 
-  const setupChat = async () => {
-    try {
-      const unlistenMsgs = await subscribeToMessages(appendMessage);
-      const unlistenUserEvents = await subscribeToMemberEvents(appendMessage);
-      const unlistenMembers = await subscribeToMemberUpdates(setMembers);
+    const setupChat = async () => {
+      try {
+        const unlistenMsgs = await subscribeToMessages(appendMessage);
+        const unlistenUserEvents = await subscribeToMemberEvents(appendMessage);
+        const unlistenMembers = await subscribeToMemberUpdates(setMembers);
+        const unlistenVoice = await subscribeToVoiceList(setVoiceMembers);
 
         if (!isMounted) return;
-        unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers];
+        unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers, unlistenVoice];
         
         await joinSession(sessionName);
-
       } catch (err) {
         if (isMounted) {
           console.error("Failed to connect to session:", err);
@@ -71,13 +82,14 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
       }
     };
 
-  setupChat();
+    setupChat();
 
     return () => {
       isMounted = false;
       unlistenFuncs.forEach((unlisten) => unlisten());
+      leaveVoiceChat().catch(console.error);
     };
-}, [sessionName]);
+  }, [sessionName]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,6 +122,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   const handleLeaveSession = async () => {
+    await leaveVoiceChat();
     await leaveSession();
     onLeaveSession();
   };
@@ -119,6 +132,41 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     setCopied(true);
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleToggleCall = async () => {
+    if (isInVoiceCall) {
+      await leaveVoiceChat();
+      setIsInVoiceCall(false);
+      setVoiceMembers([]);
+    } else {
+      await joinVoiceChat(sessionName);
+      setIsInVoiceCall(true);
+      await setMicMuted(muted);
+      await setServiceDeafened(deafened);
+    }
+  };
+
+  const handleToggleMute = async () => {
+    const nextMuted = !muted;
+    setMuted(nextMuted);
+    if (!nextMuted && deafened) {
+      setDeafened(false);
+      if (isInVoiceCall) await setServiceDeafened(false);
+    }
+    
+    if (isInVoiceCall) await setMicMuted(nextMuted);
+  };
+
+  const handleToggleDeafen = async () => {
+    const nextDeafened = !deafened;
+    setDeafened(nextDeafened);
+    if (nextDeafened && !muted) {
+      setMuted(true);
+      if (isInVoiceCall) await setMicMuted(true);
+    }
+    
+    if (isInVoiceCall) await setServiceDeafened(nextDeafened);
   };
 
   return (
@@ -133,32 +181,39 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
             <span className="chat-logo-text">quorthon</span>
           </div>
 
+          <div className="voicechat-members-sidebar">
+            <div className="chat-members-header">voice members</div>
+
+            <div className="voice-members-list">
+              {voiceMembers.length > 0 ? (
+                voiceMembers.map((username) => (
+                  <div key={`voice-${username}`} className="voice-member-card">
+                    <span className="voice-indicator-dot" />
+                    <span className="voice-member-username">{username}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="members-empty">empty</div>
+              )}
+            </div>
+          </div>
+
           <div className="chat-left-bottom">
             <div className="chat-left-actions">
               <button
                 className={`chat-small-btn ${muted ? "active" : ""}`}
                 type="button"
-                onClick={() => {
-                  setMuted(prev => {
-                    const next = !prev;
-                    if (!next) setHidden(false);
-                    return next;
-                  });
-                }}
+                onClick={handleToggleMute}
+                title="Mute/Unmute"
               >
                 <img src={muted ? micOffIcon : micIcon} width="16" height="16" className={muted ? "" : "icon-img"} />
               </button>
 
               <button
-                className={`chat-small-btn ${hidden ? "active" : ""}`}
+                className={`chat-small-btn ${deafened ? "active" : ""}`}
                 type="button"
-                onClick={() => {
-                  setHidden(prev => {
-                    const next = !prev;
-                    if (next) setMuted(true);
-                    return next;
-                  });
-                }}
+                onClick={handleToggleDeafen}
+                title="Deafen/Undeafen"
               >
                 <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={hidden ? "" : "icon-img"} />
               </button>
@@ -171,6 +226,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                 className="leave-session-btn"
                 type="button"
                 onClick={handleLeaveSession}
+                title="Leave Session"
               >
                 <img src={exitIcon} width="16" height="16" />
               </button>
@@ -245,8 +301,12 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
           )}
 
           <div className="chat-members-bottom">
-            <button className="call-btn" type="button">
-              call
+            <button 
+              className={`call-btn ${isInVoiceCall ? "active" : ""}`} 
+              type="button"
+              onClick={handleToggleCall}
+            >
+              {isInVoiceCall ? "leave call" : "call"}
             </button>
           </div>
         </aside>

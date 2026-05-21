@@ -1,9 +1,8 @@
 port: 7880
 rtc:
   tcp_port: 7881
-  udp_port_range:
-    start: 50000
-    end: 50050
+  port_range_start: 50000
+  port_range_end: 50050
 
 keys:
-  quorthon_key: mP9vkR==zvRN8vZHpH7kxXf5jpPhWfm4I=49RyWk
+  quorthon_key: "mP9vkR==zvRN8vZHpH7kxXf5jpPhWfm4I=49RyWk"

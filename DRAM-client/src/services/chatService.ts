@@ -2,8 +2,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Message, Member } from "../types/message";
 
-type MessageObj = {
-  m_type: "message" | "connect" | "disconnect";
+export type MessageType =
+  | "message"
+  | "connect"
+  | "disconnect"
+  | "userlist"
+  | "voicelist"
+  | "voicestart"
+  | "voiceend";
+
+export type MessageObj = {
+  m_type: MessageType;
   from: string;
   body: string;
   ts: number;
@@ -39,67 +48,60 @@ export async function leaveSession(): Promise<void> {
 
 function mapToUiMessage(p: MessageObj): Message {
   switch (p.m_type) {
-    case "connect": {
+    case "connect":
       return {
         authorUsername: "",
         content: `${p.from} joined the session`,
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
-      }
-    }
-    case "disconnect": {
+      };
+    case "disconnect":
       return {
         authorUsername: "",
         content: `${p.from} left the session`,
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
-      }
-    }
-    case "message": {
+      };
+    default:
       return {
         authorUsername: p.from,
         content: p.body,
         timestamp: formatTimestamp(p.ts),
         date: formatDate(p.ts),
         id: `${p.from}-${p.ts}-${p.m_type}`,
-      }
-    }
+      };
   }
 }
 
 export async function subscribeToMessages(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
-  return await listen<MessageObj>("message", (event) => {
-    console.log(event.payload);
+  return listen<MessageObj>("message", (event) => {
     onMessage(mapToUiMessage(event.payload));
   });
 }
 
+// Listens to user_list events (server sends a full updated roster on every join/leave)
 export async function subscribeToMemberUpdates(
   onUpdate: (members: Member[]) => void
 ): Promise<() => void> {
-  return await listen<MessageObj>("session_update", (event) => {
-    console.log(event.payload);
+  return listen<MessageObj>("user_list", (event) => {
     try {
       const usernames: string[] = JSON.parse(event.payload.body);
-      const members: Member[] = usernames.map((username) => ({
-        username,
-      }));
-      onUpdate(members);
+      onUpdate(usernames.map((username) => ({ username })));
     } catch (e) {
-      console.error("Failed to parse member list from session_update", e);
+      console.error("Failed to parse user_list payload", e);
     }
   });
 }
 
+// Listens to connect/disconnect events for the chat message feed
 export async function subscribeToMemberEvents(
   onMessage: (msg: Message) => void
 ): Promise<() => void> {
-  return await listen<MessageObj>("session_update", (event) => {
-    console.log(event.payload);
+  return listen<MessageObj>("session_update", (event) => {
     onMessage(mapToUiMessage(event.payload));
   });
 }

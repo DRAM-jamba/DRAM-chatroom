@@ -12,6 +12,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-opener": "^2",
+    "livekit-client": "^2.19.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tauri-plugin-keyring-api": "^0.1.1"

@@ -949,12 +949,12 @@ button {
   width: 192px;
   flex-shrink: 0;
   height: calc(100vh - 28px);
-  padding: 12px 8px;
-  background: linear-gradient(to bottom, var(--bg-sidebar), var(--bg-sidebar2));
-    border-right: 1px solid var(--border-tertiary);
+  padding: 12px 0;
+  background: linear-gradient(to bottom, #090909, #111111);
+  border-right: 1px solid #1e1e1e;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .chat-logo-row {
@@ -962,6 +962,7 @@ button {
   align-items: center;
     justify-content: center;
     gap: 8px;
+  padding: 0 8px 12px;
 }
 
 .chat-logo-text {
@@ -980,9 +981,8 @@ button {
 }
 
 .chat-left-bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin-top: auto;
+    padding: 0 8px;
 }
 
 .chat-left-actions {
@@ -1539,6 +1539,51 @@ body {
   border-radius: 20px;
   padding: 3px 14px;
   white-space: nowrap;
+}
+/* Voice list */
+
+.voicechat-members-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.voicechat-members-sidebar .chat-members-header {
+  border-top: 1px solid #1e1e1e;
+  width: 100%;
+}
+
+.voice-members-list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 3px;
+}
+
+.voice-member-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 3px 8px;
+  padding: 7px 10px;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  background: rgba(15, 15, 15, 0.9);
+  font-size: 14px;
+  color: #d0d0d0;
+  transition: border-color 0.2s ease;
+}
+
+.voice-member-card:hover {
+  border-color: #00aaff;
+}
+
+.voice-indicator-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #23a55a;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 /* ── Settings page ───────────────────────────────────────────── */
 .settings-back-btn {

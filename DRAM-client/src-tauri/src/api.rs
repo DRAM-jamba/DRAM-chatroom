@@ -6,7 +6,9 @@ pub struct ServerApi {
 
 impl ServerApi {
     pub fn new(base_url: &str) -> Self {
-        Self { base_url: base_url.to_string(), }
+        Self {
+            base_url: base_url.to_string(),
+        }
     }
 
     // Server endpoints
@@ -46,72 +48,96 @@ impl ServerApi {
         format!("{}/session/delete", self.base_url)
     }
 
+    // Voice-chat
+    pub fn create_voicechat(&self) -> String {
+        format!("{}/session/token", self.base_url)
+    }
+
     // WebSocket URL
     pub fn ws(&self) -> String {
-        format!(
-            "{}/session/connect",
-            self.base_url.replace("http", "ws")
-        )
+        format!("{}/session/connect", self.base_url.replace("http", "ws"))
     }
 
     pub async fn http_post_empty(url: &str) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .post(url)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+        let response = reqwest::Client::new()
+            .post(url)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 
-pub async fn http_post<B: serde::Serialize>(url: &str, body: &B) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .post(url)
-        .json(body)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+    pub async fn http_post<B: serde::Serialize>(
+        url: &str,
+        body: &B,
+    ) -> Result<reqwest::Response, AppError> {
+        let response = reqwest::Client::new()
+            .post(url)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 
-pub async fn http_put<B: serde::Serialize>(url: &str, body: &B) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .put(url)
-        .json(body)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+    pub async fn http_put<B: serde::Serialize>(
+        url: &str,
+        body: &B,
+    ) -> Result<reqwest::Response, AppError> {
+        let response = reqwest::Client::new()
+            .put(url)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 
-pub async fn http_delete_empty(url: &str) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .delete(url)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+    pub async fn http_delete_empty(url: &str) -> Result<reqwest::Response, AppError> {
+        let response = reqwest::Client::new()
+            .delete(url)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 
-pub async fn http_delete<B: serde::Serialize>(url: &str, body: &B) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .delete(url)
-        .json(body)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+    pub async fn http_delete<B: serde::Serialize>(
+        url: &str,
+        body: &B,
+    ) -> Result<reqwest::Response, AppError> {
+        let response = reqwest::Client::new()
+            .delete(url)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 
-pub async fn http_get<B: serde::Serialize>(url: &str, body: &B) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .get(url)
-        .json(body)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+    pub async fn http_get<B: serde::Serialize>(
+        url: &str,
+        body: &B,
+    ) -> Result<reqwest::Response, AppError> {
+        let response = reqwest::Client::new()
+            .get(url)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 
-pub async fn http_patch<B: serde::Serialize>(url: &str, body: &B) -> Result<reqwest::Response, AppError> {
-    let response = reqwest::Client::new()
-        .patch(url)
-        .json(body)
-        .send().await?
-        .error_for_status()?;
-    Ok(response)
-}
+    pub async fn http_patch<B: serde::Serialize>(
+        url: &str,
+        body: &B,
+    ) -> Result<reqwest::Response, AppError> {
+        let response = reqwest::Client::new()
+            .patch(url)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(response)
+    }
 }
