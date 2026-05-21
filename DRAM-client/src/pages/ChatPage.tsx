@@ -96,26 +96,18 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
       const micKey = loadMicHotkey();
       const headphonesKey = loadHeadphonesHotkey();
 
-      if (micKey && e.key.toUpperCase() === micKey) {
-        setMuted((prev) => {
-          const next = !prev;
-          if (!next) setMuted(false);
-          return next;
-        });
-      }
+    if (micKey && e.key.toUpperCase() === micKey) {
+      handleToggleMute();
+    }
 
-      if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
-        setDeafened((prev) => {
-          const next = !prev;
-          if (next) setDeafened(true);
-          return next;
-        });
-      }
-    };
+    if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
+      handleToggleDeafen();
+    }
+  };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [muted, deafened, isInVoiceCall]);
 
   const handleSend = async (content: string) => {
     await sendMessage(content);

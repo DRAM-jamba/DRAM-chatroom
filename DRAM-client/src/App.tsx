@@ -24,8 +24,9 @@ function App() {
       .then((stream) => {
         stream.getTracks().forEach((track) => track.stop());
       })
-      .catch((err) => {
-        console.warn("Microphone permission denied:", err);
+      .catch(async () => {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("reset_mic_permission");
       });
   }, []);
   const handleServerConnected = async () => {

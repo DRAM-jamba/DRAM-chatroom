@@ -306,6 +306,31 @@ async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), Ap
 }
 
 // Voice-chat
+
+#[tauri::command]
+async fn reset_mic_permission(app: AppHandle) -> Result<(), AppError> {
+    let data_dir = app.path().app_local_data_dir()
+        .map_err(|e| AppError::Internal(format!("Failed to get data dir: {}", e)))?;
+    
+    let prefs_path = data_dir
+        .join("EBWebView")
+        .join("Default")
+        .join("Preferences");
+    
+    let prefs_str = prefs_path.to_string_lossy().to_string();
+
+    std::process::Command::new("powershell")
+        .args([
+            "-Command",
+            &format!("Start-Sleep -Seconds 2; Remove-Item -Force '{}'", prefs_str)
+        ])
+        .spawn()
+        .map_err(|e| AppError::Internal(format!("Failed to spawn cleanup: {}", e)))?;
+    
+    app.exit(0);
+    Ok(())
+}
+
 #[tauri::command]
 async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Result<models::VoiceChatInfo, AppError> {
     let (ip, server) = get_server_context(&state).await?;
@@ -387,6 +412,7 @@ async fn save_nickname(nickname: String, state: State<'_, AppState>) -> Result<(
     Ok(())
 }
 
+
 pub fn run() {
     let master_key =
         security::get_or_create_master_key().expect("Failed to initialize secure system storage");
@@ -423,7 +449,8 @@ pub fn run() {
             forget_session,
             delete_session,
             send_message,
-            //
+            //Voice chat commands
+            reset_mic_permission,
             join_voice_chat,
             send_voice_signal,
             // Client commands
