@@ -39,7 +39,7 @@ function SessionsPage({
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showHelpPopup, setShowHelpPopup] = useState(false);
   const [view, setView] = useState<View>("list");
-
+  const [error, setError] = useState<string | null>(null);
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState(nickname);
 
@@ -112,15 +112,21 @@ function SessionsPage({
   const handleOpenAdd = () => {
     setShowPlusMenu(false);
     setSessionKeyInput("");
+    setError(null);
     setView("add");
   };
 
   const handleAddConfirm = async () => {
     if (!sessionKeyInput.trim()) return;
-    await addSession({ sessionKey: sessionKeyInput });
-    getSessions().then(setSessions);
-    setSessionKeyInput("");
-    setView("list");
+    setError(null);
+    try {
+      await addSession({ sessionKey: sessionKeyInput });
+      getSessions().then(setSessions);
+      setSessionKeyInput("");
+      setView("list");
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
   };
 
   const handleCancel = () => {
@@ -350,6 +356,7 @@ function SessionsPage({
                       confirm
                     </button>
                   </div>
+                  {error && <p className="error-text">{error}</p>}
                 </div>
               </div>
             </div>
