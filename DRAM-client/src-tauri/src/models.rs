@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // Client structs
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PersistedServer {
     pub id: String,
     #[serde(rename = "ipAddress")]

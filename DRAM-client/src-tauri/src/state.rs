@@ -195,3 +195,225 @@ impl AppState {
             .cloned()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Helper to create a test server
+    fn create_test_server(id: &str, ip: &str, name: &str, key: &str) -> PersistedServer {
+        PersistedServer {
+            id: id.to_string(),
+            ip: ip.to_string(),
+            server_name: name.to_string(),
+            user_key: key.to_string(),
+            user_nickname: None,
+        }
+    }
+
+    #[test]
+    fn test_server_creation_basics() {
+        let server = create_test_server("id1", "127.0.0.1:8080", "TestServer", "key123");
+        assert_eq!(server.id, "id1");
+        assert_eq!(server.ip, "127.0.0.1:8080");
+        assert_eq!(server.server_name, "TestServer");
+        assert_eq!(server.user_key, "key123");
+        assert_eq!(server.user_nickname, None);
+    }
+
+    #[test]
+    fn test_server_with_nickname() {
+        let mut server = create_test_server("id1", "127.0.0.1:8080", "TestServer", "key123");
+        server.user_nickname = Some("MyServer".to_string());
+        assert_eq!(server.user_nickname, Some("MyServer".to_string()));
+    }
+
+    #[test]
+    fn test_duplicate_detection_logic() {
+        let servers = vec![
+            create_test_server("id1", "127.0.0.1:8080", "Server1", "key1"),
+            create_test_server("id2", "127.0.0.1:8081", "Server2", "key2"),
+        ];
+
+        let ip_to_check = "127.0.0.1:8080";
+        let has_duplicate = servers.iter().any(|s| s.ip == ip_to_check);
+        assert!(has_duplicate);
+
+        let ip_to_check = "999.999.999.999:9999";
+        let has_duplicate = servers.iter().any(|s| s.ip == ip_to_check);
+        assert!(!has_duplicate);
+    }
+
+    #[test]
+    fn test_server_removal_logic() {
+        let mut servers = vec![
+            create_test_server("id1", "127.0.0.1:8080", "Server1", "key1"),
+            create_test_server("id2", "127.0.0.1:8081", "Server2", "key2"),
+            create_test_server("id3", "127.0.0.1:8082", "Server3", "key3"),
+        ];
+
+        servers.retain(|s| s.ip != "127.0.0.1:8081");
+
+        assert_eq!(servers.len(), 2);
+        assert!(servers.iter().all(|s| s.ip != "127.0.0.1:8081"));
+    }
+
+    #[test]
+    fn test_server_search_by_ip() {
+        let servers = vec![
+            create_test_server("id1", "127.0.0.1:8080", "Server1", "key1"),
+            create_test_server("id2", "127.0.0.1:8081", "Server2", "key2"),
+            create_test_server("id3", "127.0.0.1:8082", "Server3", "key3"),
+        ];
+
+        let found = servers.iter().find(|s| s.ip == "127.0.0.1:8081");
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().server_name, "Server2");
+
+        let not_found = servers.iter().find(|s| s.ip == "999.999.999.999:9999");
+        assert!(not_found.is_none());
+    }
+
+    #[test]
+    fn test_nickname_update_logic() {
+        let mut servers = vec![create_test_server(
+            "id1",
+            "127.0.0.1:8080",
+            "Server1",
+            "key1",
+        )];
+
+        if let Some(server) = servers.iter_mut().find(|s| s.ip == "127.0.0.1:8080") {
+            server.user_nickname = Some("UpdatedNickname".to_string());
+        }
+
+        assert_eq!(
+            servers[0].user_nickname,
+            Some("UpdatedNickname".to_string())
+        );
+    }
+
+    #[test]
+    fn test_nickname_retrieval_logic() {
+        let mut server = create_test_server("id1", "127.0.0.1:8080", "Server1", "key1");
+        server.user_nickname = Some("TestNick".to_string());
+
+        let servers = vec![server];
+
+        let nickname = servers
+            .iter()
+            .find(|s| s.ip == "127.0.0.1:8080")
+            .map(|s| s.user_nickname.clone().unwrap_or_default());
+
+        assert_eq!(nickname, Some("TestNick".to_string()));
+    }
+
+    #[test]
+    fn test_nickname_retrieval_when_none() {
+        let server = create_test_server("id1", "127.0.0.1:8080", "Server1", "key1");
+        let servers = vec![server];
+
+        let nickname = servers
+            .iter()
+            .find(|s| s.ip == "127.0.0.1:8080")
+            .map(|s| s.user_nickname.clone().unwrap_or_default());
+
+        // Returns empty string for None
+        assert_eq!(nickname, Some(String::new()));
+    }
+
+    #[test]
+    fn test_connection_state_enum() {
+        let state1 = ServerConnectionState::Connected;
+        let state2 = ServerConnectionState::Disconnected;
+
+        match state1 {
+            ServerConnectionState::Connected => assert!(true),
+            ServerConnectionState::Disconnected => panic!("Expected Connected"),
+        }
+
+        match state2 {
+            ServerConnectionState::Disconnected => assert!(true),
+            ServerConnectionState::Connected => panic!("Expected Disconnected"),
+        }
+    }
+
+    #[test]
+    fn test_session_state_enum() {
+        let state = SessionState::Idle;
+        match state {
+            SessionState::Idle => assert!(true),
+            SessionState::JoinedSession(_) => panic!("Expected Idle"),
+        }
+    }
+
+    #[test]
+    fn test_persisted_server_equality() {
+        let server1 = create_test_server("id1", "127.0.0.1:8080", "Server1", "key1");
+        let server2 = create_test_server("id1", "127.0.0.1:8080", "Server1", "key1");
+        let server3 = create_test_server("id2", "127.0.0.1:8081", "Server2", "key2");
+
+        assert_eq!(server1, server2);
+        assert_ne!(server1, server3);
+    }
+
+    #[test]
+    fn test_server_filtering_multiple() {
+        let servers = vec![
+            create_test_server("id1", "192.168.1.1:8080", "Server1", "key1"),
+            create_test_server("id2", "192.168.1.2:8080", "Server2", "key2"),
+            create_test_server("id3", "192.168.1.3:8080", "Server3", "key3"),
+        ];
+
+        let filtered: Vec<_> = servers
+            .iter()
+            .filter(|s| s.ip.starts_with("192.168.1.1"))
+            .collect();
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].ip, "192.168.1.1:8080");
+    }
+
+    #[test]
+    fn test_all_servers_cloned() {
+        let servers = vec![
+            create_test_server("id1", "127.0.0.1:8080", "Server1", "key1"),
+            create_test_server("id2", "127.0.0.1:8081", "Server2", "key2"),
+        ];
+
+        let cloned = servers.clone();
+        assert_eq!(servers, cloned);
+        assert_eq!(servers.len(), cloned.len());
+    }
+
+    #[test]
+    fn test_server_list_iteration() {
+        let servers = vec![
+            create_test_server("id1", "127.0.0.1:8080", "Server1", "key1"),
+            create_test_server("id2", "127.0.0.1:8081", "Server2", "key2"),
+            create_test_server("id3", "127.0.0.1:8082", "Server3", "key3"),
+        ];
+
+        let ips: Vec<_> = servers.iter().map(|s| s.ip.clone()).collect();
+        assert_eq!(ips.len(), 3);
+        assert_eq!(ips[0], "127.0.0.1:8080");
+    }
+
+    #[test]
+    fn test_server_ip_parsing() {
+        let ip_str = "192.168.1.100:9000";
+        let parts: Vec<&str> = ip_str.split(':').collect();
+        assert_eq!(parts.len(), 2);
+        assert_eq!(parts[0], "192.168.1.100");
+        assert_eq!(parts[1], "9000");
+    }
+
+    #[test]
+    fn test_empty_server_list() {
+        let servers: Vec<PersistedServer> = Vec::new();
+        assert_eq!(servers.len(), 0);
+
+        let found = servers.iter().find(|s| s.ip == "127.0.0.1:8080");
+        assert!(found.is_none());
+    }
+}
