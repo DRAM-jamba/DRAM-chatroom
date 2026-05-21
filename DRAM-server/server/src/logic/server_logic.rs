@@ -65,7 +65,6 @@ pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, active_sessions:
     };
 
     Ok(())
-
 }
 
 pub async fn l_set_user_nickname(db_pool: Pool<Postgres>, user_key: String, nickname: String) -> Result<(), ApiError> {
@@ -83,8 +82,37 @@ pub async fn l_set_user_nickname(db_pool: Pool<Postgres>, user_key: String, nick
     Ok(())
 }
 
+// TODO: check it for security. for now it should be ok, but it is not ideal.
 fn l_generate_user_key() -> String {
     let u_key: String = Uuid::new_v4().to_string();
 
     u_key
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::modules::user::User;
+
+    #[test]
+    fn test_generate_user_key_is_not_empty() {
+        let users: Vec<User> = vec![];
+        let key = l_generate_user_key(&users);
+        assert!(!key.is_empty());
+    }
+
+    #[test]
+    fn test_generate_user_key_is_valid_uuid() {
+        let users: Vec<User> = vec![];
+        let key = l_generate_user_key(&users);
+        let parsed = Uuid::parse_str(&key);
+        assert!(parsed.is_ok(), "key was not a valid uuid: {}", key);
+    }
+
+    #[test]
+    fn test_generate_user_key_is_36_chars() {
+        let users: Vec<User> = vec![];
+        let key = l_generate_user_key(&users);
+        assert_eq!(key.len(), 36);
+    }
 }

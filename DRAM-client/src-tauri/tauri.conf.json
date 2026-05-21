@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "dram-client",
-  "version": "0.1.0",
-  "identifier": "com.dram.client",
+  "productName": "quorthon",
+  "version": "0.69.0",
+  "identifier": "com.quorthon.client",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "",
+        "title": "quorthon",
         "width": 360,
         "height": 628,
         "resizable": false,

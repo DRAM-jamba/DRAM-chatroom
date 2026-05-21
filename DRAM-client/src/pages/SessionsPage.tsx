@@ -7,7 +7,6 @@ import {
   disconnectFromServer,
   forgetSession,
   getSessions,
-  joinSession,
   updateSession,
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";
@@ -18,14 +17,15 @@ import confirmIcon from "../assets/icons/confirmbtnicon.svg";
 import arrowUpIcon from "../assets/icons/arrowupicon.svg";
 import settingsIcon from "../assets/icons/settingbtnicon.svg";
 import exitIcon from "../assets/icons/exitbtnicon.svg";
+import cancelIcon from "../assets/icons/cancelbtnicon.svg";
 
 type SessionsPageProps = {
   nickname: string;
   onDisconnect?: () => void;
   onNicknameChange?: (newNickname: string) => void;
   onConnectToSession?: (sessionName: string) => void;
+  onOpenSettings?: () => void;
 };
-
 type View = "list" | "create" | "generated" | "add";
 
 function SessionsPage({
@@ -33,6 +33,7 @@ function SessionsPage({
   onDisconnect,
   onNicknameChange,
   onConnectToSession,
+  onOpenSettings,
 }: SessionsPageProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
@@ -260,22 +261,24 @@ function SessionsPage({
                       type="button"
                       onClick={handleCancel}
                     >
-                      ×
+                      <img src={cancelIcon} width="16" height="16" />
                     </button>
                   </div>
-                  <input
-                    className="server-input"
-                    value={sessionNameInput}
-                    onChange={(e) => setSessionNameInput(e.target.value)}
-                    autoFocus
-                  />
-                  <button
-                    className="big-confirm-btn"
-                    type="button"
-                    onClick={handleCreateConfirm}
-                  >
-                    confirm
-                  </button>
+                  <div className="session-add-row">
+                    <input
+                      className="session-add-input"
+                      value={sessionNameInput}
+                      onChange={(e) => setSessionNameInput(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      className="session-add-confirm-btn"
+                      type="button"
+                      onClick={handleCreateConfirm}
+                    >
+                      confirm
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -328,22 +331,25 @@ function SessionsPage({
                       type="button"
                       onClick={handleCancel}
                     >
-                      ×
+                      <img src={cancelIcon} width="16" height="16" />
                     </button>
                   </div>
-                  <input
-                    className="server-input"
-                    value={sessionKeyInput}
-                    onChange={(e) => setSessionKeyInput(e.target.value)}
-                    autoFocus
-                  />
-                  <button
-                    className="big-confirm-btn"
-                    type="button"
-                    onClick={handleAddConfirm}
-                  >
-                    confirm
-                  </button>
+                  <div className="session-add-row">
+                    <input
+                      className="session-add-input"
+                      value={sessionKeyInput}
+                      onChange={(e) => setSessionKeyInput(e.target.value)}
+                      autoFocus
+                    />
+
+                    <button
+                      className="session-add-confirm-btn"
+                      type="button"
+                      onClick={handleAddConfirm}
+                    >
+                      confirm
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -398,7 +404,7 @@ function SessionsPage({
               )}
             </div>
 
-            <button className="settings-btn" type="button">
+            <button className="settings-btn" type="button" onClick={() => onOpenSettings?.()}>
               <img src={settingsIcon} width="16" height="16" />
             </button>
 
