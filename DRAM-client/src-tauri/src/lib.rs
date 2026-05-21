@@ -5,7 +5,7 @@ use crate::state::{AppState, ServerConnectionState, SessionState};
 
 use tauri::{AppHandle, Manager, State};
 
-mod api;
+pub mod api;
 mod client;
 mod error;
 mod events;
