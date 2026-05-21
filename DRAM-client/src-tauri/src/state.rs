@@ -194,6 +194,18 @@ impl AppState {
             .find(|s| s.ip == ip)
             .cloned()
     }
+
+    pub async fn rename_server(&self, ip: &str, new_name: String) -> Result<(), Box<dyn std::error::Error>> {
+        let mut servers = self.servers.lock().await;
+        if let Some(server) = servers.iter_mut().find(|s| s.ip == ip) {
+            server.server_name = new_name;
+            drop(servers);
+            self.save_servers().await?;
+            Ok(())
+        } else {
+            Err("Server not found".into())
+        }
+    }
 }
 
 #[cfg(test)]

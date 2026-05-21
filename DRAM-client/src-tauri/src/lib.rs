@@ -148,6 +148,19 @@ async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Resul
     Ok(())
 }
 
+#[tauri::command]
+async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
+    ip.parse::<std::net::SocketAddr>()
+        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
+
+    state
+        .rename_server(&ip, nickname)
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to rename server: {}", e)))?;
+
+    Ok(())
+}
+
 // Session commands
 #[tauri::command]
 async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppError> {
@@ -440,6 +453,7 @@ pub fn run() {
             leave_server,
             forget_server,
             set_nickname,
+            rename_server,
             // Session commands
             get_sessions,
             create_session,
