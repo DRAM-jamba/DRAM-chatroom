@@ -7,7 +7,6 @@ import {
   disconnectFromServer,
   forgetSession,
   getSessions,
-  joinSession,
   updateSession,
 } from "../services/sessionService";
 import { updateNickname } from "../services/nicknameService";
@@ -132,7 +131,6 @@ function SessionsPage({
 
   const handleConnect = async (id: string) => {
     const session = sessions.find((s) => s.id === id);
-    await joinSession(id);
     onConnectToSession?.(session?.name ?? id, id);
   };
 

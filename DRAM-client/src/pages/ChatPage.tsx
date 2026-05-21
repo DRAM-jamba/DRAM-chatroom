@@ -59,8 +59,8 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   };
 
   useEffect(() => {
-    if (!sessionName) {
-      console.warn("ChatPage mounted without a sessionName (key). Waiting...");
+    if (!sessionKey) {
+      console.warn("ChatPage mounted without a key. Waiting...");
       return;
     }
 
@@ -189,22 +189,24 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
               </button>
             </div>
 
-            <div className="voice-members-list">
-              {voiceMembers.map((username) => (
-                <div key={`voice-${username}`} className="voice-member-card">
-                  <span className="voice-indicator-dot" />
-                  <span className="voice-member-username">{username}</span>
-                </div>
-              ))}
-              {isConnecting && !voiceMembers.includes(nickname) && (
-                <div className="voice-member-card">
-                  <span className={`voice-indicator-dot ${voiceMembers.includes(nickname) ? "" : "connecting"}`} />
-                  <span className="voice-member-username">{nickname}</span>
-                </div>
-              )}
-              {!isConnecting && voiceMembers.length === 0 && (
-                <div className="members-empty">empty</div>
-              )}
+            <div className="voice-members-list-scroll">
+              <div className="voice-members-list">
+                {voiceMembers.map((username) => (
+                  <div key={`voice-${username}`} className="voice-member-card">
+                    <span className="voice-indicator-dot" />
+                    <span className="voice-member-username">{username}</span>
+                  </div>
+                ))}
+                {isConnecting && !voiceMembers.includes(nickname) && (
+                  <div className="voice-member-card">
+                    <span className={`voice-indicator-dot ${voiceMembers.includes(nickname) ? "" : "connecting"}`} />
+                    <span className="voice-member-username">{nickname}</span>
+                  </div>
+                )}
+                {!isConnecting && voiceMembers.length === 0 && (
+                  <div className="members-empty"></div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -294,21 +296,16 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
         {/* Right members sidebar */}
         <aside className="chat-members-sidebar">
           <div className="chat-members-header">members</div>
-
-          {members.length > 0 && (
-            <>
-              {members.map((member) => (
-                <div key={member.username} className="member-card">
-                  {member.username}
-                </div>
-              ))}
-            </>
-          )}
-
-          {members.length === 0 && (
-            <div className="members-empty">empty</div>
-          )}
-
+          <div className="chat-members-list">
+            {members.length > 0 && members.map((member) => (
+              <div key={member.username} className="member-card">
+                {member.username}
+              </div>
+            ))}
+            {members.length === 0 && (
+              <div className="members-empty">empty</div>
+            )}
+          </div>
         </aside>
       </div>
       {showSettings && (

@@ -196,7 +196,6 @@ button {
   height: calc(100vh - 28px);
   padding: 8px 8px;
   background: var(--bg-topbar);
-    border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1035,8 +1034,13 @@ button {
   flex-direction: column;
   height: 100%;
   border-right: 1px solid var(--border-tertiary);
+  user-select: text;
 }
-
+.message-content,
+.message-author,
+.message-time {
+  user-select: text;
+}
 .chat-topbar {
   height: 42px;
   flex-shrink: 0;
@@ -1264,6 +1268,28 @@ button {
   background: var(--bg-topbar);
 }
 
+.chat-members-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.chat-members-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-members-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-members-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+.chat-members-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 .chat-members-header {
   height: 42px;
   display: flex;
@@ -1479,6 +1505,7 @@ body {
     padding: 0 4px;
     flex-shrink: 0;
   border-bottom: 2px solid var(--border-tertiary);
+  border-top: 1px solid var(--border-tertiary);
     -webkit-app-region: drag;
   }
   
@@ -1542,6 +1569,7 @@ body {
 
 .voicechat-members-sidebar {
   flex: 1;
+    min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -1556,13 +1584,13 @@ body {
   flex-direction: column;
   padding: 8px;
   gap: 3px;
+    direction: ltr;
 }
 
 .voice-member-card {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 3px 8px;
   padding: 7px 10px;
   border: 1px solid var(--border-tertiary);
   border-radius: 6px;
@@ -1618,6 +1646,29 @@ body {
 }
 .voice-indicator-dot.connecting {
   background-color: #f0a030;
+}
+.voice-members-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  direction: rtl;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
 /* ── Settings page ───────────────────────────────────────────── */
 .settings-back-btn {
