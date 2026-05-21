@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // Client structs
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PersistedServer {
     pub id: String,
     #[serde(rename = "ipAddress")]
@@ -53,7 +53,7 @@ pub struct VoiceChatInfo {
 
 
 // Websocket structs
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum MessageType {
     Message,

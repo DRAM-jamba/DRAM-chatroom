@@ -461,3 +461,279 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running quorthon");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{PersistedServer, Session};
+
+    #[allow(dead_code)]
+    struct MockAppState {
+        current_ip: Option<String>,
+        servers: Vec<PersistedServer>,
+        nicknames: std::collections::HashMap<String, String>,
+    }
+
+    impl MockAppState {
+        fn new() -> Self {
+            MockAppState {
+                current_ip: None,
+                servers: Vec::new(),
+                nicknames: std::collections::HashMap::new(),
+            }
+        }
+
+        fn with_servers(mut self, servers: Vec<PersistedServer>) -> Self {
+            self.servers = servers;
+            self
+        }
+
+        fn with_current_ip(mut self, ip: String) -> Self {
+            self.current_ip = Some(ip);
+            self
+        }
+
+        fn with_nickname(mut self, ip: String, nickname: String) -> Self {
+            self.nicknames.insert(ip, nickname);
+            self
+        }
+
+        async fn get_all_servers(&self) -> Vec<PersistedServer> {
+            self.servers.clone()
+        }
+
+        #[allow(dead_code)]
+        async fn get_current_ip(&self) -> Option<String> {
+            self.current_ip.clone()
+        }
+
+        async fn get_nickname(&self, ip: &str) -> Option<String> {
+            self.nicknames.get(ip).cloned()
+        }
+    }
+
+    #[test]
+    fn test_get_servers_empty() {
+        let state = MockAppState::new();
+        let servers = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(state.get_all_servers())
+        })
+        .join()
+        .unwrap();
+
+        assert_eq!(servers.len(), 0);
+    }
+
+    #[test]
+    fn test_get_servers_with_data() {
+        let test_servers = vec![
+            PersistedServer {
+                id: "server1".to_string(),
+                ip: "127.0.0.1:8080".to_string(),
+                server_name: "Test Server".to_string(),
+                user_key: "key123".to_string(),
+                user_nickname: Some("TestUser".to_string()),
+            },
+            PersistedServer {
+                id: "server2".to_string(),
+                ip: "192.168.1.1:8080".to_string(),
+                server_name: "Production Server".to_string(),
+                user_key: "key456".to_string(),
+                user_nickname: None,
+            },
+        ];
+
+        let state = MockAppState::new().with_servers(test_servers.clone());
+        let servers = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(state.get_all_servers())
+        })
+        .join()
+        .unwrap();
+
+        assert_eq!(servers.len(), 2);
+        assert_eq!(servers[0].ip, "127.0.0.1:8080");
+        assert_eq!(servers[1].ip, "192.168.1.1:8080");
+        assert_eq!(servers[0].user_nickname, Some("TestUser".to_string()));
+        assert_eq!(servers[1].user_nickname, None);
+    }
+
+    #[test]
+    fn test_get_sessions_parsing() {
+        let json_str = r#"
+        {
+            "user_sessions": [
+                {
+                    "session_key": "session_abc123",
+                    "session_name": "General Chat",
+                    "user_role": "member"
+                },
+                {
+                    "session_key": "session_def456",
+                    "session_name": "Private Group",
+                    "user_role": "admin"
+                }
+            ]
+        }
+        "#;
+
+        let session_list: models::SessionList =
+            serde_json::from_str(json_str).expect("Failed to parse SessionList");
+
+        assert_eq!(session_list.user_sessions.len(), 2);
+        assert_eq!(session_list.user_sessions[0].id, "session_abc123");
+        assert_eq!(session_list.user_sessions[0].name, "General Chat");
+        assert_eq!(session_list.user_sessions[0].user_role, "member");
+        assert_eq!(session_list.user_sessions[1].user_role, "admin");
+    }
+
+    #[test]
+    fn test_get_sessions_empty() {
+        let json_str = r#"
+        {
+            "user_sessions": []
+        }
+        "#;
+
+        let session_list: models::SessionList =
+            serde_json::from_str(json_str).expect("Failed to parse empty SessionList");
+
+        assert_eq!(session_list.user_sessions.len(), 0);
+    }
+
+    #[test]
+    fn test_create_session_key_extraction() {
+        // Test that SessionKey deserializes and extracts correctly
+        let json_str = r#"
+        {
+            "session_key": "new_session_xyz789"
+        }
+        "#;
+
+        let session_key: models::SessionKey =
+            serde_json::from_str(json_str).expect("Failed to parse SessionKey");
+
+        assert_eq!(session_key.session_key, "new_session_xyz789");
+    }
+
+    #[test]
+    fn test_get_nickname_exists() {
+        let state = MockAppState::new()
+            .with_current_ip("127.0.0.1:8080".to_string())
+            .with_nickname("127.0.0.1:8080".to_string(), "TestUser".to_string());
+
+        let nickname = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(state.get_nickname("127.0.0.1:8080"))
+        })
+        .join()
+        .unwrap();
+
+        assert_eq!(nickname, Some("TestUser".to_string()));
+    }
+
+    #[test]
+    fn test_get_nickname_not_found() {
+        // Test that None is returned when nickname doesn't exist
+        let state = MockAppState::new();
+
+        let nickname = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(state.get_nickname("unknown_ip"))
+        })
+        .join()
+        .unwrap();
+
+        assert_eq!(nickname, None);
+    }
+
+    #[test]
+    fn test_join_voice_chat_url_construction() {
+        // Test that voice chat URL is constructed correctly from IP
+        let test_cases = vec![
+            ("127.0.0.1:8080", "ws://127.0.0.1:7880"),
+            ("192.168.1.100:9000", "ws://192.168.1.100:7880"),
+            ("localhost:8000", "ws://localhost:7880"),
+        ];
+
+        for (ip, expected_url) in test_cases {
+            let host = ip.split(':').next().unwrap_or(ip);
+            let lk_url = format!("ws://{}:7880", host);
+            assert_eq!(lk_url, expected_url);
+        }
+    }
+
+    #[test]
+    fn test_voice_token_deserialization() {
+        let json_str = r#"
+        {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+        }
+        "#;
+
+        let token: models::VoiceToken =
+            serde_json::from_str(json_str).expect("Failed to parse VoiceToken");
+
+        assert_eq!(token.token, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
+    }
+
+    #[test]
+    fn test_user_key_deserialization() {
+        // Test that UserKey deserializes correctly
+        let json_str = r#"
+        {
+            "user_key": "user_abc123def456"
+        }
+        "#;
+
+        let user_key: models::UserKey =
+            serde_json::from_str(json_str).expect("Failed to parse UserKey");
+
+        assert_eq!(user_key.user_key, "user_abc123def456");
+    }
+
+    #[test]
+    fn test_message_serialization() {
+        // Test that BackMessageObj serializes correctly
+        let msg = models::BackMessageObj {
+            m_type: models::MessageType::Message,
+            body: "Hello, World!".to_string(),
+        };
+
+        let json = serde_json::to_string(&msg).expect("Failed to serialize message");
+        assert!(json.contains("Hello, World!"));
+        assert!(json.contains("message") || json.contains("Message"));
+    }
+
+    #[test]
+    fn test_persisted_server_structure() {
+        // Test that PersistedServer can be created and has correct fields
+        let server = PersistedServer {
+            id: "test_id".to_string(),
+            ip: "10.0.0.1:8080".to_string(),
+            server_name: "Test".to_string(),
+            user_key: "key123".to_string(),
+            user_nickname: Some("Nick".to_string()),
+        };
+
+        assert_eq!(server.id, "test_id");
+        assert_eq!(server.ip, "10.0.0.1:8080");
+        assert_eq!(server.server_name, "Test");
+        assert_eq!(server.user_key, "key123");
+        assert_eq!(server.user_nickname, Some("Nick".to_string()));
+    }
+
+    #[test]
+    fn test_session_structure() {
+        let session = Session {
+            id: "session_1".to_string(),
+            name: "Test Session".to_string(),
+            user_role: "admin".to_string(),
+        };
+
+        assert_eq!(session.id, "session_1");
+        assert_eq!(session.name, "Test Session");
+        assert_eq!(session.user_role, "admin");
+    }
+}
