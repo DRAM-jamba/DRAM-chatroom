@@ -96,26 +96,18 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
       const micKey = loadMicHotkey();
       const headphonesKey = loadHeadphonesHotkey();
 
-      if (micKey && e.key.toUpperCase() === micKey) {
-        setMuted((prev) => {
-          const next = !prev;
-          if (!next) setHidden(false);
-          return next;
-        });
-      }
+    if (micKey && e.key.toUpperCase() === micKey) {
+      handleToggleMute();
+    }
 
-      if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
-        setHidden((prev) => {
-          const next = !prev;
-          if (next) setMuted(true);
-          return next;
-        });
-      }
-    };
+    if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
+      handleToggleDeafen();
+    }
+  };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [muted, deafened, isInVoiceCall]);
 
   const handleSend = async (content: string) => {
     await sendMessage(content);
@@ -215,7 +207,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
                 onClick={handleToggleDeafen}
                 title="Deafen/Undeafen"
               >
-                <img src={hidden ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={hidden ? "" : "icon-img"} />
+                <img src={deafened ? headphonesOffIcon : headphonesIcon} width="16" height="16" className={deafened ? "" : "icon-img"} />
               </button>
 
               <button className="chat-settings-btn" type="button" onClick={() => setShowSettings(true)}>

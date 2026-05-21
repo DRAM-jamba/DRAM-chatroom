@@ -18,7 +18,6 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
 
   _room = new Room();
 
-  // ✅ This is what you were missing — fires when a track is ready to play
   _room.on(RoomEvent.TrackSubscribed, (
     track: RemoteTrack,
     _publication: RemoteTrackPublication,
@@ -32,7 +31,6 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
     document.body.appendChild(audioEl);
   });
 
-  // ✅ Cleanup when track is gone
   _room.on(RoomEvent.TrackUnsubscribed, (
     track: RemoteTrack,
     _publication: RemoteTrackPublication,
