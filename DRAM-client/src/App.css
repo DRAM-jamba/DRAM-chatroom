@@ -280,6 +280,7 @@ button {
   margin: 2px 0 12px;
   color: var(--text-ip);
   font-size: 14px;
+  user-select: text;
 }
 
 .server-actions {
