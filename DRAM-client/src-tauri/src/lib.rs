@@ -9,7 +9,7 @@ mod api;
 mod client;
 mod error;
 mod events;
-mod models;
+pub mod models;
 mod security;
 mod state;
 
