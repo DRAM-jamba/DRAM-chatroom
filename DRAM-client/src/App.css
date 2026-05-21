@@ -949,9 +949,9 @@ button {
   width: 192px;
   flex-shrink: 0;
   height: calc(100vh - 28px);
-  padding: 12px 0;
-  background: linear-gradient(to bottom, #090909, #111111);
-  border-right: 1px solid #1e1e1e;
+  padding-bottom: 12px;
+    background: var(--bg-topbar);
+    border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -1531,9 +1531,9 @@ body {
 
 .system-message-text {
   font-size: 12px;
-  color: #555;
-  background: #111;
-  border: 1px solid #1e1e1e;
+  color: var(--text-faint);
+    background: var(--bg-element);
+    border: 1px solid var(--border-tertiary);
   border-radius: 20px;
   padding: 3px 14px;
   white-space: nowrap;
@@ -1547,7 +1547,7 @@ body {
 }
 
 .voicechat-members-sidebar .chat-members-header {
-  border-top: 1px solid #1e1e1e;
+  height: 42px;
   width: 100%;
 }
 
@@ -1564,16 +1564,16 @@ body {
   gap: 10px;
   margin: 3px 8px;
   padding: 7px 10px;
-  border: 1px solid #1e1e1e;
+  border: 1px solid var(--border-tertiary);
   border-radius: 6px;
-  background: rgba(15, 15, 15, 0.9);
+  background: var(--bg-card);
   font-size: 14px;
-  color: #d0d0d0;
+  color: var(--text-muted);
   transition: border-color 0.2s ease;
 }
 
 .voice-member-card:hover {
-  border-color: #00aaff;
+  border-color: var(--accent);
 }
 
 .voice-indicator-dot {
@@ -1582,6 +1582,39 @@ body {
   background-color: #23a55a;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.voice-channel-header {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.call-btn-small {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-left: 5px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.call-btn-small:hover {
+  border-color: var(--accent);
+}
+
+.call-btn-small.active {
+  border-color: var(--border-secondary);
+}
+
+.call-btn-small.active:hover {
+  border-color: var(--danger);
+  box-shadow: 0 0 6px var(--danger-glow);
 }
 /* ── Settings page ───────────────────────────────────────────── */
 .settings-back-btn {

@@ -26,7 +26,8 @@ import headphonesIcon from "../assets/icons/headphonesbtnicon.svg";
 import headphonesOffIcon from "../assets/icons/headphonesoffbtnicon.svg";
 import settingsIcon from "../assets/icons/settingbtnicon.svg";
 import exitIcon from "../assets/icons/exitbtnicon.svg";
-import logoIcon from "../assets/icons/logorgb.png";
+import callIcon from "../assets/icons/callbtnicon.svg";
+import endCallIcon from "../assets/icons/endcallbtnicon.svg";
 
 type ChatPageProps = {
   sessionName: string;
@@ -169,13 +170,22 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
 
         {/* Left sidebar */}
         <aside className="chat-left-sidebar">
-          <div className="chat-logo-row">
-            <img src={logoIcon} width="18" height="18" />
-            <span className="chat-logo-text">quorthon</span>
-          </div>
-
           <div className="voicechat-members-sidebar">
-            <div className="chat-members-header">voice members</div>
+            <div className="chat-members-header voice-channel-header">
+              <span>voice channel</span>
+              <button
+                className={`call-btn-small ${isInVoiceCall ? "active" : ""}`}
+                type="button"
+                onClick={handleToggleCall}
+              >
+                <img
+                  src={isInVoiceCall ? endCallIcon : callIcon}
+                  width="14"
+                  height="14"
+                  className={isInVoiceCall ? "" : "icon-img"}
+                />
+              </button>
+            </div>
 
             <div className="voice-members-list">
               {voiceMembers.length > 0 ? (
@@ -186,7 +196,7 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
                   </div>
                 ))
               ) : (
-                <div className="members-empty">empty</div>
+                  <div className="members-empty"></div>
               )}
             </div>
           </div>
@@ -292,15 +302,6 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
             <div className="members-empty">empty</div>
           )}
 
-          <div className="chat-members-bottom">
-            <button 
-              className={`call-btn ${isInVoiceCall ? "active" : ""}`} 
-              type="button"
-              onClick={handleToggleCall}
-            >
-              {isInVoiceCall ? "leave call" : "call"}
-            </button>
-          </div>
         </aside>
       </div>
       {showSettings && (
