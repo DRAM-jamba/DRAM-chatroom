@@ -16,7 +16,13 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
     { sessionKey }
   );
 
-  _room = new Room();
+  _room = new Room({
+    audioCaptureDefaults: {
+      noiseSuppression: true,
+      echoCancellation: true,
+      autoGainControl: false,
+    },
+  });
 
   _room.on(RoomEvent.TrackSubscribed, (
     track: RemoteTrack,

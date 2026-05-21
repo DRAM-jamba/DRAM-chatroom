@@ -1616,6 +1616,9 @@ body {
   border-color: var(--danger);
   box-shadow: 0 0 6px var(--danger-glow);
 }
+.voice-indicator-dot.connecting {
+  background-color: #f0a030;
+}
 /* ── Settings page ───────────────────────────────────────────── */
 .settings-back-btn {
   height: 35px;

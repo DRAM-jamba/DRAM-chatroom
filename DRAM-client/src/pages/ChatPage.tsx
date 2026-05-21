@@ -40,7 +40,8 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [voiceMembers, setVoiceMembers] = useState<string[]>([]);
-  
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const [showHelp, setShowHelp] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,9 +133,10 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
     if (isInVoiceCall) {
       await leaveVoiceChat();
       setIsInVoiceCall(false);
-      setVoiceMembers([]);
+      setIsConnecting(false);
     } else {
-      await joinVoiceChat(sessionName);
+      setIsConnecting(true);
+      await joinVoiceChat(sessionKey);
       setIsInVoiceCall(true);
       await setMicMuted(muted);
       await setServiceDeafened(deafened);
@@ -188,15 +190,20 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
             </div>
 
             <div className="voice-members-list">
-              {voiceMembers.length > 0 ? (
-                voiceMembers.map((username) => (
-                  <div key={`voice-${username}`} className="voice-member-card">
-                    <span className="voice-indicator-dot" />
-                    <span className="voice-member-username">{username}</span>
-                  </div>
-                ))
-              ) : (
-                  <div className="members-empty"></div>
+              {voiceMembers.map((username) => (
+                <div key={`voice-${username}`} className="voice-member-card">
+                  <span className="voice-indicator-dot" />
+                  <span className="voice-member-username">{username}</span>
+                </div>
+              ))}
+              {isConnecting && !voiceMembers.includes(nickname) && (
+                <div className="voice-member-card">
+                  <span className={`voice-indicator-dot ${voiceMembers.includes(nickname) ? "" : "connecting"}`} />
+                  <span className="voice-member-username">{nickname}</span>
+                </div>
+              )}
+              {!isConnecting && voiceMembers.length === 0 && (
+                <div className="members-empty">empty</div>
               )}
             </div>
           </div>
