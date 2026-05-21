@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Room, RoomEvent, RemoteParticipant } from "livekit-client";
+import { Room, RoomEvent, RemoteParticipant, RemoteTrack, RemoteTrackPublication, Track } from "livekit-client";
 import type { MessageObj } from "./chatService";
 
 let _room: Room | null = null;
 let _isDeafened = false;
+
+const _audioElements = new Map<string, HTMLAudioElement>();
 
 export async function joinVoiceChat(sessionKey: string): Promise<void> {
   if (_room) return;
@@ -15,6 +17,34 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
   );
 
   _room = new Room();
+
+  // ✅ This is what you were missing — fires when a track is ready to play
+  _room.on(RoomEvent.TrackSubscribed, (
+    track: RemoteTrack,
+    _publication: RemoteTrackPublication,
+    participant: RemoteParticipant
+  ) => {
+    if (track.kind !== Track.Kind.Audio) return;
+
+    const audioEl = track.attach();   // creates <audio> element
+    audioEl.volume = _isDeafened ? 0 : 1;
+    _audioElements.set(participant.identity, audioEl);
+    document.body.appendChild(audioEl);
+  });
+
+  // ✅ Cleanup when track is gone
+  _room.on(RoomEvent.TrackUnsubscribed, (
+    track: RemoteTrack,
+    _publication: RemoteTrackPublication,
+    participant: RemoteParticipant
+  ) => {
+    track.detach();
+    const el = _audioElements.get(participant.identity);
+    if (el) {
+      el.remove();
+      _audioElements.delete(participant.identity);
+    }
+  });
 
   _room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
     if (_isDeafened) participant.setVolume(0);
@@ -27,6 +57,10 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
 
 export async function leaveVoiceChat(): Promise<void> {
   if (!_room) return;
+
+  _audioElements.forEach((el) => el.remove());
+  _audioElements.clear();
+
   await _room.disconnect();
   _room = null;
   _isDeafened = false;
@@ -42,6 +76,11 @@ export async function setDeafened(deafened: boolean): Promise<void> {
   _isDeafened = deafened;
   if (!_room) return;
   _room.remoteParticipants.forEach((p) => p.setVolume(deafened ? 0 : 1));
+
+  _audioElements.forEach((el) => {
+    el.volume = deafened ? 0 : 1;
+  });
+
 }
 
 export async function subscribeToVoiceList(
