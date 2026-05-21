@@ -195,7 +195,7 @@ button {
   width: 360px;
   height: calc(100vh - 28px);
   padding: 8px 8px;
-  background: linear-gradient(to bottom, var(--bg-sidebar), var(--bg-sidebar2));
+  background: var(--bg-topbar);
     border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
@@ -203,7 +203,7 @@ button {
 }
 
 .logo {
-  margin: 0 0 18px;
+  margin: 0 0 13px;
   text-align: center;
   font-size: 28px;
   font-weight: 400;
@@ -1060,7 +1060,7 @@ button {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 60%;
+    max-width: 100%;
     transition: border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -1237,7 +1237,7 @@ button {
 .message-input {
   width: 100%;
   height: 40px;
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
   background: var(--bg-secondary);
     color: var(--text-msg);
@@ -1261,7 +1261,7 @@ button {
   height: calc(100vh - 28px);
   display: flex;
   flex-direction: column;
-  background: linear-gradient(to bottom, var(--bg-sidebar), var(--bg-sidebar2));
+  background: var(--bg-topbar);
 }
 
 .chat-members-header {
@@ -1269,7 +1269,6 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--border-tertiary);
   font-size: 15px;
   color: var(--text-members);
   font-weight: 400;
@@ -1307,7 +1306,6 @@ button {
 .chat-members-bottom {
   margin-top: auto;
   padding: 12px 8px;
-  border-top: 1px solid var(--border-tertiary);
 }
 
 .call-btn {
@@ -1480,7 +1478,7 @@ body {
     align-items: center;
     padding: 0 4px;
     flex-shrink: 0;
-  border-bottom: 1px solid var(--border-tertiary);
+  border-bottom: 2px solid var(--border-tertiary);
     -webkit-app-region: drag;
   }
   

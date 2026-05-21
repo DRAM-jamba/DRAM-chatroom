@@ -30,11 +30,12 @@ import logoIcon from "../assets/icons/logorgb.png";
 
 type ChatPageProps = {
   sessionName: string;
+  sessionKey: string;
   nickname: string;
   onLeaveSession: () => void;
 };
 
-function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
+function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [voiceMembers, setVoiceMembers] = useState<string[]>([]);
@@ -74,7 +75,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         if (!isMounted) return;
         unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers, unlistenVoice];
         
-        await joinSession(sessionName);
+        await joinSession(sessionKey);
       } catch (err) {
         if (isMounted) {
           console.error("Failed to connect to session:", err);
@@ -120,7 +121,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   const handleCopySessionKey = async () => {
-    await navigator.clipboard.writeText(sessionName);
+    await navigator.clipboard.writeText(sessionKey);
     setCopied(true);
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
@@ -230,7 +231,6 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         <main className="chat-main">
           <div className="chat-topbar">
             <div className="chat-session-key-wrapper">
-              <span className="chat-session-key-label">session key</span>
               <button
                 className="chat-session-name"
                 type="button"
