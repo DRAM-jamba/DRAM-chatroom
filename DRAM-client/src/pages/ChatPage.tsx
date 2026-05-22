@@ -267,26 +267,7 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
               </div>
             )}
 
-            <div className="chat-help-wrapper">
-              <button
-                className="chat-help-btn"
-                type="button"
-                onClick={() => setShowHelp((prev) => !prev)}
-              >
-                ?
-              </button>
 
-              {showHelp && (
-                <div className="chat-help-popup" onClick={() => setShowHelp(false)}>
-                  <div className="help-popup-content">
-                    <p>• M — mute microphone</p>
-                    <p>• H — hide / show camera</p>
-                    <p>• Call — start a voice/video call</p>
-                    <span className="help-popup-close-text">click to close</span>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           <MessageList messages={messages} currentUsername={nickname} />

@@ -26,7 +26,7 @@
 [data-theme="dark"] {
   --bg-primary: #050505;
   --bg-secondary: #0e0e0e;
-  --bg-card: rgba(15, 15, 15, 0.95);
+  --bg-card: #090909;
   --bg-card-alt: rgba(15, 15, 15, 0.98);
   --bg-sidebar: #090909;
   --bg-sidebar2: #111111;
@@ -416,7 +416,7 @@ button {
   height: 38px;
   border: 1px solid var(--border-secondary);
   border-radius: 6px;
-  background: var(--bg-element);
+  background: var(--bg-element2);
     color: var(--text-primary);
   font-size: 32px;
   cursor: pointer;
