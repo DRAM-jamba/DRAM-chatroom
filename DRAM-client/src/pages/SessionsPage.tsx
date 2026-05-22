@@ -23,7 +23,7 @@ type SessionsPageProps = {
   nickname: string;
   onDisconnect?: () => void;
   onNicknameChange?: (newNickname: string) => void;
-  onConnectToSession?: (sessionName: string) => void;
+  onConnectToSession?: (sessionName: string, sessionKey: string) => void;
   onOpenSettings?: () => void;
 };
 type View = "list" | "create" | "generated" | "add";
@@ -135,8 +135,9 @@ function SessionsPage({
     setView("list");
   };
 
-  const handleConnect = (id: string) => {
-    onConnectToSession?.(id);
+  const handleConnect = async (id: string) => {
+    const session = sessions.find((s) => s.id === id);
+    onConnectToSession?.(session?.name ?? id, id);
   };
 
   const handleSaveEdit = async (id: string, name: string) => {

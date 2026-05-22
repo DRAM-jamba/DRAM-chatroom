@@ -241,11 +241,19 @@ async fn connect_session(
             height: 750.0,
         }))
         .unwrap();
+    window
+        .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize {
+            width: 1100.0,
+            height: 740.0,
+        })))
+        .unwrap();
+
     Ok(())
 }
 
 #[tauri::command]
 async fn leave_session(state: State<'_, AppState>, app: AppHandle) -> Result<(), AppError> {
+    println!("Leaving session...");
     let (ip, _server) = get_server_context(&state).await?;
     let api = ServerApi::new(&format!("http://{}", ip));
 
@@ -266,7 +274,7 @@ async fn leave_session(state: State<'_, AppState>, app: AppHandle) -> Result<(),
             height: 628.0,
         }))
         .unwrap();
-
+    println!("Left session");
     Ok(())
 }
 

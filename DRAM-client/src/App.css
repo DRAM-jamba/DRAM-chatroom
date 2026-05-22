@@ -26,7 +26,7 @@
 [data-theme="dark"] {
   --bg-primary: #050505;
   --bg-secondary: #0e0e0e;
-  --bg-card: rgba(15, 15, 15, 0.95);
+  --bg-card: #090909;
   --bg-card-alt: rgba(15, 15, 15, 0.98);
   --bg-sidebar: #090909;
   --bg-sidebar2: #111111;
@@ -195,15 +195,14 @@ button {
   width: 360px;
   height: calc(100vh - 28px);
   padding: 8px 8px;
-  background: linear-gradient(to bottom, var(--bg-sidebar), var(--bg-sidebar2));
-    border-right: 1px solid var(--border-primary);
+  background: var(--bg-topbar);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .logo {
-  margin: 0 0 18px;
+  margin: 0 0 13px;
   text-align: center;
   font-size: 28px;
   font-weight: 400;
@@ -281,6 +280,7 @@ button {
   margin: 2px 0 12px;
   color: var(--text-ip);
   font-size: 14px;
+  user-select: text;
 }
 
 .server-actions {
@@ -416,7 +416,7 @@ button {
   height: 38px;
   border: 1px solid var(--border-secondary);
   border-radius: 6px;
-  background: var(--bg-element);
+  background: var(--bg-element2);
     color: var(--text-primary);
   font-size: 32px;
   cursor: pointer;
@@ -949,9 +949,9 @@ button {
   width: 192px;
   flex-shrink: 0;
   height: calc(100vh - 28px);
-  padding: 12px 0;
-  background: linear-gradient(to bottom, #090909, #111111);
-  border-right: 1px solid #1e1e1e;
+  padding-bottom: 12px;
+    background: var(--bg-topbar);
+    border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -1035,8 +1035,13 @@ button {
   flex-direction: column;
   height: 100%;
   border-right: 1px solid var(--border-tertiary);
+  user-select: text;
 }
-
+.message-content,
+.message-author,
+.message-time {
+  user-select: text;
+}
 .chat-topbar {
   height: 42px;
   flex-shrink: 0;
@@ -1060,7 +1065,7 @@ button {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 60%;
+    max-width: 100%;
     transition: border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -1237,7 +1242,7 @@ button {
 .message-input {
   width: 100%;
   height: 40px;
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
   background: var(--bg-secondary);
     color: var(--text-msg);
@@ -1261,15 +1266,36 @@ button {
   height: calc(100vh - 28px);
   display: flex;
   flex-direction: column;
-  background: linear-gradient(to bottom, var(--bg-sidebar), var(--bg-sidebar2));
+  background: var(--bg-topbar);
 }
 
+.chat-members-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.chat-members-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-members-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-members-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+.chat-members-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 .chat-members-header {
   height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--border-tertiary);
   font-size: 15px;
   color: var(--text-members);
   font-weight: 400;
@@ -1307,7 +1333,6 @@ button {
 .chat-members-bottom {
   margin-top: auto;
   padding: 12px 8px;
-  border-top: 1px solid var(--border-tertiary);
 }
 
 .call-btn {
@@ -1480,7 +1505,8 @@ body {
     align-items: center;
     padding: 0 4px;
     flex-shrink: 0;
-  border-bottom: 1px solid var(--border-tertiary);
+  border-bottom: 2px solid var(--border-tertiary);
+  border-top: 1px solid var(--border-tertiary);
     -webkit-app-region: drag;
   }
   
@@ -1533,9 +1559,9 @@ body {
 
 .system-message-text {
   font-size: 12px;
-  color: #555;
-  background: #111;
-  border: 1px solid #1e1e1e;
+  color: var(--text-faint);
+    background: var(--bg-element);
+    border: 1px solid var(--border-tertiary);
   border-radius: 20px;
   padding: 3px 14px;
   white-space: nowrap;
@@ -1544,12 +1570,13 @@ body {
 
 .voicechat-members-sidebar {
   flex: 1;
+    min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .voicechat-members-sidebar .chat-members-header {
-  border-top: 1px solid #1e1e1e;
+  height: 42px;
   width: 100%;
 }
 
@@ -1558,24 +1585,24 @@ body {
   flex-direction: column;
   padding: 8px;
   gap: 3px;
+    direction: ltr;
 }
 
 .voice-member-card {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 3px 8px;
   padding: 7px 10px;
-  border: 1px solid #1e1e1e;
+  border: 1px solid var(--border-tertiary);
   border-radius: 6px;
-  background: rgba(15, 15, 15, 0.9);
+  background: var(--bg-card);
   font-size: 14px;
-  color: #d0d0d0;
+  color: var(--text-muted);
   transition: border-color 0.2s ease;
 }
 
 .voice-member-card:hover {
-  border-color: #00aaff;
+  border-color: var(--accent);
 }
 
 .voice-indicator-dot {
@@ -1584,6 +1611,65 @@ body {
   background-color: #23a55a;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.voice-channel-header {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.call-btn-small {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-left: 5px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.call-btn-small:hover {
+  border-color: var(--accent);
+}
+
+.call-btn-small.active {
+  border-color: var(--border-secondary);
+}
+
+.call-btn-small.active:hover {
+  border-color: var(--danger);
+  box-shadow: 0 0 6px var(--danger-glow);
+}
+.voice-indicator-dot.connecting {
+  background-color: #f0a030;
+}
+.voice-members-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  direction: rtl;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+.voice-members-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
 /* ── Settings page ───────────────────────────────────────────── */
 .settings-back-btn {

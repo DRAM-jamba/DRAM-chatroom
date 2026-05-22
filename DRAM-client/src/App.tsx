@@ -12,7 +12,7 @@ type Page =
   | { name: "servers" }
   | { name: "nickname" }
   | { name: "sessions"; nickname: string }
-  | { name: "chat"; sessionName: string; nickname: string }
+  | { name: "chat"; sessionName: string; sessionKey: string; nickname: string }
   | { name: "settings"; nickname: string };
 
 loadAllSettings();
@@ -42,6 +42,7 @@ function App() {
     return (
       <ChatPage
         sessionName={page.sessionName}
+        sessionKey={page.sessionKey}
         nickname={page.nickname}
         onLeaveSession={() =>
           setPage({ name: "sessions", nickname: page.nickname })
@@ -58,8 +59,8 @@ function App() {
         onNicknameChange={(newNickname) =>
           setPage({ name: "sessions", nickname: newNickname })
         }
-        onConnectToSession={(sessionName) =>
-          setPage({ name: "chat", sessionName, nickname: page.nickname })
+        onConnectToSession={(sessionName, sessionKey) =>
+          setPage({ name: "chat", sessionName, sessionKey, nickname: page.nickname })
         }
         onOpenSettings=
         {

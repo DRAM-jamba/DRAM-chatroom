@@ -26,20 +26,22 @@ import headphonesIcon from "../assets/icons/headphonesbtnicon.svg";
 import headphonesOffIcon from "../assets/icons/headphonesoffbtnicon.svg";
 import settingsIcon from "../assets/icons/settingbtnicon.svg";
 import exitIcon from "../assets/icons/exitbtnicon.svg";
-import logoIcon from "../assets/icons/logorgb.png";
+import callIcon from "../assets/icons/callbtnicon.svg";
+import endCallIcon from "../assets/icons/endcallbtnicon.svg";
 
 type ChatPageProps = {
   sessionName: string;
+  sessionKey: string;
   nickname: string;
   onLeaveSession: () => void;
 };
 
-function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
+function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [voiceMembers, setVoiceMembers] = useState<string[]>([]);
-  
-  const [showHelp, setShowHelp] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -56,8 +58,8 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   useEffect(() => {
-    if (!sessionName) {
-      console.warn("ChatPage mounted without a sessionName (key). Waiting...");
+    if (!sessionKey) {
+      console.warn("ChatPage mounted without a key. Waiting...");
       return;
     }
 
@@ -74,7 +76,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         if (!isMounted) return;
         unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers, unlistenVoice];
         
-        await joinSession(sessionName);
+        await joinSession(sessionKey);
       } catch (err) {
         if (isMounted) {
           console.error("Failed to connect to session:", err);
@@ -120,7 +122,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
   };
 
   const handleCopySessionKey = async () => {
-    await navigator.clipboard.writeText(sessionName);
+    await navigator.clipboard.writeText(sessionKey);
     setCopied(true);
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
@@ -130,9 +132,10 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
     if (isInVoiceCall) {
       await leaveVoiceChat();
       setIsInVoiceCall(false);
-      setVoiceMembers([]);
+      setIsConnecting(false);
     } else {
-      await joinVoiceChat(sessionName);
+      setIsConnecting(true);
+      await joinVoiceChat(sessionKey);
       setIsInVoiceCall(true);
       await setMicMuted(muted);
       await setServiceDeafened(deafened);
@@ -168,25 +171,41 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
 
         {/* Left sidebar */}
         <aside className="chat-left-sidebar">
-          <div className="chat-logo-row">
-            <img src={logoIcon} width="18" height="18" />
-            <span className="chat-logo-text">quorthon</span>
-          </div>
-
           <div className="voicechat-members-sidebar">
-            <div className="chat-members-header">voice members</div>
+            <div className="chat-members-header voice-channel-header">
+              <span>voice channel</span>
+              <button
+                className={`call-btn-small ${isInVoiceCall ? "active" : ""}`}
+                type="button"
+                onClick={handleToggleCall}
+              >
+                <img
+                  src={isInVoiceCall ? endCallIcon : callIcon}
+                  width="14"
+                  height="14"
+                  className={isInVoiceCall ? "" : "icon-img"}
+                />
+              </button>
+            </div>
 
-            <div className="voice-members-list">
-              {voiceMembers.length > 0 ? (
-                voiceMembers.map((username) => (
+            <div className="voice-members-list-scroll">
+              <div className="voice-members-list">
+                {voiceMembers.map((username) => (
                   <div key={`voice-${username}`} className="voice-member-card">
                     <span className="voice-indicator-dot" />
                     <span className="voice-member-username">{username}</span>
                   </div>
-                ))
-              ) : (
-                <div className="members-empty">empty</div>
-              )}
+                ))}
+                {isConnecting && !voiceMembers.includes(nickname) && (
+                  <div className="voice-member-card">
+                    <span className={`voice-indicator-dot ${voiceMembers.includes(nickname) ? "" : "connecting"}`} />
+                    <span className="voice-member-username">{nickname}</span>
+                  </div>
+                )}
+                {!isConnecting && voiceMembers.length === 0 && (
+                  <div className="members-empty"></div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -230,7 +249,6 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         <main className="chat-main">
           <div className="chat-topbar">
             <div className="chat-session-key-wrapper">
-              <span className="chat-session-key-label">session key</span>
               <button
                 className="chat-session-name"
                 type="button"
@@ -248,26 +266,7 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
               </div>
             )}
 
-            <div className="chat-help-wrapper">
-              <button
-                className="chat-help-btn"
-                type="button"
-                onClick={() => setShowHelp((prev) => !prev)}
-              >
-                ?
-              </button>
 
-              {showHelp && (
-                <div className="chat-help-popup" onClick={() => setShowHelp(false)}>
-                  <div className="help-popup-content">
-                    <p>• M — mute microphone</p>
-                    <p>• H — hide / show camera</p>
-                    <p>• Call — start a voice/video call</p>
-                    <span className="help-popup-close-text">click to close</span>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           <MessageList messages={messages} currentUsername={nickname} />
@@ -277,29 +276,15 @@ function ChatPage({ sessionName, nickname, onLeaveSession }: ChatPageProps) {
         {/* Right members sidebar */}
         <aside className="chat-members-sidebar">
           <div className="chat-members-header">members</div>
-
-          {members.length > 0 && (
-            <>
-              {members.map((member) => (
-                <div key={member.username} className="member-card">
-                  {member.username}
-                </div>
-              ))}
-            </>
-          )}
-
-          {members.length === 0 && (
-            <div className="members-empty">empty</div>
-          )}
-
-          <div className="chat-members-bottom">
-            <button 
-              className={`call-btn ${isInVoiceCall ? "active" : ""}`} 
-              type="button"
-              onClick={handleToggleCall}
-            >
-              {isInVoiceCall ? "leave call" : "call"}
-            </button>
+          <div className="chat-members-list">
+            {members.length > 0 && members.map((member) => (
+              <div key={member.username} className="member-card">
+                {member.username}
+              </div>
+            ))}
+            {members.length === 0 && (
+              <div className="members-empty">empty</div>
+            )}
           </div>
         </aside>
       </div>
