@@ -42,7 +42,6 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const [voiceMembers, setVoiceMembers] = useState<string[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const [showHelp, setShowHelp] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState(false);
