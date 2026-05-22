@@ -5,11 +5,11 @@ use crate::state::{AppState, ServerConnectionState, SessionState};
 
 use tauri::{AppHandle, Manager, State};
 
-mod api;
+pub mod api;
 mod client;
 mod error;
 mod events;
-mod models;
+pub mod models;
 mod security;
 mod state;
 
@@ -144,6 +144,19 @@ async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Resul
         .save_nickname(&ip, new_nickname)
         .await
         .map_err(|e| AppError::Network(format!("Failed to update nickname: {}", e)))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
+    ip.parse::<std::net::SocketAddr>()
+        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
+
+    state
+        .rename_server(&ip, nickname)
+        .await
+        .map_err(|e| AppError::Network(format!("Failed to rename server: {}", e)))?;
 
     Ok(())
 }
@@ -440,6 +453,7 @@ pub fn run() {
             leave_server,
             forget_server,
             set_nickname,
+            rename_server,
             // Session commands
             get_sessions,
             create_session,

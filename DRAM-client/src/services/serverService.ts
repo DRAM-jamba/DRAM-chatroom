@@ -24,10 +24,7 @@ export async function updateServer(
   ip: string,
   data: { nickname: string }
 ): Promise<Server> {
-  // Wire up to Rust when the command is available:
-  // await invoke("rename_server", { ip, nickname: data.nickname });
-
-  // Temporary: reflect the rename optimistically on the frontend only
+  await invoke("rename_server", { ip, nickname: data.nickname });
   return Promise.resolve({ id: "", ipAddress: ip, name: data.nickname, user_key: "" });
 }
 
