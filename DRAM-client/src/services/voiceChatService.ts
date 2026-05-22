@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Room, RoomEvent, RemoteParticipant, RemoteTrack, RemoteTrackPublication, Track } from "livekit-client";
 import type { MessageObj } from "./chatService";
+import { loadMicDevice } from "./settingsService";
 
 let _room: Room | null = null;
 let _isDeafened = false;
@@ -55,7 +56,9 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
   });
 
   await _room.connect(url, token);
-  await _room.localParticipant.setMicrophoneEnabled(true);
+  await _room.localParticipant.setMicrophoneEnabled(true, {
+    deviceId: loadMicDevice(),
+  });
   await _sendVoiceSignal("voicestart");
 }
 
