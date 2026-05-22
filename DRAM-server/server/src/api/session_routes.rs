@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{delete, get, post}};
 use hyper::HeaderMap;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}}, modules::{request_bodies::{UserKey, UserKeySessionName, UserSessionKeys}, server_state::ServerState}};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}, voice_logic::l_create_voice_token}, modules::{request_bodies::{UserKey, UserKeySessionName, UserSessionKeys}, server_state::ServerState}};
 
 pub fn router() -> Router<ServerState> {
     Router::new() // move user_key to body of request
@@ -10,6 +10,7 @@ pub fn router() -> Router<ServerState> {
         .route("/add", post(r_add_session))
         .route("/connect", get(r_connect_to_session))
         .route("/leave", delete(r_leave_session))
+        .route("/token", get(r_create_voice_token))
         .route("/forget", delete(r_forget_session))
         .route("/delete", delete(r_delete_session))
 }
@@ -93,6 +94,22 @@ async fn r_leave_session(State(_server_state): State<ServerState>) -> Result<Jso
     }
     else {
         Err(ApiError::NotFound)
+    }
+}
+
+async fn r_create_voice_token(State(server_state): State<ServerState>,
+                       Json(payload): Json<UserSessionKeys>) -> Result<Json<Value>, ApiError> {
+    
+    match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
+        Ok(()) => return Err(ApiError::Forbidden("User must be in session for this action.".into())),
+        Err(e) => ()
+    }
+    
+    match l_create_voice_token(payload.user_key, payload.session_key).await {
+        Ok(token) => Ok(Json(json!({
+            "token": token
+        }))),
+        Err(e) => Err(e)
     }
 }
 

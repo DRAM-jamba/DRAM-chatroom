@@ -134,8 +134,37 @@ pub async fn l_delete_session_by_owner_by_tx(active_sessions: SessionMap, mut tx
     }
 }
 
+// TODO: check it for security. for now it should be ok, but it is not ideal.
 fn l_generate_session_key() -> String {
     let s_key: String = Uuid::new_v4().to_string();
     
     s_key
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::modules::session::Session;
+
+    #[test]
+    fn test_generate_session_key_is_not_empty() {
+        let sessions: Vec<Session> = vec![];
+        let key = l_generate_session_key(&sessions);
+        assert!(!key.is_empty());
+    }
+
+    #[test]
+    fn test_generate_session_key_is_valid_uuid() {
+        use uuid::Uuid;
+        let sessions: Vec<Session> = vec![];
+        let key = l_generate_session_key(&sessions);
+        assert!(Uuid::parse_str(&key).is_ok(), "not a valid uuid: {}", key);
+    }
+
+    #[test]
+    fn test_generate_session_key_is_36_chars() {
+        let sessions: Vec<Session> = vec![];
+        let key = l_generate_session_key(&sessions);
+        assert_eq!(key.len(), 36);
+    }
 }
