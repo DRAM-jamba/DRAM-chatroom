@@ -1589,10 +1589,6 @@ body {
 }
 
 .voice-member-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
   border: 1px solid var(--border-tertiary);
   border-radius: 6px;
   background: var(--bg-card);
@@ -1601,6 +1597,19 @@ body {
   transition: border-color 0.2s ease;
 }
 
+.voice-member-volume {
+  padding: 4px 10px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-member-volume-value {
+  font-size: 12px;
+  color: var(--text-faint);
+  min-width: 36px;
+  text-align: right;
+}
 .voice-member-card:hover {
   border-color: var(--accent);
 }
@@ -1647,6 +1656,14 @@ body {
 }
 .voice-indicator-dot.connecting {
   background-color: #f0a030;
+}
+.voice-member-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  width: 100%;
+  padding: 7px 10px;
 }
 .voice-members-list-scroll {
   flex: 1;
