@@ -210,6 +210,10 @@ export function updateSpeakerDevice(deviceId: string): void {
   });
 }
 
+export function setParticipantVolume(username: string, volume: number): void {
+
+}
+
 async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {
   try {
     await invoke("send_voice_signal", { mType });
