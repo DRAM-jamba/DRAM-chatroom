@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import SettingsPage from "./SettingsPage";
@@ -77,7 +78,9 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
         unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers, unlistenVoice];
         
         await joinSession(sessionKey);
+        console.log("joinSession completed");
       } catch (err) {
+        console.error("Failed:", err);
         if (isMounted) {
           console.error("Failed to connect to session:", err);
         }
@@ -92,6 +95,10 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
       leaveVoiceChat().catch(console.error);
     };
   }, [sessionName]);
+
+  useEffect(() => {
+    invoke("resize_for_chat");
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -118,6 +125,7 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const handleLeaveSession = async () => {
     await leaveVoiceChat();
     await leaveSession();
+    await invoke("resize_for_sessions");
     onLeaveSession();
   };
 

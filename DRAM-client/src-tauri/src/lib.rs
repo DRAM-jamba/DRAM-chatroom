@@ -39,10 +39,8 @@ async fn add_server(
     nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    ip.parse::<std::net::SocketAddr>()
-        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
     let response = ServerApi::http_post_empty(&api.add_server()).await?;
     let json_response: UserKey = response
         .json()
@@ -64,14 +62,12 @@ async fn add_server(
 
 #[tauri::command]
 async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
-    ip.parse::<std::net::SocketAddr>()
-        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     let server = state
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_put(
         &api.connect_server(),
@@ -90,7 +86,7 @@ async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), Ap
 #[tauri::command]
 async fn leave_server(state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, _server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_delete_empty(&api.leave_server()).await?;
 
@@ -106,14 +102,12 @@ async fn leave_server(state: State<'_, AppState>) -> Result<(), AppError> {
 
 #[tauri::command]
 async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
-    ip.parse::<std::net::SocketAddr>()
-        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     let server = state
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_delete(
         &api.forget_server(),
@@ -132,7 +126,7 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
 #[tauri::command]
 async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_patch(
         &api.set_nickname(),
@@ -150,8 +144,6 @@ async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Resul
 
 #[tauri::command]
 async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
-    ip.parse::<std::net::SocketAddr>()
-        .map_err(|_| AppError::Network(format!("Invalid IP address: '{}'", ip)))?;
 
     state
         .rename_server(&ip, nickname)
@@ -165,7 +157,7 @@ async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>)
 #[tauri::command]
 async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     let response = ServerApi::http_get(
         &api.session_list(),
@@ -184,7 +176,7 @@ async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppErr
 #[tauri::command]
 async fn create_session(name: String, state: State<'_, AppState>) -> Result<String, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     let response = ServerApi::http_post(
         &api.create_session(),
@@ -203,7 +195,7 @@ async fn create_session(name: String, state: State<'_, AppState>) -> Result<Stri
 #[tauri::command]
 async fn add_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_post(
         &api.add_session(),
@@ -221,7 +213,7 @@ async fn connect_session(
     app: AppHandle,
 ) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     let ws_url = api.ws();
     let ws_client = client::WsClient::connect(&ws_url, &server.user_key, &session_key, app.clone())
@@ -231,23 +223,40 @@ async fn connect_session(
     state
         .set_session_state(SessionState::JoinedSession(ws_client))
         .await;
+    Ok(())
+}
 
+#[tauri::command]
+async fn resize_for_chat(app: AppHandle) -> Result<(), AppError> {
     let window = app.get_webview_window("main").unwrap();
     window.set_resizable(true).unwrap();
     window.set_maximizable(true).unwrap();
-    window
-        .set_size(tauri::Size::Logical(tauri::LogicalSize {
-            width: 1100.0,
-            height: 750.0,
-        }))
-        .unwrap();
     window
         .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize {
             width: 1100.0,
             height: 740.0,
         })))
         .unwrap();
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: 1100.0,
+            height: 750.0,
+        }))
+        .unwrap();
+    Ok(())
+}
 
+#[tauri::command]
+async fn resize_for_sessions(app: AppHandle) -> Result<(), AppError> {
+    let window = app.get_webview_window("main").unwrap();
+        window.set_resizable(false).unwrap();
+        window.set_maximizable(false).unwrap();
+        window
+            .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                width: 360.0,
+                height: 628.0,
+            }))
+            .unwrap();
     Ok(())
 }
 
@@ -255,7 +264,7 @@ async fn connect_session(
 async fn leave_session(state: State<'_, AppState>, app: AppHandle) -> Result<(), AppError> {
     println!("Leaving session...");
     let (ip, _server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     if let SessionState::JoinedSession(ws_client) = &state.get_session_state().await {
         let _ = ws_client.close().await;
@@ -265,15 +274,6 @@ async fn leave_session(state: State<'_, AppState>, app: AppHandle) -> Result<(),
 
     state.set_session_state(SessionState::Idle).await;
 
-    let window = app.get_webview_window("main").unwrap();
-    window.set_resizable(false).unwrap();
-    window.set_maximizable(false).unwrap();
-    window
-        .set_size(tauri::Size::Logical(tauri::LogicalSize {
-            width: 360.0,
-            height: 628.0,
-        }))
-        .unwrap();
     println!("Left session");
     Ok(())
 }
@@ -281,7 +281,7 @@ async fn leave_session(state: State<'_, AppState>, app: AppHandle) -> Result<(),
 #[tauri::command]
 async fn forget_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_delete(
         &api.forget_session(),
@@ -295,7 +295,7 @@ async fn forget_session(session_key: String, state: State<'_, AppState>) -> Resu
 #[tauri::command]
 async fn delete_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     ServerApi::http_delete(
         &api.delete_session(),
@@ -355,7 +355,7 @@ async fn reset_mic_permission(app: AppHandle) -> Result<(), AppError> {
 #[tauri::command]
 async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Result<models::VoiceChatInfo, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
  
     let response = ServerApi::http_get(
         &api.create_voicechat(),
@@ -369,7 +369,7 @@ async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Res
         .map_err(|e| AppError::Protocol(format!("Invalid voice token response: {}", e)))?;
     
     let host = ip.split(':').next().unwrap_or(&ip);
-    let lk_url = format!("ws://{}:7880", host);
+    let lk_url = format!("wss://{}:7880", host);
  
     Ok(models::VoiceChatInfo {
         token: json_response.token,
@@ -471,6 +471,8 @@ pub fn run() {
             forget_session,
             delete_session,
             send_message,
+            resize_for_chat,
+            resize_for_sessions,
             //Voice chat commands
             reset_mic_permission,
             join_voice_chat,
@@ -674,14 +676,14 @@ mod tests {
     fn test_join_voice_chat_url_construction() {
         // Test that voice chat URL is constructed correctly from IP
         let test_cases = vec![
-            ("127.0.0.1:8080", "ws://127.0.0.1:7880"),
-            ("192.168.1.100:9000", "ws://192.168.1.100:7880"),
-            ("localhost:8000", "ws://localhost:7880"),
+            ("127.0.0.1:8080", "wss://127.0.0.1:7880"),
+            ("192.168.1.100:9000", "wss://192.168.1.100:7880"),
+            ("localhost:8000", "wss://localhost:7880"),
         ];
 
         for (ip, expected_url) in test_cases {
             let host = ip.split(':').next().unwrap_or(ip);
-            let lk_url = format!("ws://{}:7880", host);
+            let lk_url = format!("wss://{}:7880", host);
             assert_eq!(lk_url, expected_url);
         }
     }

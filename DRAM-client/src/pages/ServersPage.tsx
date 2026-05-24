@@ -118,7 +118,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
               onChange={(e) => setNewServerName(e.target.value)}
             />
 
-            <label className="input-label">IP Address</label>
+              <label className="input-label">Address</label>
             <input
               className="server-input"
               value={newServerIp}
