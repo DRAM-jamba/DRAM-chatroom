@@ -369,7 +369,7 @@ async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Res
         .map_err(|e| AppError::Protocol(format!("Invalid voice token response: {}", e)))?;
     
     let host = ip.split(':').next().unwrap_or(&ip);
-    let lk_url = format!("wss://{}:7880", host);
+    let lk_url = format!("wss://{}", ip);
  
     Ok(models::VoiceChatInfo {
         token: json_response.token,
@@ -683,7 +683,7 @@ mod tests {
 
         for (ip, expected_url) in test_cases {
             let host = ip.split(':').next().unwrap_or(ip);
-            let lk_url = format!("wss://{}:7880", host);
+            let lk_url = format!("wss://{}", ip);
             assert_eq!(lk_url, expected_url);
         }
     }
