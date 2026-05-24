@@ -71,18 +71,30 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
   _audioContext = new AudioContext();
   const source = _audioContext.createMediaStreamSource(_rawStream);
   _gainNode = _audioContext.createGain();
+  // remove channelCount and channelCountMode lines
+  _gainNode.gain.value = loadMicLevel() / 100;
   const destination = _audioContext.createMediaStreamDestination();
   _gainNode.gain.value = loadMicLevel() / 100;
 
   if (_useRnnoise) {
     await _audioContext.audioWorklet.addModule(NoiseSuppressorWorklet);
-    const noiseNode = new AudioWorkletNode(_audioContext, NoiseSuppressorWorklet_Name);
+    const noiseNode = new AudioWorkletNode(
+      _audioContext,
+      NoiseSuppressorWorklet_Name
+    );
+
+    const merger = _audioContext.createChannelMerger(2);
+
     source.connect(noiseNode);
-    noiseNode.connect(_gainNode);
+
+    // same mono output into both channels
+    noiseNode.connect(merger, 0, 0);
+    noiseNode.connect(merger, 0, 1);
+
+    merger.connect(_gainNode);
   } else {
     source.connect(_gainNode);
   }
-
   _gainNode.connect(destination);
   const processedTrack = destination.stream.getAudioTracks()[0];
   await _room.localParticipant.publishTrack(processedTrack, {
@@ -140,15 +152,28 @@ export async function reconnectMic(): Promise<void> {
 
   const source = _audioContext.createMediaStreamSource(_rawStream);
   _gainNode = _audioContext.createGain();
+  // remove channelCount and channelCountMode lines
+  _gainNode.gain.value = loadMicLevel() / 100;
   const destination = _audioContext.createMediaStreamDestination();
   const level = loadMicLevel();
   _gainNode.gain.value = level / 100;
 
   if (_useRnnoise) {
     await _audioContext.audioWorklet.addModule(NoiseSuppressorWorklet);
-    const noiseNode = new AudioWorkletNode(_audioContext, NoiseSuppressorWorklet_Name);
+    const noiseNode = new AudioWorkletNode(
+      _audioContext,
+      NoiseSuppressorWorklet_Name
+    );
+
+    const merger = _audioContext.createChannelMerger(2);
+
     source.connect(noiseNode);
-    noiseNode.connect(_gainNode);
+
+    // same mono output into both channels
+    noiseNode.connect(merger, 0, 0);
+    noiseNode.connect(merger, 0, 1);
+
+    merger.connect(_gainNode);
   } else {
     source.connect(_gainNode);
   }
@@ -210,7 +235,7 @@ export function updateSpeakerDevice(deviceId: string): void {
   });
 }
 
-export function setParticipantVolume(username: string, volume: number): void {
+export function setParticipantVolume(_username: string, _volume: number): void {
 
 }
 
