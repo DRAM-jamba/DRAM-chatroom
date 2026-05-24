@@ -90,6 +90,22 @@ export function loadSpeakerLevel(): number {
   return Number(localStorage.getItem(KEYS.speakerLevel)) || 50;
 }
 
+export function loadNoiseGateThreshold(): number {
+  return parseFloat(localStorage.getItem("noise_gate_threshold") ?? "0");
+}
+
+export function saveNoiseGateThreshold(value: number): void {
+  localStorage.setItem("noise_gate_threshold", value.toString());
+}
+
+export function loadNoiseSuppression(): boolean {
+  return localStorage.getItem("noise_suppression") !== "false";
+}
+
+export function saveNoiseSuppression(value: boolean): void {
+  localStorage.setItem("noise_suppression", String(value));
+}
+
 export function loadAllSettings(): void {
   applyTheme(loadTheme());
   applyFont(loadFont());

@@ -14,7 +14,22 @@ import {
   saveSpeakerLevel, loadSpeakerLevel,
   type Theme, type Font,
 } from "../services/settingsService";
-import { updateSpeakerLevel, updateSpeakerDevice } from "../services/voiceChatService";
+import {
+  updateMicLevel,
+  updateNoiseGateThreshold,
+  updateSpeakerLevel,
+  updateSpeakerDevice,
+  setUseRnnoise,
+  isInVoiceChat,
+  reconnectMic
+} from "../services/voiceChatService";
+import {
+  loadNoiseGateThreshold,
+  saveNoiseGateThreshold,
+  loadNoiseSuppression
+} from "../services/settingsService";
+
+
 
 type SettingsPageProps = {
   onBack: () => void;
@@ -35,7 +50,8 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
   const [micDropdownOpen, setMicDropdownOpen] = useState(false);
   const [speakerDropdownOpen, setSpeakerDropdownOpen] = useState(false);
-
+  const [noiseGate, setNoiseGateState] = useState(loadNoiseGateThreshold());
+  const [noiseSuppression, setNoiseSuppressionState] = useState(loadNoiseSuppression());
 
   useEffect(() => {
     if (!listeningFor) return;
@@ -187,6 +203,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                         setMicDevice(device.deviceId);
                         saveMicDevice(device.deviceId);
                         setMicDropdownOpen(false);
+                        if (isInVoiceChat()) reconnectMic();
                       }}
                     >
                       {device.label || (device.deviceId === "default" ? "Windows default" : "Microphone")}
@@ -195,7 +212,31 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                   </div>
                 )}
               </div>
-
+              <p className="input-label" style={{ marginTop: "12px" }}>Noise suppression</p>
+              <div className="settings-option-row">
+                <button
+                  className={`settings-option-btn ${!noiseSuppression ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setNoiseSuppressionState(false);
+                    setUseRnnoise(false);
+                    if (isInVoiceChat()) reconnectMic();
+                  }}
+                >
+                  default
+                </button>
+                <button
+                  className={`settings-option-btn ${noiseSuppression ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setNoiseSuppressionState(true);
+                    setUseRnnoise(true);
+                    if (isInVoiceChat()) reconnectMic();
+                  }}
+                >
+                  rnnoise
+                </button>
+              </div>
                 <p className="input-label">Microphone level</p>
                 <input
                     type="range"
@@ -206,10 +247,27 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                         const val = Number(e.target.value);
                         setMicLevel(val);
                         saveMicLevel(val);
+                      updateMicLevel(val);
                     }}
                     className="settings-slider"
                 />
                 <p className="settings-slider-value">{micLevel}%</p>
+              <p className="input-label">Threshold</p>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.005"
+                value={noiseGate}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setNoiseGateState(val);
+                  saveNoiseGateThreshold(val);
+                  updateNoiseGateThreshold(val);
+                }}
+                className="settings-slider"
+              />
+              <p className="settings-slider-value">{noiseGate.toFixed(3)}</p>
                 </div>
           </div>
 
