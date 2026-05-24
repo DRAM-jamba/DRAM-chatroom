@@ -2,8 +2,8 @@ services:
   app:
     container_name: server
     build: .
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       - livekit
     environment:
@@ -16,18 +16,34 @@ services:
     container_name: quorthon_db
     environment:
       POSTGRES_USER: antihype
-      POSTGRES_PASSWORD: W440Qh6qWJ5JsY184 # ! - %21, ? - %3F
+      POSTGRES_PASSWORD: W440Qh6qWJ5JsY184
       POSTGRES_DB: quorthon_api
     volumes:
       - quorthon_data:/var/lib/postgresql/data
   livekit:
     image: livekit/livekit-server:latest
     ports:
-      - "7880:7880"       # HTTP/WebSocket
-      - "7881:7881"       # RTC TCP
-      - "50000-50050:50000-50050/udp"  # RTC UDP (media)
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50050:50000-50050/udp"
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
     command: --config /etc/livekit.yaml
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=quorthon.eu
+    depends_on:
+      - app
 volumes:
   quorthon_data:
+  caddy_data:
+  caddy_config:
