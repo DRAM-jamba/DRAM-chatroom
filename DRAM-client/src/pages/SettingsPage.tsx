@@ -16,7 +16,6 @@ import {
 } from "../services/settingsService";
 import {
   updateMicLevel,
-  updateNoiseGateThreshold,
   updateSpeakerLevel,
   updateSpeakerDevice,
   setUseRnnoise,
@@ -24,8 +23,6 @@ import {
   reconnectMic
 } from "../services/voiceChatService";
 import {
-  loadNoiseGateThreshold,
-  saveNoiseGateThreshold,
   loadNoiseSuppression
 } from "../services/settingsService";
 
@@ -50,7 +47,6 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
   const [micDropdownOpen, setMicDropdownOpen] = useState(false);
   const [speakerDropdownOpen, setSpeakerDropdownOpen] = useState(false);
-  const [noiseGate, setNoiseGateState] = useState(loadNoiseGateThreshold());
   const [noiseSuppression, setNoiseSuppressionState] = useState(loadNoiseSuppression());
 
   useEffect(() => {
@@ -61,13 +57,13 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
       const key = e.key.toUpperCase();
 
       if (listeningFor === "mic") {
-        if (key === headphonesHotkey) return; // already used
+        if (key === headphonesHotkey) return; 
         setMicHotkey(key);
         saveMicHotkey(key);
       }
 
       if (listeningFor === "headphones") {
-        if (key === micHotkey) return; // already used
+        if (key === micHotkey) return; 
         setHeadphonesHotkey(key);
         saveHeadphonesHotkey(key);
       }
@@ -251,23 +247,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                     }}
                     className="settings-slider"
                 />
-                <p className="settings-slider-value">{micLevel}%</p>
-              <p className="input-label">Threshold</p>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.005"
-                value={noiseGate}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setNoiseGateState(val);
-                  saveNoiseGateThreshold(val);
-                  updateNoiseGateThreshold(val);
-                }}
-                className="settings-slider"
-              />
-              <p className="settings-slider-value">{noiseGate.toFixed(3)}</p>
+              <p className="settings-slider-value">{micLevel}%</p>
                 </div>
           </div>
 

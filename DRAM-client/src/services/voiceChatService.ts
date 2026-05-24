@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Room, RoomEvent, RemoteParticipant, RemoteTrack, RemoteTrackPublication, Track } from "livekit-client";
 import type { MessageObj } from "./chatService";
-import { loadMicDevice, loadSpeakerDevice, loadMicLevel, loadNoiseGateThreshold, loadNoiseSuppression, saveNoiseSuppression } from "./settingsService";
+import { loadMicDevice, loadSpeakerDevice, loadMicLevel, loadNoiseSuppression, saveNoiseSuppression } from "./settingsService";
 import { NoiseSuppressorWorklet_Name } from "@timephy/rnnoise-wasm";
 import NoiseSuppressorWorklet from "@timephy/rnnoise-wasm/NoiseSuppressorWorklet?worker&url";
 
@@ -11,7 +11,6 @@ let _isDeafened = false;
 let _gainNode: GainNode | null = null;
 let _audioContext: AudioContext | null = null;
 let _rawStream: MediaStream | null = null;
-let _noiseGateThreshold = 0;
 let _useRnnoise = loadNoiseSuppression();
 
 const _audioElements = new Map<string, HTMLAudioElement>();
@@ -73,9 +72,7 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
   const source = _audioContext.createMediaStreamSource(_rawStream);
   _gainNode = _audioContext.createGain();
   const destination = _audioContext.createMediaStreamDestination();
-  _noiseGateThreshold = loadNoiseGateThreshold();
-  const level = loadMicLevel();
-  _gainNode.gain.value = level <= _noiseGateThreshold * 100 ? 0 : level / 100;
+  _gainNode.gain.value = loadMicLevel() / 100;
 
   if (_useRnnoise) {
     await _audioContext.audioWorklet.addModule(NoiseSuppressorWorklet);
@@ -144,9 +141,8 @@ export async function reconnectMic(): Promise<void> {
   const source = _audioContext.createMediaStreamSource(_rawStream);
   _gainNode = _audioContext.createGain();
   const destination = _audioContext.createMediaStreamDestination();
-  _noiseGateThreshold = loadNoiseGateThreshold();
   const level = loadMicLevel();
-  _gainNode.gain.value = level <= _noiseGateThreshold * 100 ? 0 : level / 100;
+  _gainNode.gain.value = level / 100;
 
   if (_useRnnoise) {
     await _audioContext.audioWorklet.addModule(NoiseSuppressorWorklet);
@@ -166,15 +162,7 @@ export async function reconnectMic(): Promise<void> {
 
 export function updateMicLevel(level: number): void {
   if (!_gainNode) return;
-  _gainNode.gain.value = level <= _noiseGateThreshold * 100 ? 0 : level / 100;
-}
-
-export function updateNoiseGateThreshold(value: number): void {
-  _noiseGateThreshold = value;
-  const level = loadMicLevel();
-  if (_gainNode) {
-    _gainNode.gain.value = level <= value * 100 ? 0 : level / 100;
-  }
+  _gainNode.gain.value = level / 100;
 }
 
 export function setUseRnnoise(value: boolean): void {
@@ -184,12 +172,7 @@ export function setUseRnnoise(value: boolean): void {
 
 export async function setMicMuted(muted: boolean): Promise<void> {
   if (!_gainNode) return;
-  if (muted) {
-    _gainNode.gain.value = 0;
-  } else {
-    const level = loadMicLevel();
-    _gainNode.gain.value = level <= _noiseGateThreshold * 100 ? 0 : level / 100;
-  }
+  _gainNode.gain.value = muted ? 0 : loadMicLevel() / 100;
 }
 
 export async function setDeafened(deafened: boolean): Promise<void> {
