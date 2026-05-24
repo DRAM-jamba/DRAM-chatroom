@@ -14,7 +14,7 @@ import {
   saveSpeakerLevel, loadSpeakerLevel,
   type Theme, type Font,
 } from "../services/settingsService";
-
+import { updateSpeakerLevel, updateSpeakerDevice } from "../services/voiceChatService";
 
 type SettingsPageProps = {
   onBack: () => void;
@@ -240,6 +240,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                       onClick={() => {
                         setSpeakerDevice(device.deviceId);
                         saveSpeakerDevice(device.deviceId);
+                        updateSpeakerDevice(device.deviceId);
                         setSpeakerDropdownOpen(false);
                       }}
                     >
@@ -260,6 +261,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                     const val = Number(e.target.value);
                     setSpeakerLevel(val);
                     saveSpeakerLevel(val);
+                  updateSpeakerLevel(val);
                 }}
                 className="settings-slider"
                 />

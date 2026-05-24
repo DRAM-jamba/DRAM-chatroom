@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Room, RoomEvent, RemoteParticipant, RemoteTrack, RemoteTrackPublication, Track } from "livekit-client";
 import type { MessageObj } from "./chatService";
-import { loadMicDevice } from "./settingsService";
+import { loadMicDevice, loadSpeakerDevice } from "./settingsService";
 
 let _room: Room | null = null;
 let _isDeafened = false;
@@ -32,8 +32,11 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
   ) => {
     if (track.kind !== Track.Kind.Audio) return;
 
-    const audioEl = track.attach();   // creates <audio> element
+    const audioEl = track.attach();
     audioEl.volume = _isDeafened ? 0 : 1;
+    if (typeof audioEl.setSinkId === "function") {
+      audioEl.setSinkId(loadSpeakerDevice());
+    }
     _audioElements.set(participant.identity, audioEl);
     document.body.appendChild(audioEl);
   });
@@ -102,6 +105,19 @@ export async function subscribeToVoiceList(
   });
 }
 
+export function updateSpeakerLevel(level: number): void {
+  _audioElements.forEach((el) => {
+    el.volume = level / 100;
+  });
+}
+
+export function updateSpeakerDevice(deviceId: string): void {
+  _audioElements.forEach((el) => {
+    if (typeof el.setSinkId === "function") {
+      el.setSinkId(deviceId);
+    }
+  });
+}
 async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {
   try {
     await invoke("send_voice_signal", { mType });
