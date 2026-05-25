@@ -30,23 +30,19 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
     publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ) => {
+    console.log("track subscribed:", track.kind, publication.source, participant.identity);
     if (track.kind === Track.Kind.Audio) {
-    // existing audio handling
       const audioEl = track.attach();
-    if (typeof audioEl.setSinkId === "function") {
-      audioEl.setSinkId(loadSpeakerDevice());
-    }
-      const ctx = new AudioContext();
-      const source = ctx.createMediaElementSource(audioEl);
-      const gain = ctx.createGain();
-      gain.gain.value = _isDeafened ? 0 : 1;
-      source.connect(gain);
-      gain.connect(ctx.destination);
-    _audioElements.set(participant.identity, audioEl);
-    document.body.appendChild(audioEl);
+      audioEl.volume = _isDeafened ? 0 : 1;
+      if (typeof audioEl.setSinkId === "function") {
+        audioEl.setSinkId(loadSpeakerDevice());
+      }
+      _audioElements.set(participant.identity, audioEl);
+      document.body.appendChild(audioEl);
     }
 
     if (track.kind === Track.Kind.Video && publication.source === Track.Source.ScreenShare) {
+      console.log("screen share track received");
       const videoEl = track.attach() as HTMLVideoElement;
       videoEl.style.position = "fixed";
       videoEl.style.top = "0";

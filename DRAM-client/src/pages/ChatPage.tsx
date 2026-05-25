@@ -66,8 +66,12 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
 
   const handleToggleScreenShare = async () => {
     if (!isInVoiceCall) return;
+    try {
     await setScreenShare(!isSharingScreen);
     setIsSharingScreen(!isSharingScreen);
+  } catch (e) {
+    console.error("screen share error:", e);
+  }
   };
 
   useEffect(() => {

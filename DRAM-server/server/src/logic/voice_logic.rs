@@ -24,7 +24,7 @@ pub async fn l_create_voice_token(db_pool: Pool<Postgres>, user_key: String, ses
                                         .with_grants(VideoGrants {
                                             room_join: true,
                                             room: session_key,
-                                            can_publish_sources: vec!["microphone".to_string()],
+                                            can_publish_sources: vec!["microphone".to_string(), "screen_share".to_string()],
                                             ..Default::default()
                                         })
                                         .to_jwt() {
