@@ -234,8 +234,14 @@ export function updateSpeakerDevice(deviceId: string): void {
   });
 }
 
-export function setParticipantVolume(_username: string, _volume: number): void {
-
+export function setParticipantVolume(username: string, volume: number): void {
+  if (_room) {
+    _room.remoteParticipants.forEach((p) => {
+      if (p.identity === username) {
+        p.setVolume(volume / 100);
+      }
+    });
+  }
 }
 
 async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {

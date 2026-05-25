@@ -224,7 +224,7 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
                         <input
                           type="range"
                           min={0}
-                          max={100}
+                          max={322}
                           value={voiceVolumes[username] ?? 100}
                           onChange={(e) => {
                             console.log("slider changed", username, e.target.value);
