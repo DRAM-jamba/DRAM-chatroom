@@ -7,7 +7,7 @@ pub async fn l_create_voice_token(db_pool: Pool<Postgres>, user_key: String, ses
     
     let user = match d_get_user(db_pool, &user_key).await {
         Ok(u) => u,
-        Err(e) => return Err(e)
+        Err(e) => return Err(e.into())
     };
     
     let lk_key = match std::env::var("LIVEKIT_API_KEY") {
