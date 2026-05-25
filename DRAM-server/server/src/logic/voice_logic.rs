@@ -5,7 +5,7 @@ use crate::{data_logic::user_data::d_get_user, errors::api_error::ApiError};
 
 pub async fn l_create_voice_token(db_pool: Pool<Postgres>, user_key: String, session_key: String) -> Result<String, ApiError> {
     
-    let user = match d_get_user(db_pool, &user_key) {
+    let user = match d_get_user(db_pool, &user_key).await {
         Ok(u) => u,
         Err(e) => return Err(e)
     };
