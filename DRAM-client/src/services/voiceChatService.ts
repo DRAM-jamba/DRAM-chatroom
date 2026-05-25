@@ -262,7 +262,13 @@ export function setParticipantVolume(username: string, volume: number): void {
 
 export async function setScreenShare(enabled: boolean): Promise<void> {
   if (!_room) return;
-  await _room.localParticipant.setScreenShareEnabled(enabled);
+  await _room.localParticipant.setScreenShareEnabled(enabled, {
+    resolution: {
+      width: 1920,
+      height: 1080,
+      frameRate: 30,
+    },
+  });
 }
 
 async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {
