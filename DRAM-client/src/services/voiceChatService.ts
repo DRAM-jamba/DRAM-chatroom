@@ -238,7 +238,7 @@ export function setParticipantVolume(username: string, volume: number): void {
   if (_room) {
     _room.remoteParticipants.forEach((p) => {
       if (p.identity === username) {
-        p.setVolume(volume / 100);
+        p.setVolume(Math.min(volume / 100, 1));
       }
     });
   }

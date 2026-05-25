@@ -261,7 +261,7 @@ async fn resize_for_sessions(app: AppHandle) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-async fn leave_session(state: State<'_, AppState>, app: AppHandle) -> Result<(), AppError> {
+async fn leave_session(state: State<'_, AppState>, _app: AppHandle) -> Result<(), AppError> {
     println!("Leaving session...");
     let (ip, _server) = get_server_context(&state).await?;
     let api = ServerApi::new(&format!("https://{}", ip));
