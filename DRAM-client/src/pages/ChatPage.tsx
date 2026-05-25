@@ -18,6 +18,7 @@ import {
   setDeafened as setServiceDeafened, 
   subscribeToVoiceList,
   setParticipantVolume,
+  setScreenShare,
 } from "../services/voiceChatService.ts";
 import { loadMicHotkey, loadHeadphonesHotkey } from "../services/settingsService";
 import type { Message, Member } from "../types/message";
@@ -54,11 +55,19 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const [expandedVoiceMember, setExpandedVoiceMember] = useState<string | null>(null);
   const [voiceVolumes, setVoiceVolumes] = useState<Record<string, number>>({});
 
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
+
   const appendMessage = (msg: Message) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === msg.id)) return prev;
       return [...prev, msg];
     });
+  };
+
+  const handleToggleScreenShare = async () => {
+    if (!isInVoiceCall) return;
+    await setScreenShare(!isSharingScreen);
+    setIsSharingScreen(!isSharingScreen);
   };
 
   useEffect(() => {
@@ -202,6 +211,15 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
                   height="14"
                   className={isInVoiceCall ? "" : "icon-img"}
                 />
+              </button>
+
+              <button
+                className={`call-btn-small ${isSharingScreen ? "active" : ""}`}
+                type="button"
+                onClick={handleToggleScreenShare}
+                disabled={!isInVoiceCall}
+              >
+                S
               </button>
             </div>
 

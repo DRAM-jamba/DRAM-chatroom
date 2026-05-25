@@ -27,17 +27,37 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
 
   _room.on(RoomEvent.TrackSubscribed, (
     track: RemoteTrack,
-    _publication: RemoteTrackPublication,
+    publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ) => {
-    if (track.kind !== Track.Kind.Audio) return;
-    const audioEl = track.attach();
-    audioEl.volume = _isDeafened ? 0 : 1;
+    if (track.kind === Track.Kind.Audio) {
+    // existing audio handling
+      const audioEl = track.attach();
     if (typeof audioEl.setSinkId === "function") {
       audioEl.setSinkId(loadSpeakerDevice());
     }
+      const ctx = new AudioContext();
+      const source = ctx.createMediaElementSource(audioEl);
+      const gain = ctx.createGain();
+      gain.gain.value = _isDeafened ? 0 : 1;
+      source.connect(gain);
+      gain.connect(ctx.destination);
     _audioElements.set(participant.identity, audioEl);
     document.body.appendChild(audioEl);
+    }
+
+    if (track.kind === Track.Kind.Video && publication.source === Track.Source.ScreenShare) {
+      const videoEl = track.attach() as HTMLVideoElement;
+      videoEl.style.position = "fixed";
+      videoEl.style.top = "0";
+      videoEl.style.left = "0";
+      videoEl.style.width = "100%";
+      videoEl.style.height = "100%";
+      videoEl.style.zIndex = "999";
+      videoEl.style.background = "black";
+      videoEl.style.objectFit = "contain";
+      document.body.appendChild(videoEl);
+    }
   });
 
   _room.on(RoomEvent.TrackUnsubscribed, (
@@ -242,6 +262,11 @@ export function setParticipantVolume(username: string, volume: number): void {
       }
     });
   }
+}
+
+export async function setScreenShare(enabled: boolean): Promise<void> {
+  if (!_room) return;
+  await _room.localParticipant.setScreenShareEnabled(enabled);
 }
 
 async function _sendVoiceSignal(mType: "voicestart" | "voiceend"): Promise<void> {
