@@ -266,7 +266,7 @@ export async function setScreenShare(enabled: boolean): Promise<void> {
     resolution: {
       width: 1920,
       height: 1080,
-      frameRate: 30,
+      frameRate: 60,
     },
   });
 }
