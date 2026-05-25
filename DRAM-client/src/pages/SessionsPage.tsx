@@ -75,11 +75,21 @@ function SessionsPage({
     setSessionKeyInput("");
     setGeneratedSessionKey("");
     setKeyCopied(false);
+    setError(null);
     setView("create");
   };
 
   const handleCreateConfirm = async () => {
     if (!sessionNameInput.trim()) return;
+
+    const nameExists = sessions.some(
+      (s) => s.name.toLowerCase() === sessionNameInput.trim().toLowerCase()
+    );
+    if (nameExists) {
+      setError("You already have a session with this name");
+      return;
+    }
+
     const result = await createSession({
       sessionName: sessionNameInput,
       sessionKey: sessionKeyInput,
@@ -132,6 +142,7 @@ function SessionsPage({
   const handleCancel = () => {
     setSessionNameInput("");
     setSessionKeyInput("");
+    setError(null);
     setView("list");
   };
 
@@ -286,6 +297,7 @@ function SessionsPage({
                       confirm
                     </button>
                   </div>
+                  {error && <p className="error-text">{error}</p>}
                 </div>
               </div>
             </div>
@@ -400,12 +412,9 @@ function SessionsPage({
                   onClick={() => setShowHelpPopup(false)}
                 >
                   <div className="help-popup-content">
-                    <p>• You can have up to 10 sessions</p>
-                    <p>
-                      • You are removed from the session
-                      <br />
-                      after 1 month of inactivity
-                    </p>
+                    <p>In this page you can:</p>
+                    <p>•  add / remove sessions</p>
+                    <p>• change your nickname</p>
                     <span className="help-popup-close-text">click to close</span>
                   </div>
                 </div>

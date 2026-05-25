@@ -184,6 +184,9 @@ button {
 }
 
 /* ── Pages ───────────────────────────────────────────────────── */
+.error-text {
+  margin-left: 12px;
+}
 .servers-page {
   display: block;
   width: 100%;
@@ -757,8 +760,8 @@ button {
 .help-popup {
   position: absolute;
   bottom: 42px;
-  left: -8px;
-  width: 230px;
+  left: 0px;
+    width: 185px;
   border: 1px solid var(--border-secondary);
   border-radius: 8px;
   background: var(--bg-element2);
