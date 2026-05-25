@@ -96,23 +96,20 @@ mod tests {
 
     #[test]
     fn test_generate_user_key_is_not_empty() {
-        let users: Vec<User> = vec![];
-        let key = l_generate_user_key(&users);
+        let key = l_generate_user_key();
         assert!(!key.is_empty());
     }
 
     #[test]
     fn test_generate_user_key_is_valid_uuid() {
-        let users: Vec<User> = vec![];
-        let key = l_generate_user_key(&users);
+        let key = l_generate_user_key();
         let parsed = Uuid::parse_str(&key);
         assert!(parsed.is_ok(), "key was not a valid uuid: {}", key);
     }
 
     #[test]
     fn test_generate_user_key_is_36_chars() {
-        let users: Vec<User> = vec![];
-        let key = l_generate_user_key(&users);
+        let key = l_generate_user_key();
         assert_eq!(key.len(), 36);
     }
 }
