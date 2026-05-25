@@ -1916,7 +1916,7 @@ select.server-input {
 
 .settings-modal {
   position: relative;
-  max-height: 89vh;
+  max-height: min(89vh, 900px);
   overflow-y: hidden;
   background: var(--modal-bg);
     border: 1px solid var(--border-secondary);

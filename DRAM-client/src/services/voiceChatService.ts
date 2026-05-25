@@ -71,32 +71,33 @@ export async function joinVoiceChat(sessionKey: string): Promise<void> {
   _audioContext = new AudioContext();
   const source = _audioContext.createMediaStreamSource(_rawStream);
   _gainNode = _audioContext.createGain();
-  // remove channelCount and channelCountMode lines
   _gainNode.gain.value = loadMicLevel() / 100;
   const destination = _audioContext.createMediaStreamDestination();
-  _gainNode.gain.value = loadMicLevel() / 100;
+  let outputNode: AudioNode = source;
 
   if (_useRnnoise) {
     await _audioContext.audioWorklet.addModule(NoiseSuppressorWorklet);
     const noiseNode = new AudioWorkletNode(
       _audioContext,
-      NoiseSuppressorWorklet_Name
+      NoiseSuppressorWorklet_Name,
+      {
+        outputChannelCount: [1],
+      }
     );
-
     const merger = _audioContext.createChannelMerger(2);
-
     source.connect(noiseNode);
 
-    // same mono output into both channels
     noiseNode.connect(merger, 0, 0);
     noiseNode.connect(merger, 0, 1);
 
-    merger.connect(_gainNode);
-  } else {
-    source.connect(_gainNode);
+    outputNode = merger;
   }
+
+  outputNode.connect(_gainNode);
   _gainNode.connect(destination);
+
   const processedTrack = destination.stream.getAudioTracks()[0];
+
   await _room.localParticipant.publishTrack(processedTrack, {
     source: Track.Source.Microphone,
   });
@@ -152,34 +153,32 @@ export async function reconnectMic(): Promise<void> {
 
   const source = _audioContext.createMediaStreamSource(_rawStream);
   _gainNode = _audioContext.createGain();
-  // remove channelCount and channelCountMode lines
   _gainNode.gain.value = loadMicLevel() / 100;
   const destination = _audioContext.createMediaStreamDestination();
-  const level = loadMicLevel();
-  _gainNode.gain.value = level / 100;
+  let outputNode: AudioNode = source;
 
   if (_useRnnoise) {
     await _audioContext.audioWorklet.addModule(NoiseSuppressorWorklet);
+
     const noiseNode = new AudioWorkletNode(
       _audioContext,
-      NoiseSuppressorWorklet_Name
+      NoiseSuppressorWorklet_Name,
+      {
+        outputChannelCount: [1],
+      }
     );
-
     const merger = _audioContext.createChannelMerger(2);
-
     source.connect(noiseNode);
 
-    // same mono output into both channels
     noiseNode.connect(merger, 0, 0);
     noiseNode.connect(merger, 0, 1);
 
-    merger.connect(_gainNode);
-  } else {
-    source.connect(_gainNode);
+    outputNode = merger;
   }
-
+  outputNode.connect(_gainNode);
   _gainNode.connect(destination);
   const processedTrack = destination.stream.getAudioTracks()[0];
+
   await _room.localParticipant.publishTrack(processedTrack, {
     source: Track.Source.Microphone,
   });

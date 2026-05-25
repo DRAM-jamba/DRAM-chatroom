@@ -237,7 +237,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                 <input
                     type="range"
                     min={0}
-                    max={100}
+                max={322}
                     value={micLevel}
                     onChange={(e) => {
                         const val = Number(e.target.value);
