@@ -29,6 +29,32 @@ function App() {
         await invoke("reset_mic_permission");
       });
   }, []);
+
+  useEffect(() => {
+    const disableContext = (e: MouseEvent) => e.preventDefault();
+
+    const disableShortcuts = (e: KeyboardEvent) => {
+      if (
+        e.key === "F5" ||
+        e.key === "F7" ||
+        (e.ctrlKey && e.key === "r") ||
+        (e.ctrlKey && e.key === "p") ||
+        (e.ctrlKey && e.key === "s") ||
+        (e.ctrlKey && e.key === "u")
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("contextmenu", disableContext);
+    document.addEventListener("keydown", disableShortcuts);
+
+    return () => {
+      document.removeEventListener("contextmenu", disableContext);
+      document.removeEventListener("keydown", disableShortcuts);
+    };
+  }, []);
+
   const handleServerConnected = async () => {
     const saved = await getSavedNickname();
     if (saved) {
