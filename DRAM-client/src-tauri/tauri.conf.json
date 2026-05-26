@@ -37,6 +37,7 @@
   },
   "plugins": {
     "keyring": null,
-    "store": null
+    "store": null,
+    "global-shortcut": null
   }
 }
