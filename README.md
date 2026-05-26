@@ -62,3 +62,19 @@ Anyone can run their own Quorthon server and clients can connect to any availabl
 # License
 
 MIT License
+
+---
+
+# Third-party licenses
+
+This project uses [RNNoise](https://github.com/xiph/rnnoise) via [@timephy/rnnoise-wasm](https://github.com/dumpvn/tim-rnnoise-wasm) for noise suppression.
+
+RNNoise is licensed under BSD-3-Clause:
+
+```
+Copyright (c) 2007-2017, 2024 Jean-Marc Valin
+Copyright (c) 2023 Amazon
+Copyright (c) 2017, Mozilla
+Copyright (c) 2005-2017, Xiph.Org Foundation
+Copyright (c) 2003-2004, Mark Borgerding
+```

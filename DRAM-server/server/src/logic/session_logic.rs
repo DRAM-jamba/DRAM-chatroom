@@ -148,23 +148,20 @@ mod tests {
 
     #[test]
     fn test_generate_session_key_is_not_empty() {
-        let sessions: Vec<Session> = vec![];
-        let key = l_generate_session_key(&sessions);
+        let key = l_generate_session_key();
         assert!(!key.is_empty());
     }
 
     #[test]
     fn test_generate_session_key_is_valid_uuid() {
         use uuid::Uuid;
-        let sessions: Vec<Session> = vec![];
-        let key = l_generate_session_key(&sessions);
+        let key = l_generate_session_key();
         assert!(Uuid::parse_str(&key).is_ok(), "not a valid uuid: {}", key);
     }
 
     #[test]
     fn test_generate_session_key_is_36_chars() {
-        let sessions: Vec<Session> = vec![];
-        let key = l_generate_session_key(&sessions);
+        let key = l_generate_session_key();
         assert_eq!(key.len(), 36);
     }
 }

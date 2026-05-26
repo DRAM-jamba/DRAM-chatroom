@@ -72,7 +72,7 @@ function ServerCard({
 
       {expanded && (
         <div className="server-details">
-          <p className="server-ip">IP: {server.ipAddress}</p>
+          <p className="server-ip">{server.ipAddress}</p>
 
           {!confirmForget ? (
             <div className="server-actions">

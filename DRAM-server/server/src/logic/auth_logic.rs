@@ -49,7 +49,7 @@ mod tests {
     async fn test_check_active_user_not_in_map() {
         let map: UsersMap = Arc::new(RwLock::new(HashMap::new()));
         let key = "somekey".to_string();
-        let result = l_check_active_user(map, &key).await;
+        let result = l_ensure_user_not_in_session(map, &key).await;
         assert!(result.is_ok());
     }
 
@@ -59,7 +59,7 @@ mod tests {
         let map: UsersMap = Arc::new(RwLock::new(HashMap::new()));
         map.write().await.insert("busykey".to_string(), "session1".to_string());
         let key = "busykey".to_string();
-        let result = l_check_active_user(map, &key).await;
+        let result = l_ensure_user_not_in_session(map, &key).await;
         assert!(result.is_err());
     }
 
@@ -69,7 +69,7 @@ mod tests {
         use crate::modules::active_sessions::{SessionMap, SessionChat};
         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let key = "somesession".to_string();
-        let result = l_check_active_session(map, &key).await;
+        let result = l_ensure_session_is_not_active(map, &key).await;
         assert!(result.is_ok());
     }
 
@@ -80,7 +80,7 @@ mod tests {
         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         map.write().await.insert("activesession".to_string(), SessionChat::new());
         let key = "activesession".to_string();
-        let result = l_check_active_session(map, &key).await;
+        let result = l_ensure_session_is_not_active(map, &key).await;
         assert!(result.is_err());
     }
 }

@@ -102,10 +102,10 @@ async fn r_create_voice_token(State(server_state): State<ServerState>,
     
     match l_ensure_user_not_in_session(server_state.active_users.clone(), &payload.user_key).await {
         Ok(()) => return Err(ApiError::Forbidden("User must be in session for this action.".into())),
-        Err(e) => ()
+        Err(_e) => ()
     }
     
-    match l_create_voice_token(payload.user_key, payload.session_key).await {
+    match l_create_voice_token(server_state.db_pool.clone(), payload.user_key, payload.session_key).await {
         Ok(token) => Ok(Json(json!({
             "token": token
         }))),

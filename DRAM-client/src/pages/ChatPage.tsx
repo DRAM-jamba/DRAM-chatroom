@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import SettingsPage from "./SettingsPage";
@@ -16,6 +17,7 @@ import {
   setMicMuted, 
   setDeafened as setServiceDeafened, 
   subscribeToVoiceList,
+  setParticipantVolume,
 } from "../services/voiceChatService.ts";
 import { loadMicHotkey, loadHeadphonesHotkey } from "../services/settingsService";
 import type { Message, Member } from "../types/message";
@@ -49,6 +51,8 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const [isInVoiceCall, setIsInVoiceCall] = useState(false);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
+  const [expandedVoiceMember, setExpandedVoiceMember] = useState<string | null>(null);
+  const [voiceVolumes, setVoiceVolumes] = useState<Record<string, number>>({});
 
   const appendMessage = (msg: Message) => {
     setMessages((prev) => {
@@ -56,6 +60,12 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
       return [...prev, msg];
     });
   };
+
+  useEffect(() => {
+    if (!isInVoiceCall) {
+      setExpandedVoiceMember(null);
+    }
+  }, [isInVoiceCall]);
 
   useEffect(() => {
     if (!sessionKey) {
@@ -77,7 +87,9 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
         unlistenFuncs = [unlistenMsgs, unlistenUserEvents, unlistenMembers, unlistenVoice];
         
         await joinSession(sessionKey);
+        console.log("joinSession completed");
       } catch (err) {
+        console.error("Failed:", err);
         if (isMounted) {
           console.error("Failed to connect to session:", err);
         }
@@ -92,6 +104,10 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
       leaveVoiceChat().catch(console.error);
     };
   }, [sessionName]);
+
+  useEffect(() => {
+    invoke("resize_for_chat");
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -118,6 +134,7 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const handleLeaveSession = async () => {
     await leaveVoiceChat();
     await leaveSession();
+    await invoke("resize_for_sessions");
     onLeaveSession();
   };
 
@@ -192,14 +209,42 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
               <div className="voice-members-list">
                 {voiceMembers.map((username) => (
                   <div key={`voice-${username}`} className="voice-member-card">
-                    <span className="voice-indicator-dot" />
-                    <span className="voice-member-username">{username}</span>
+                    <div
+                      className="voice-member-header"
+                      onClick={() => {
+                        if (username === nickname || !isInVoiceCall) return;
+                        setExpandedVoiceMember(prev => prev === username ? null : username);
+                      }}
+                    >
+                      <span className="voice-indicator-dot" />
+                      <span className="voice-member-username">{username}</span>
+                    </div>
+                    {expandedVoiceMember === username && (
+                      <div className="voice-member-volume">
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={voiceVolumes[username] ?? 100}
+                          onChange={(e) => {
+                            console.log("slider changed", username, e.target.value);
+                            const val = Number(e.target.value);
+                            setVoiceVolumes(prev => ({ ...prev, [username]: val }));
+                            setParticipantVolume(username, val);
+                          }}
+                          className="settings-slider"
+                        />
+                        <span className="voice-member-volume-value">{voiceVolumes[username] ?? 100}%</span>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {isConnecting && !voiceMembers.includes(nickname) && (
                   <div className="voice-member-card">
-                    <span className={`voice-indicator-dot ${voiceMembers.includes(nickname) ? "" : "connecting"}`} />
-                    <span className="voice-member-username">{nickname}</span>
+                    <div className="voice-member-header">
+                      <span className="voice-indicator-dot connecting" />
+                      <span className="voice-member-username">{nickname}</span>
+                    </div>
                   </div>
                 )}
                 {!isConnecting && voiceMembers.length === 0 && (

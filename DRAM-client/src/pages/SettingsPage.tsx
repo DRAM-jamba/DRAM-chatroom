@@ -14,6 +14,18 @@ import {
   saveSpeakerLevel, loadSpeakerLevel,
   type Theme, type Font,
 } from "../services/settingsService";
+import {
+  updateMicLevel,
+  updateSpeakerLevel,
+  updateSpeakerDevice,
+  setUseRnnoise,
+  isInVoiceChat,
+  reconnectMic
+} from "../services/voiceChatService";
+import {
+  loadNoiseSuppression
+} from "../services/settingsService";
+
 
 
 type SettingsPageProps = {
@@ -35,7 +47,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
   const [micDropdownOpen, setMicDropdownOpen] = useState(false);
   const [speakerDropdownOpen, setSpeakerDropdownOpen] = useState(false);
-
+  const [noiseSuppression, setNoiseSuppressionState] = useState(loadNoiseSuppression());
 
   useEffect(() => {
     if (!listeningFor) return;
@@ -45,13 +57,13 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
       const key = e.key.toUpperCase();
 
       if (listeningFor === "mic") {
-        if (key === headphonesHotkey) return; // already used
+        if (key === headphonesHotkey) return; 
         setMicHotkey(key);
         saveMicHotkey(key);
       }
 
       if (listeningFor === "headphones") {
-        if (key === micHotkey) return; // already used
+        if (key === micHotkey) return; 
         setHeadphonesHotkey(key);
         saveHeadphonesHotkey(key);
       }
@@ -187,6 +199,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                         setMicDevice(device.deviceId);
                         saveMicDevice(device.deviceId);
                         setMicDropdownOpen(false);
+                        if (isInVoiceChat()) reconnectMic();
                       }}
                     >
                       {device.label || (device.deviceId === "default" ? "Windows default" : "Microphone")}
@@ -195,21 +208,46 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                   </div>
                 )}
               </div>
-
+              <p className="input-label" style={{ marginTop: "12px" }}>Noise suppression</p>
+              <div className="settings-option-row">
+                <button
+                  className={`settings-option-btn ${!noiseSuppression ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setNoiseSuppressionState(false);
+                    setUseRnnoise(false);
+                    if (isInVoiceChat()) reconnectMic();
+                  }}
+                >
+                  default
+                </button>
+                <button
+                  className={`settings-option-btn ${noiseSuppression ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setNoiseSuppressionState(true);
+                    setUseRnnoise(true);
+                    if (isInVoiceChat()) reconnectMic();
+                  }}
+                >
+                  rnnoise
+                </button>
+              </div>
                 <p className="input-label">Microphone level</p>
                 <input
                     type="range"
                     min={0}
-                    max={100}
+                max={322}
                     value={micLevel}
                     onChange={(e) => {
                         const val = Number(e.target.value);
                         setMicLevel(val);
                         saveMicLevel(val);
+                      updateMicLevel(val);
                     }}
                     className="settings-slider"
                 />
-                <p className="settings-slider-value">{micLevel}%</p>
+              <p className="settings-slider-value">{micLevel}%</p>
                 </div>
           </div>
 
@@ -240,6 +278,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                       onClick={() => {
                         setSpeakerDevice(device.deviceId);
                         saveSpeakerDevice(device.deviceId);
+                        updateSpeakerDevice(device.deviceId);
                         setSpeakerDropdownOpen(false);
                       }}
                     >
@@ -260,6 +299,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                     const val = Number(e.target.value);
                     setSpeakerLevel(val);
                     saveSpeakerLevel(val);
+                  updateSpeakerLevel(val);
                 }}
                 className="settings-slider"
                 />

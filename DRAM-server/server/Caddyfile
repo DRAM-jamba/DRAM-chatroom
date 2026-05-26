@@ -1,0 +1,4 @@
+{$DOMAIN} {
+    reverse_proxy /rtc* livekit:7880
+    reverse_proxy app:3000
+}
