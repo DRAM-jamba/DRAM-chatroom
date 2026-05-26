@@ -4,6 +4,7 @@ import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import SettingsPage from "./SettingsPage";
 import { joinSession } from "../services/sessionService";
+import { listen } from "@tauri-apps/api/event";
 import {
   sendMessage,
   leaveSession,
@@ -110,21 +111,19 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const micKey = loadMicHotkey();
-      const headphonesKey = loadHeadphonesHotkey();
+    const micKey = loadMicHotkey() ?? "";
+    const headphonesKey = loadHeadphonesHotkey() ?? "";
 
-    if (micKey && e.key.toUpperCase() === micKey) {
-      handleToggleMute();
-    }
+    invoke("register_hotkeys", { micKey, headphonesKey });
 
-    if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
-      handleToggleDeafen();
-    }
-  };
+    const unlistenMic = listen("global_mic_hotkey", () => handleToggleMute());
+    const unlistenHeadphones = listen("global_headphones_hotkey", () => handleToggleDeafen());
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      invoke("unregister_hotkeys");
+      unlistenMic.then(f => f());
+      unlistenHeadphones.then(f => f());
+    };
   }, [muted, deafened, isInVoiceCall]);
 
   const handleSend = async (content: string) => {
