@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 
 use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::{BackMessageObj, MessageObj, MessageType}, server_state::ServerState, user::User}};
 use axum::{extract::{WebSocketUpgrade, ws::{Message, WebSocket}}, response::IntoResponse};
@@ -60,6 +60,9 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     let mut rx = session_chat.tx.subscribe();
     let (dead_tx, dead_rx) = tokio::sync::oneshot::channel::<()>();
 
+    let waiting_for_pong = Arc::new(AtomicBool::new(false));
+    let waiting_for_pong_clone = waiting_for_pong.clone();
+
     let send_task = tokio::spawn(async move {
         
         let mut ping_interval = interval(Duration::from_secs(PING_TIME));
@@ -68,8 +71,12 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
         loop {
             tokio::select! {
                 _ = ping_interval.tick() => {
-                    if sender.send(Message::Ping(vec![].into())).await.is_err() {
+                    if waiting_for_pong.load(Ordering::Relaxed) {
                         let _ = dead_tx.send(());
+                        break;
+                    }
+                    waiting_for_pong.store(true, Ordering::Relaxed);
+                    if sender.send(Message::Ping(vec![].into())).await.is_err() {
                         break;
                     }
                 }
@@ -123,7 +130,9 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
                         },
                         Message::Binary(_bytes) => {}, // TODO: use this to send images. for later
                         Message::Ping(_) => {},
-                        Message::Pong(_) => {},
+                        Message::Pong(_) => {
+                            waiting_for_pong_clone.store(false, Ordering::Relaxed);
+                        },
                         Message::Close(frame) => {
                             match frame {
                                 Some(cf) => {
