@@ -1,6 +1,11 @@
+use std::time::Duration;
+
 use crate::{data_logic::{connection_data::d_get_user_role, session_data::d_get_session, user_data::d_get_user}, errors::api_error::ApiError, modules::{active_sessions::{SessionChat, SessionMap}, message::{BackMessageObj, MessageObj, MessageType}, server_state::ServerState, user::User}};
 use axum::{extract::{WebSocketUpgrade, ws::{Message, WebSocket}}, response::IntoResponse};
 use futures_util::{SinkExt, StreamExt};
+use tokio::time::{MissedTickBehavior, interval};
+
+const PING_TIME: u64 = 30;
 
 pub async fn l_connection_handler(server_state: ServerState, user_key: String, session_key: String, 
                                 ws: WebSocketUpgrade) -> Result<impl IntoResponse, ApiError> {
@@ -53,13 +58,35 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
     let (mut sender, mut receiver) = ws.split();
     let mut rx = session_chat.tx.subscribe();
+    let (dead_tx, dead_rx) = tokio::sync::oneshot::channel::<()>();
 
     let send_task = tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            if sender.send(Message::Text(msg.into())).await.is_err() {
-                break;
+        
+        let mut ping_interval = interval(Duration::from_secs(PING_TIME));
+        ping_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+        loop {
+            tokio::select! {
+                _ = ping_interval.tick() => {
+                    if sender.send(Message::Ping(vec![].into())).await.is_err() {
+                        let _ = dead_tx.send(());
+                        break;
+                    }
+                }
+                msg = rx.recv() => {
+                    match msg {
+                        Ok(m) => {
+                            if sender.send(Message::Text(m.into())).await.is_err() {
+                                let _ = dead_tx.send(());
+                                break;
+                            }
+                        },
+                        Err(_e) => ()
+                    }
+                }
             }
         }
+
     });
 
 
@@ -86,30 +113,35 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
 
 
     // Handling message from client
-    while let Some(result) = receiver.next().await {
-        match result {
-            Ok(msg) => match msg {
-                Message::Text(text) => {
-                    l_handle_message(&session_chat, text.to_string(), &user.nickname).await;
-                },
-                Message::Binary(_bytes) => {}, // TODO: use this to send images. for later
-                Message::Ping(_) => {},
-                Message::Pong(_) => {},
-                Message::Close(frame) => {
-                    match frame {
-                        Some(cf) => {
-                            println!("closed: code={}, reason={}", cf.code, cf.reason);
+    tokio::select! {
+        _ = async { // never closed, only when Close message appear
+            while let Some(result) = receiver.next().await {
+                match result {
+                    Ok(msg) => match msg {
+                        Message::Text(text) => {
+                            l_handle_message(&session_chat, text.to_string(), &user.nickname).await;
                         },
-                        None => {println!("closed without frame");}
+                        Message::Binary(_bytes) => {}, // TODO: use this to send images. for later
+                        Message::Ping(_) => {},
+                        Message::Pong(_) => {},
+                        Message::Close(frame) => {
+                            match frame {
+                                Some(cf) => {
+                                    println!("closed: code={}, reason={}", cf.code, cf.reason);
+                                },
+                                None => {println!("closed without frame");}
+                            }
+                            break;
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("websocket error: {}", e);
+                        break;
                     }
-                    break;
                 }
-            },
-            Err(e) => {
-                eprintln!("websocket error: {}", e);
-                break;
             }
-        }
+        } => {}
+        _ = dead_rx => {} // when connection is lost, you gone
     }
 
     send_task.abort();
@@ -144,6 +176,7 @@ async fn l_handle_websocket(session_chat: SessionChat,mut ws: WebSocket, user: U
     l_broadcast_message(&session_chat, MessageType::Disconnect, "".into(), &user.nickname, true).await;
     l_broadcast_message(&session_chat, MessageType::UserList, json, &user.nickname, false).await;
     l_broadcast_message(&session_chat, MessageType::VoiceList, json_voice, &user.nickname, false).await;
+
 
     if is_empty { 
         let mut active_sessions = server_state.active_sessions.write().await;
