@@ -26,6 +26,7 @@ import {
   loadNoiseSuppression
 } from "../services/settingsService";
 import { invoke } from "@tauri-apps/api/core";
+import { getHotkeyString } from "../services/hotkeysService";
 
 
 
@@ -55,7 +56,7 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
-      const key = e.key.toUpperCase();
+      const key = getHotkeyString(e);
 
       if (listeningFor === "mic") {
         if (key === headphonesHotkey) return;

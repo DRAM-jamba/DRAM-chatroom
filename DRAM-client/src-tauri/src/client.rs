@@ -2,7 +2,6 @@ use crate::error::AppError;
 use crate::events::{self, emit_message, emit_session_update, emit_user_list, emit_voice_list};
 use crate::models::{MessageObj, MessageType};
 use futures_util::{SinkExt, StreamExt};
-use tokio::io::sink;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;

@@ -36,3 +36,4 @@ keyring = "3.0"
 hex = "0.4.3"
 aes-gcm = "0.10.3"
 tauri-plugin-global-shortcut = "2"
+windows-sys = { version = "0.52", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_System_Threading"] }
