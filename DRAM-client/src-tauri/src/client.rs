@@ -2,6 +2,7 @@ use crate::error::AppError;
 use crate::events::{self, emit_message, emit_session_update, emit_user_list, emit_voice_list};
 use crate::models::{MessageObj, MessageType};
 use futures_util::{SinkExt, StreamExt};
+use tokio::io::sink;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
@@ -38,21 +39,33 @@ impl WsClient {
         let (sink, mut stream) = ws_stream.split();
         let app_clone = app.clone();
 
+        let sink_arc = Arc::new(Mutex::new(sink));
+        let sind_arc_copy = sink_arc.clone();
+
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
-                if let Message::Text(text) = msg {
-                    if let Err(e) = Self::handle_incoming(&app_clone, &text) {
-                        eprintln!("WS Error: {} | Raw: {}", e, text);
+                println!("{:?}", msg);
+                match msg {
+                    Message::Text(text) => {
+                        if let Err(e) = Self::handle_incoming(&app_clone, &text) {
+                            eprintln!("WS Error: {} | Raw: {}", e, text);
+                        }
+                    },
+                    Message::Close(_) => {
+                        events::emit_disconnected(&app_clone);
+                        break;
+                    },
+                    Message::Ping(_) => {
+                        println!("ping received, pong send");
+                        let _ = sink_arc.lock().await.send(Message::Pong(vec![].into())).await.map_err(|_e| ());
                     }
-                } else if let Message::Close(_) = msg {
-                    events::emit_disconnected(&app_clone);
-                    break;
+                    _ => {}
                 }
             }
         });
 
         Ok(Self {
-            sink: Arc::new(Mutex::new(sink)),
+            sink: sind_arc_copy,
         })
     }
 
