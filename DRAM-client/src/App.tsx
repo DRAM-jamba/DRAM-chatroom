@@ -37,10 +37,13 @@ function App() {
       if (
         e.key === "F5" ||
         e.key === "F7" ||
+        e.key === "F3" ||
         (e.ctrlKey && e.key === "r") ||
+        (e.ctrlKey && e.shiftKey && e.key === "R") ||
         (e.ctrlKey && e.key === "p") ||
         (e.ctrlKey && e.key === "s") ||
-        (e.ctrlKey && e.key === "u")
+        (e.ctrlKey && e.key === "u") ||
+        (e.ctrlKey && e.key === "f")
       ) {
         e.preventDefault();
       }
