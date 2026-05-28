@@ -1,8 +1,12 @@
 use crate::api::ServerApi;
 use crate::error::AppError;
-use crate::models::{PersistedServer, Session, SessionKey, SessionList, UserKey, BackMessageObj, MessageType};
+use crate::models::{
+    BackMessageObj, ChallengeSolvePayload, MessageType, PersistedServer, Session, SessionKey,
+    SessionList, UserKey,
+};
+use crate::security::get_public_key_hex;
 use crate::state::{AppState, ServerConnectionState, SessionState};
-
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
@@ -33,6 +37,76 @@ async fn get_server_context(
     Ok((ip, server))
 }
 
+async fn solve_challenge(
+    master_key: &[u8; 32],
+    challenge_hex: String,
+    user_key: String,
+) -> Result<ChallengeSolvePayload, String> {
+    use ed25519_dalek::Signer; 
+    let signing_key = security::derive_identity_keypair(master_key).0;
+    let signature = signing_key.sign(challenge_hex.as_bytes());
+    Ok(ChallengeSolvePayload {
+        nonce: challenge_hex,
+        signature: hex::encode(signature.to_bytes()),
+        user_key,
+    })
+}
+
+fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
+    let state_clone = state.inner().clone();
+    println!("Starting token refresh worker...");
+    let handle = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(7 * 60));
+        interval.tick().await;
+
+        loop {
+            interval.tick().await;
+
+            let current_ip = state_clone.get_current_ip().await;
+            let current_token = state_clone.get_token().await;
+            println!(
+                "[Worker] Tick: Current IP: {:?}, Current Token: {:?}",
+                current_ip, current_token
+            );
+            println!("[Worker] Attempting to refresh token...");
+            if let (Some(ip), Some(token)) = (current_ip, current_token) {
+                if let Some(server) = state_clone.get_server(&ip).await {
+                    let api = crate::api::ServerApi::with_token(&format!("https://{}", ip), token);
+                    let payload = serde_json::json!({ "user_key": server.user_key });
+
+                    match api
+                        .http_patch_authed(&api.refresh_token_url(), &payload)
+                        .await
+                    {
+                        Ok(response) => {
+                            #[derive(serde::Deserialize)]
+                            struct TokenResponse {
+                                token: String,
+                            }
+                            if let Ok(json_res) = response.json::<TokenResponse>().await {
+                                state_clone.set_token(json_res.token).await;
+                                println!("[Worker] Token refreshed successfully");
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("[Worker] Refresh failed: {:?}", e);
+                            // TODO: Proper error handling - log out the user and stop the worker
+                            break;
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+    });
+
+    let state_for_setter = state.inner().clone();
+    tokio::spawn(async move {
+        state_for_setter.set_refresh_task(Some(handle)).await;
+    });
+}
+
 // Server commands
 #[tauri::command]
 async fn add_server(
@@ -40,18 +114,22 @@ async fn add_server(
     nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-
     let api = ServerApi::new(&format!("https://{}", ip));
-    let response = ServerApi::http_post_empty(&api.add_server()).await?;
+    let public_key = get_public_key_hex(&*state.get_master_key());
+    println!(
+        "Adding server with IP: {}, using public key: {}",
+        ip, public_key
+    );
+    let response = ServerApi::http_post(
+        &api.add_server(),
+        &serde_json::json!({ "public_key": public_key }),
+    )
+    .await?;
+
     let json_response: UserKey = response
         .json()
         .await
         .map_err(|e| AppError::Protocol(format!("Failed to parse user key: {}", e)))?;
-
-    state.set_connection_ip(ip.clone()).await;
-    state
-        .set_connection_state(ServerConnectionState::Connected)
-        .await;
 
     state
         .add_server(ip, nickname, json_response.user_key)
@@ -63,39 +141,56 @@ async fn add_server(
 
 #[tauri::command]
 async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
-
     let server = state
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
     let api = ServerApi::new(&format!("https://{}", ip));
 
-    ServerApi::http_put(
-        &api.connect_server(),
+    let challenge_response = ServerApi::http_get(
+        &api.challenge(),
         &serde_json::json!({ "user_key": server.user_key }),
     )
     .await?;
 
+    let challenge_data: models::ChallengeFromServer = challenge_response
+        .json()
+        .await
+        .map_err(|e| AppError::Protocol(format!("Failed to parse challenge: {}", e)))?;
+    
+    let challenge_payload = solve_challenge(
+        &*state.get_master_key(),
+        challenge_data.challenge,
+        server.user_key,
+    )
+    .await
+    .map_err(|e| AppError::Auth(e))?;
+
+    let token_response = ServerApi::http_post(&api.token_url(), &challenge_payload).await?;
+    let token_data: models::TokenResponse = token_response
+        .json()
+        .await
+        .map_err(|e| AppError::Protocol(format!("Failed to parse token: {}", e)))?;
+
+    state.set_token(token_data.token).await;
     state.set_connection_ip(ip).await;
-    state
-        .set_connection_state(ServerConnectionState::Connected)
-        .await;
+    state.set_connection_state(ServerConnectionState::Connected).await;
+
+    start_token_refresh_worker(state.clone());
 
     Ok(())
 }
 
 #[tauri::command]
 async fn leave_server(state: State<'_, AppState>) -> Result<(), AppError> {
-    let (ip, _server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let (_ip, _server) = get_server_context(&state).await?;
 
-    ServerApi::http_delete_empty(&api.leave_server()).await?;
+    state.set_refresh_task(None).await;
+    state.clear_token().await;
 
     let empty_ip = "0.0.0.0:0000";
     state.set_connection_ip(empty_ip.to_string()).await;
-    state
-        .set_connection_state(ServerConnectionState::Disconnected)
-        .await;
+    state.set_connection_state(ServerConnectionState::Disconnected).await;
     state.set_session_state(SessionState::Idle).await;
 
     Ok(())
@@ -103,18 +198,36 @@ async fn leave_server(state: State<'_, AppState>) -> Result<(), AppError> {
 
 #[tauri::command]
 async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), AppError> {
-
     let server = state
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
-    let api = ServerApi::new(&format!("https://{}", ip));
 
-    ServerApi::http_delete(
-        &api.forget_server(),
+    let api = ServerApi::new(&format!("https://{}", ip));
+    let challenge_response = ServerApi::http_get(
+        &api.challenge(),
         &serde_json::json!({ "user_key": server.user_key }),
+    ).await?;
+
+    let challenge_data: models::ChallengeFromServer = challenge_response.json().await?;
+    let challenge_payload = solve_challenge(
+        &*state.get_master_key(),
+        challenge_data.challenge,
+        server.user_key.clone(),
     )
-    .await?;
+    .await
+    .map_err(|e| AppError::Auth(e))?;
+
+    let token_response = ServerApi::http_post(&api.token_url(), &challenge_payload).await?;
+    let token_data: models::TokenResponse = token_response.json().await?;
+
+    let api_with_token = ServerApi::with_token(&format!("https://{}", ip), token_data.token);
+    api_with_token
+        .http_delete_authed(
+            &api_with_token.forget_server(),
+            &serde_json::json!({ "user_key": server.user_key }),
+        )
+        .await?;
 
     state
         .remove_server(&server.ip)
@@ -127,9 +240,12 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
 #[tauri::command]
 async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
 
-    ServerApi::http_patch(
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    api.http_patch_authed(
         &api.set_nickname(),
         &serde_json::json!({ "user_key": server.user_key, "nickname": new_nickname }),
     )
@@ -139,13 +255,16 @@ async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Resul
         .save_nickname(&ip, new_nickname)
         .await
         .map_err(|e| AppError::Network(format!("Failed to update nickname: {}", e)))?;
-
+    
     Ok(())
 }
 
 #[tauri::command]
-async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
-
+async fn rename_server(
+    ip: String,
+    nickname: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
     state
         .rename_server(&ip, nickname)
         .await
@@ -158,13 +277,19 @@ async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>)
 #[tauri::command]
 async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
 
-    let response = ServerApi::http_get(
-        &api.session_list(),
-        &serde_json::json!({ "user_key": server.user_key }),
-    )
-    .await?;
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+
+    let response = api
+        .http_get_authed(
+            &api.session_list(),
+            &serde_json::json!({ "user_key": server.user_key }),
+        )
+        .await?;
 
     let json_response: SessionList = response
         .json()
@@ -177,13 +302,19 @@ async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppErr
 #[tauri::command]
 async fn create_session(name: String, state: State<'_, AppState>) -> Result<String, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
 
-    let response = ServerApi::http_post(
-        &api.create_session(),
-        &serde_json::json!({ "user_key": server.user_key, "session_name": name }),
-    )
-    .await?;
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+
+    let response = api
+        .http_post_authed(
+            &api.create_session(),
+            &serde_json::json!({ "user_key": server.user_key, "session_name": name }),
+        )
+        .await?;
 
     let json_response: SessionKey = response
         .json()
@@ -196,9 +327,14 @@ async fn create_session(name: String, state: State<'_, AppState>) -> Result<Stri
 #[tauri::command]
 async fn add_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
 
-    ServerApi::http_post(
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+
+    api.http_post_authed(
         &api.add_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )
@@ -250,41 +386,52 @@ async fn resize_for_chat(app: AppHandle) -> Result<(), AppError> {
 #[tauri::command]
 async fn resize_for_sessions(app: AppHandle) -> Result<(), AppError> {
     let window = app.get_webview_window("main").unwrap();
-        window.set_resizable(false).unwrap();
-        window.set_maximizable(false).unwrap();
-        window
-            .set_size(tauri::Size::Logical(tauri::LogicalSize {
-                width: 360.0,
-                height: 628.0,
-            }))
-            .unwrap();
+    window.set_resizable(false).unwrap();
+    window.set_maximizable(false).unwrap();
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: 360.0,
+            height: 628.0,
+        }))
+        .unwrap();
     Ok(())
 }
 
 #[tauri::command]
 async fn leave_session(state: State<'_, AppState>, _app: AppHandle) -> Result<(), AppError> {
-    println!("Leaving session...");
-    let (ip, _server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let (ip, server) = get_server_context(&state).await?;
+
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     if let SessionState::JoinedSession(ws_client) = &state.get_session_state().await {
         let _ = ws_client.close().await;
     }
 
-    ServerApi::http_delete_empty(&api.leave_session()).await?;
+    api.http_delete_authed(
+        &api.leave_session(),
+        &serde_json::json!({ "user_key": server.user_key }),
+    )
+    .await?;
 
     state.set_session_state(SessionState::Idle).await;
-
-    println!("Left session");
     Ok(())
 }
 
 #[tauri::command]
 async fn forget_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
 
-    ServerApi::http_delete(
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+
+    api.http_delete_authed(
         &api.forget_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )
@@ -296,9 +443,14 @@ async fn forget_session(session_key: String, state: State<'_, AppState>) -> Resu
 #[tauri::command]
 async fn delete_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
 
-    ServerApi::http_delete(
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token. Connect to server first.".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+
+    api.http_delete_authed(
         &api.delete_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )
@@ -322,7 +474,7 @@ async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), Ap
         ws_client
             .send(&serialized_body)
             .await
-            .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?; 
+            .map_err(|e| AppError::Network(format!("Failed to send message: {}", e)))?;
     }
     Ok(())
 }
@@ -331,46 +483,57 @@ async fn send_message(body: String, state: State<'_, AppState>) -> Result<(), Ap
 
 #[tauri::command]
 async fn reset_mic_permission(app: AppHandle) -> Result<(), AppError> {
-    let data_dir = app.path().app_local_data_dir()
+    let data_dir = app
+        .path()
+        .app_local_data_dir()
         .map_err(|e| AppError::Internal(format!("Failed to get data dir: {}", e)))?;
-    
+
     let prefs_path = data_dir
         .join("EBWebView")
         .join("Default")
         .join("Preferences");
-    
+
     let prefs_str = prefs_path.to_string_lossy().to_string();
 
     std::process::Command::new("powershell")
         .args([
             "-Command",
-            &format!("Start-Sleep -Seconds 2; Remove-Item -Force '{}'", prefs_str)
+            &format!("Start-Sleep -Seconds 2; Remove-Item -Force '{}'", prefs_str),
         ])
         .spawn()
         .map_err(|e| AppError::Internal(format!("Failed to spawn cleanup: {}", e)))?;
-    
+
     app.exit(0);
     Ok(())
 }
 
 #[tauri::command]
-async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Result<models::VoiceChatInfo, AppError> {
+async fn join_voice_chat(
+    session_key: String,
+    state: State<'_, AppState>,
+) -> Result<models::VoiceChatInfo, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
- 
-    let response = ServerApi::http_get(
-        &api.create_voicechat(),
-        &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
-    )
-    .await?;
- 
+    let host = ip.split(':').next().unwrap_or(&ip);
+    let lk_url = format!("ws://{}:7880", host);
+
+    let token = state.get_token().await.ok_or_else(|| {
+        AppError::Auth("No authentication token".into())
+    })?;
+
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+
+    let response = api
+        .http_get_authed(
+            &api.create_voicechat(),
+            &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
+        )
+        .await?;
+
     let json_response: models::VoiceToken = response
         .json()
         .await
-        .map_err(|e| AppError::Protocol(format!("Invalid voice token response: {}", e)))?;
-    
-    let lk_url = format!("wss://{}", ip);
- 
+        .map_err(|e| AppError::Protocol(format!("Invalid voice token: {}", e)))?;
+
     Ok(models::VoiceChatInfo {
         token: json_response.token,
         url: lk_url,
@@ -382,9 +545,14 @@ async fn send_voice_signal(m_type: String, state: State<'_, AppState>) -> Result
     let msg_type = match m_type.as_str() {
         "voicestart" => MessageType::VoiceStart,
         "voiceend" => MessageType::VoiceEnd,
-        _ => return Err(AppError::Protocol(format!("Invalid voice signal type: {}", m_type))),
+        _ => {
+            return Err(AppError::Protocol(format!(
+                "Invalid voice signal type: {}",
+                m_type
+            )))
+        }
     };
- 
+
     let session = state.get_session_state();
     if let SessionState::JoinedSession(ws_client) = &session.await {
         let payload = BackMessageObj {
@@ -400,8 +568,6 @@ async fn send_voice_signal(m_type: String, state: State<'_, AppState>) -> Result
     }
     Ok(())
 }
-
-
 
 // Client commands
 #[tauri::command]
@@ -433,20 +599,27 @@ async fn save_nickname(nickname: String, state: State<'_, AppState>) -> Result<(
     Ok(())
 }
 
-
 #[tauri::command]
-async fn register_hotkeys(mic_key: String, headphones_key: String, app: AppHandle) -> Result<(), AppError> {
-    app.global_shortcut().unregister_all()
+async fn register_hotkeys(
+    mic_key: String,
+    headphones_key: String,
+    app: AppHandle,
+) -> Result<(), AppError> {
+    app.global_shortcut()
+        .unregister_all()
         .map_err(|e| AppError::Internal(format!("Failed to unregister shortcuts: {}", e)))?;
 
     if !mic_key.is_empty() {
         let mic_key_clone = mic_key.clone();
         app.global_shortcut()
-            .on_shortcut(mic_key_clone.as_str(), move |app_handle, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    let _ = app_handle.emit("global_mic_hotkey", ());
-                }
-            })
+            .on_shortcut(
+                mic_key_clone.as_str(),
+                move |app_handle, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        let _ = app_handle.emit("global_mic_hotkey", ());
+                    }
+                },
+            )
             .map_err(|e| eprintln!("Failed to register mic shortcut: {}", e))
             .ok();
     }
@@ -454,11 +627,14 @@ async fn register_hotkeys(mic_key: String, headphones_key: String, app: AppHandl
     if !headphones_key.is_empty() {
         let headphones_key_clone = headphones_key.clone();
         app.global_shortcut()
-            .on_shortcut(headphones_key_clone.as_str(), move |app_handle, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    let _ = app_handle.emit("global_headphones_hotkey", ());
-                }
-            })
+            .on_shortcut(
+                headphones_key_clone.as_str(),
+                move |app_handle, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        let _ = app_handle.emit("global_headphones_hotkey", ());
+                    }
+                },
+            )
             .map_err(|e| eprintln!("Failed to register headphones shortcut: {}", e))
             .ok();
     }
@@ -468,11 +644,11 @@ async fn register_hotkeys(mic_key: String, headphones_key: String, app: AppHandl
 
 #[tauri::command]
 async fn unregister_hotkeys(app: AppHandle) -> Result<(), AppError> {
-    app.global_shortcut().unregister_all()
+    app.global_shortcut()
+        .unregister_all()
         .map_err(|e| AppError::Internal(format!("Failed to unregister shortcuts: {}", e)))?;
     Ok(())
 }
-
 
 pub fn run() {
     let master_key =

@@ -4,14 +4,14 @@ use crate::{errors::app_error::AppError, modules::user::User};
 
 pub async fn d_get_user_list(db_pool: Pool<Postgres>) -> Result<Vec<User>, AppError> {
   
-    sqlx::query_as::<_, User>("SELECT user_key, nickname, last_time_seen FROM users")
+    sqlx::query_as::<_, User>("SELECT user_key, nickname, last_time_seen, public_key FROM users")
                                 .fetch_all(&db_pool).await
                                 .map_err(|e| AppError::Database(e))
 }
 
 pub async fn d_get_user(db_pool: Pool<Postgres>, user_key: &String) -> Result<User, AppError> {
  
-    sqlx::query_as::<_, User>("SELECT user_key, nickname, last_time_seen FROM users WHERE user_key = $1")
+    sqlx::query_as::<_, User>("SELECT user_key, nickname, last_time_seen, public_key FROM users WHERE user_key = $1")
                     .bind(&user_key)
                     .fetch_one(&db_pool).await
                     .map_err(|e| AppError::Database(e))
@@ -19,10 +19,11 @@ pub async fn d_get_user(db_pool: Pool<Postgres>, user_key: &String) -> Result<Us
 
 pub async fn d_add_user(db_pool: Pool<Postgres>, user: &User) -> Result<(), AppError> {
 
-    let _result = sqlx::query("INSERT INTO users (user_key, nickname, last_time_seen) VALUES ($1, $2, $3)")
+    let _result = sqlx::query("INSERT INTO users (user_key, nickname, last_time_seen, public_key) VALUES ($1, $2, $3, $4)")
                     .bind(&user.user_key)
                     .bind(&user.nickname)
                     .bind(&user.last_time_seen)
+                    .bind(&user.public_key)
                     .execute(&db_pool).await?; 
     // as i understood, if will be error, it will automatically change itself to 
     // AppError::Database, so it should be fine

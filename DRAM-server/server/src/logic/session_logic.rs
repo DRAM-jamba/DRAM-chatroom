@@ -144,7 +144,6 @@ fn l_generate_session_key() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::session::Session;
 
     #[test]
     fn test_generate_session_key_is_not_empty() {

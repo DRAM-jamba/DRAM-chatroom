@@ -38,21 +38,31 @@ impl WsClient {
         let (sink, mut stream) = ws_stream.split();
         let app_clone = app.clone();
 
+        let sink_arc = Arc::new(Mutex::new(sink));
+        let sind_arc_copy = sink_arc.clone();
+
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
-                if let Message::Text(text) = msg {
-                    if let Err(e) = Self::handle_incoming(&app_clone, &text) {
-                        eprintln!("WS Error: {} | Raw: {}", e, text);
+                match msg {
+                    Message::Text(text) => {
+                        if let Err(e) = Self::handle_incoming(&app_clone, &text) {
+                            eprintln!("WS Error: {} | Raw: {}", e, text);
+                        }
+                    },
+                    Message::Close(_) => {
+                        events::emit_disconnected(&app_clone);
+                        break;
+                    },
+                    Message::Ping(_) => {
+                        let _ = sink_arc.lock().await.send(Message::Pong(vec![].into())).await.map_err(|_e| ());
                     }
-                } else if let Message::Close(_) = msg {
-                    events::emit_disconnected(&app_clone);
-                    break;
+                    _ => {}
                 }
             }
         });
 
         Ok(Self {
-            sink: Arc::new(Mutex::new(sink)),
+            sink: sind_arc_copy,
         })
     }
 
@@ -78,7 +88,6 @@ impl WsClient {
     }
 
     pub async fn send(&self, msg: &str) -> Result<(), AppError> {
-        println!("Sending message: {}", msg);
         self.sink
             .lock()
             .await

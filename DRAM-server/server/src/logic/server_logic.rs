@@ -3,14 +3,15 @@ use uuid::Uuid;
 
 use crate::{data_logic::{connection_data::d_get_user_connections, user_data::{d_add_user, d_get_user, d_remove_user, d_update_user}}, 
                         errors::api_error::ApiError, 
-                        logic::{auth_logic::l_generate_auth_token, session_logic::{l_delete_session_by_owner_by_tx, l_forget_session_by_tx}}, 
+                        logic::{session_logic::{l_delete_session_by_owner_by_tx, l_forget_session_by_tx}}, 
                         modules::{active_sessions::SessionMap, user::User}};
 
-pub async fn l_add_user_to_server(db_pool: Pool<Postgres>) -> Result<String, ApiError> {
+pub async fn l_add_user_to_server(db_pool: Pool<Postgres>, public_key: String) -> Result<String, ApiError> {
 
     let new_user: User = User {user_key: l_generate_user_key(), 
                                nickname: chrono::Utc::now().to_string(), // nickname must be unique, should work 
-                               last_time_seen: chrono::Local::now().naive_local() };
+                               last_time_seen: chrono::Local::now().naive_local(),
+                               public_key: public_key };
     
     match d_add_user(db_pool.clone(), &new_user).await {
         Ok(()) => (),
@@ -20,12 +21,10 @@ pub async fn l_add_user_to_server(db_pool: Pool<Postgres>) -> Result<String, Api
     Ok(new_user.user_key)
 }
 
-pub async fn l_connect_user_to_server(db_pool: Pool<Postgres>, user_key: String) -> Result<String, ApiError> {
-    let _user = match d_get_user(db_pool.clone(), &user_key).await {
-        Ok(u) => u,
-        Err(e) => return Err(e.into())
-    };
-    Ok(l_generate_auth_token())
+pub async fn l_connect_user_to_server(db_pool: Pool<Postgres>, user_key: String) -> Result<(), ApiError> {
+    let _user = d_get_user(db_pool.clone(), &user_key).await?;
+    
+    Ok(())
 }
 
 pub async fn l_delete_user_from_server(db_pool: Pool<Postgres>, active_sessions: SessionMap, user_key: String) -> Result<(), ApiError> {
@@ -92,7 +91,6 @@ fn l_generate_user_key() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::user::User;
 
     #[test]
     fn test_generate_user_key_is_not_empty() {
