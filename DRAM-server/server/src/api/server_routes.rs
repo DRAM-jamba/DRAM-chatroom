@@ -6,7 +6,6 @@ pub fn router(server_state: ServerState) -> Router<ServerState> {
     Router::new()
         .route("/connect", put(r_connect_to_server))
         .route("/leave", delete(r_leave_server))
-        .route("/forget", delete(r_forget_server))
         .route("/nickname", patch(r_set_nickname))
         .route("/refresh_token", patch(r_refresh_token))
         .route_layer(middleware::from_fn_with_state(
@@ -14,6 +13,7 @@ pub fn router(server_state: ServerState) -> Router<ServerState> {
             auth_middle
         ))
         .route("/add", post(r_add_server))
+        .route("/forget", delete(r_forget_server))
         .route("/challenge", get(r_create_challenge))
         .route("/token", post(r_handle_challenge))
 }
