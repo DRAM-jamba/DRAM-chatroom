@@ -72,7 +72,7 @@ fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
             println!("[Worker] Attempting to refresh token...");
             if let (Some(ip), Some(token)) = (current_ip, current_token) {
                 if let Some(server) = state_clone.get_server(&ip).await {
-                    let api = crate::api::ServerApi::with_token(&format!("http://{}", ip), token);
+                    let api = crate::api::ServerApi::with_token(&format!("https://{}", ip), token);
                     let payload = serde_json::json!({ "user_key": server.user_key });
 
                     match api
@@ -115,7 +115,7 @@ async fn add_server(
     nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
     let public_key = get_public_key_hex(&*state.get_master_key());
     println!(
         "Adding server with IP: {}, using public key: {}",
@@ -146,7 +146,7 @@ async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), Ap
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     println!(
         "Connecting to server at {} with user key {}",
@@ -218,7 +218,7 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     api.http_delete_authed(
         &api.forget_server(),
@@ -237,24 +237,24 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
 #[tauri::command]
 async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-
+    println!("Setting nickname for server {}: {}", ip, new_nickname);
     let token = state.get_token().await.ok_or_else(|| {
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
-
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    println!("Sending nickname update to server...");
     api.http_patch_authed(
         &api.set_nickname(),
         &serde_json::json!({ "user_key": server.user_key, "nickname": new_nickname }),
     )
     .await?;
 
+    println!("Nickname update sent, updating local state...");
     state
         .save_nickname(&ip, new_nickname)
         .await
         .map_err(|e| AppError::Network(format!("Failed to update nickname: {}", e)))?;
-
     Ok(())
 }
 
@@ -281,7 +281,7 @@ async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppErr
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     let response = api
         .http_get_authed(
@@ -306,7 +306,7 @@ async fn create_session(name: String, state: State<'_, AppState>) -> Result<Stri
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     let response = api
         .http_post_authed(
@@ -331,7 +331,7 @@ async fn add_session(session_key: String, state: State<'_, AppState>) -> Result<
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     api.http_post_authed(
         &api.add_session(),
@@ -349,7 +349,7 @@ async fn connect_session(
     app: AppHandle,
 ) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("http://{}", ip));
+    let api = ServerApi::new(&format!("https://{}", ip));
 
     let ws_url = api.ws();
     let ws_client = client::WsClient::connect(&ws_url, &server.user_key, &session_key, app.clone())
@@ -405,7 +405,7 @@ async fn leave_session(state: State<'_, AppState>, _app: AppHandle) -> Result<()
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     if let SessionState::JoinedSession(ws_client) = &state.get_session_state().await {
         let _ = ws_client.close().await;
@@ -431,7 +431,7 @@ async fn forget_session(session_key: String, state: State<'_, AppState>) -> Resu
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     api.http_delete_authed(
         &api.forget_session(),
@@ -450,7 +450,7 @@ async fn delete_session(session_key: String, state: State<'_, AppState>) -> Resu
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     api.http_delete_authed(
         &api.delete_session(),
@@ -523,7 +523,7 @@ async fn join_voice_chat(
         AppError::Auth("No authentication token".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("http://{}", ip), token);
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     let response = api
         .http_get_authed(

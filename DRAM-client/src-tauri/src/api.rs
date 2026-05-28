@@ -92,6 +92,7 @@ impl ServerApi {
 
     pub async fn http_post_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
         let req = self.inject_auth(reqwest::Client::new().post(url).json(body)).await;
+        println!("POST {} with auth header: {}", url, self.auth_header().unwrap_or("None".to_string()));
         Self::handle_response(req.send().await?).await
     }
 
@@ -112,6 +113,7 @@ impl ServerApi {
 
     pub async fn http_patch_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
         let req = self.inject_auth(reqwest::Client::new().patch(url).json(body)).await;
+        println!("PATCH {} with auth header: {}", url, self.auth_header().unwrap_or("None".to_string()));
         Self::handle_response(req.send().await?).await
     }
 
