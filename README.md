@@ -91,13 +91,14 @@ cd DRAM-chatroom/DRAM-server/server
 
 Edit `docker-compose.yml` and set your own values for:
 - `POSTGRES_PASSWORD` and `DATABASE_URL` — choose a strong database password
-- `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` — choose a strong key and secret
+- `LIVEKIT_API_SECRET` — choose a strong secret
+- `JWT_SECRET` — choose a strong secret
 - `DOMAIN` — set your actual domain
 
 Edit `livekit.yaml` and set the same key/secret:
 ```yaml
 keys:
-  your_key: "your_secret"
+  quorthon_key: "your_secret"
 ```
 
 5. Start the server
