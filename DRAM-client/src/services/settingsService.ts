@@ -41,21 +41,22 @@ export function applyFont(font: Font): void {
 }
 
 
-export function saveMicHotkey(key: string): void {
-  localStorage.setItem(KEYS.micHotkey, key);
+export function saveMicHotkey(key: string | null): void {
+  localStorage.setItem(KEYS.micHotkey, key ?? "");
 }
 
 export function loadMicHotkey(): string | null {
-  return localStorage.getItem(KEYS.micHotkey);
+  const val = localStorage.getItem(KEYS.micHotkey);
+  return val && val.length > 0 ? val : null;
 }
 
-
-export function saveHeadphonesHotkey(key: string): void {
-  localStorage.setItem(KEYS.headphonesHotkey, key);
+export function saveHeadphonesHotkey(key: string | null): void {
+  localStorage.setItem(KEYS.headphonesHotkey, key ?? "");
 }
 
 export function loadHeadphonesHotkey(): string | null {
-  return localStorage.getItem(KEYS.headphonesHotkey);
+  const val = localStorage.getItem(KEYS.headphonesHotkey);
+  return val && val.length > 0 ? val : null;
 }
 
 export function saveMicDevice(deviceId: string): void {

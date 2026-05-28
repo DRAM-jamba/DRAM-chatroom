@@ -1768,7 +1768,7 @@ select.server-input {
 
 .hotkey-key {
   font-size: 12px;
-  min-width: 30px;
+  min-width: 40px;
     padding-left: 2px;
     padding-right: 2px;
   height: 22px;
@@ -1785,7 +1785,7 @@ select.server-input {
 
 .hotkey-set-btn {
   height: 22px;
-  min-width: 30px;
+  min-width: 40px;
     padding-left: 2px;
     padding-right: 2px;
     border: 1px solid var(--border-secondary);
@@ -1811,6 +1811,27 @@ select.server-input {
       color: var(--accent);
 }
 
+.hotkey-remove-btn {
+  height: 22px;
+  min-width: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--danger-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--danger-dim);
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hotkey-remove-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger-bright);
+  box-shadow: 0 0 6px var(--danger-glow);
+}
 .mic-device-list {
   display: flex;
   flex-direction: column;

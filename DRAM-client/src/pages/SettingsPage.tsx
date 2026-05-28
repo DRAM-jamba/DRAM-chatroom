@@ -331,46 +331,78 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
                 <span className="hotkey-label">Mute / Unmute microphone</span>
                 <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                     {micHotkey && listeningFor !== "mic" ? (
-                        <kbd
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <button
+                        className="hotkey-remove-btn"
+                        type="button"
+                        onClick={() => {
+                          setMicHotkey(null);
+                          saveMicHotkey(null);
+                          invoke("register_hotkeys", {
+                            micKey: "",
+                            headphonesKey: headphonesHotkey ?? "",
+                          }).catch(console.error);
+                        }}
+                      >
+                        -
+                      </button>
+                      <kbd
                         className="hotkey-key"
                         style={{ cursor: "pointer" }}
                         onClick={() => setListeningFor("mic")}
                         title="Click to change"
-                        >
+                      >
                         {micHotkey}
-                        </kbd>
-                    ) : (
-                        <button
-                        className={`hotkey-set-btn ${listeningFor === "mic" ? "active" : ""}`}
-                        type="button"
-                        onClick={() => setListeningFor("mic")}
-                        >
-                        {listeningFor === "mic" ? "..." : "set"}
-                        </button>
-                    )}
+                      </kbd>
+                    </div>
+                  ) : (
+                    <button
+                      className={`hotkey-set-btn ${listeningFor === "mic" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => setListeningFor("mic")}
+                    >
+                      {listeningFor === "mic" ? "..." : "set"}
+                    </button>
+                  )}
                     </div>
               </div>
               <div className="hotkey-row">
                 <span className="hotkey-label">Mute / Unmute headphones</span>
                 <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                     {headphonesHotkey && listeningFor !== "headphones" ? (
-                        <kbd
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <button
+                        className="hotkey-remove-btn"
+                        type="button"
+                        onClick={() => {
+                          setHeadphonesHotkey(null);
+                          saveHeadphonesHotkey(null);
+                          invoke("register_hotkeys", {
+                            micKey: micHotkey ?? "",
+                            headphonesKey: "",
+                          }).catch(console.error);
+                        }}
+                      >
+                        -
+                      </button>
+                      <kbd
                         className="hotkey-key"
                         style={{ cursor: "pointer" }}
                         onClick={() => setListeningFor("headphones")}
                         title="Click to change"
-                        >
+                      >
                         {headphonesHotkey}
-                        </kbd>
-                    ) : (
-                        <button
-                        className={`hotkey-set-btn ${listeningFor === "headphones" ? "active" : ""}`}
-                        type="button"
-                        onClick={() => setListeningFor("headphones")}
-                        >
-                        {listeningFor === "headphones" ? "..." : "set"}
-                        </button>
-                    )}
+                      </kbd>
+                    </div>
+                  ) : (
+                    <button
+                      className={`hotkey-set-btn ${listeningFor === "headphones" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => setListeningFor("headphones")}
+                    >
+                      {listeningFor === "headphones" ? "..." : "set"}
+                    </button>
+                  )}
                     </div>
               </div>
             </div>
