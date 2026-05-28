@@ -6,5 +6,6 @@ use sqlx::prelude::FromRow;
 pub struct User {
     pub user_key: String,
     pub nickname: String,
-    pub last_time_seen: chrono::NaiveDateTime
+    pub last_time_seen: chrono::NaiveDateTime,
+    pub public_key: String
 }

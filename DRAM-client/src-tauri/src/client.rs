@@ -2,7 +2,6 @@ use crate::error::AppError;
 use crate::events::{self, emit_message, emit_session_update, emit_user_list, emit_voice_list};
 use crate::models::{MessageObj, MessageType};
 use futures_util::{SinkExt, StreamExt};
-use tokio::io::sink;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::net::TcpStream;
@@ -44,7 +43,6 @@ impl WsClient {
 
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
-                println!("{:?}", msg);
                 match msg {
                     Message::Text(text) => {
                         if let Err(e) = Self::handle_incoming(&app_clone, &text) {
@@ -56,7 +54,6 @@ impl WsClient {
                         break;
                     },
                     Message::Ping(_) => {
-                        println!("ping received, pong send");
                         let _ = sink_arc.lock().await.send(Message::Pong(vec![].into())).await.map_err(|_e| ());
                     }
                     _ => {}
@@ -91,7 +88,6 @@ impl WsClient {
     }
 
     pub async fn send(&self, msg: &str) -> Result<(), AppError> {
-        println!("Sending message: {}", msg);
         self.sink
             .lock()
             .await

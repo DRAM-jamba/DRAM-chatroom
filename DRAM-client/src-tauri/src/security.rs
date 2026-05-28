@@ -1,5 +1,7 @@
 use keyring::Entry;
 use rand::Rng;
+use ed25519_dalek::{SigningKey, VerifyingKey};
+use sha2::{Sha256, Digest};
 
 pub fn get_or_create_master_key() -> Result<[u8; 32], Box<dyn std::error::Error>> {
     let service = "com.quorthon.app.vault";
@@ -16,6 +18,23 @@ pub fn get_or_create_master_key() -> Result<[u8; 32], Box<dyn std::error::Error>
         }
         Err(e) => Err(e.into()),
     }
+}
+
+pub fn derive_identity_keypair(master_key: &[u8; 32]) -> (SigningKey, VerifyingKey) {
+    let mut hasher = Sha256::new();
+        hasher.update(b"identity_key_derivation_v1"); // hardcoding is fine
+        hasher.update(master_key);
+    
+    let seed: [u8; 32] = hasher.finalize().into();
+    let private_key = SigningKey::from_bytes(&seed);
+    let public_key = private_key.verifying_key();
+    
+    (private_key, public_key)
+}
+
+pub fn get_public_key_hex(master_key: &[u8; 32]) -> String {
+    let (_, public_key) = derive_identity_keypair(master_key);
+    hex::encode(public_key.to_bytes())
 }
 
 // Test & Validator
