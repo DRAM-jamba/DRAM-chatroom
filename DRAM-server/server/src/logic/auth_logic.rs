@@ -1,5 +1,6 @@
+use std::env;
+
 use chrono::{Duration, Utc};
-use dotenvy_macro::dotenv;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use sqlx::{Pool, Postgres};
@@ -102,7 +103,8 @@ pub async fn l_create_jwt(user_key: &String) -> Result<String, ApiError> {
     let exp = now.timestamp() as usize;
     let claim = Claims {exp, iat, sub: user_key.to_string()};
 
-    let secret = dotenv!("JWT_SECRET");
+    let secret = env::var("JWT_SECRET")
+        .map_err(|_| ApiError::InternalError)?;
     let key = EncodingKey::from_secret(secret.as_bytes());
 
     encode(&Header::default(), &claim, &key)
@@ -111,7 +113,8 @@ pub async fn l_create_jwt(user_key: &String) -> Result<String, ApiError> {
 
 pub async fn l_is_valid(token: &String) -> Result<Claims, ApiError> {
     
-    let secret = dotenv!("JWT_SECRET");
+    let secret = env::var("JWT_SECRET")
+        .map_err(|_| ApiError::InternalError)?;
     let key = DecodingKey::from_secret(secret.as_bytes());
     let claim = decode::<Claims>(token, &key, &Validation::default())
         .map_err(|e| match e.kind() {
