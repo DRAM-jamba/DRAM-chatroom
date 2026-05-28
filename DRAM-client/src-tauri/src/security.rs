@@ -47,6 +47,7 @@ pub fn validate_hex_key(hex_str: &str) -> Result<[u8; 32], Box<dyn std::error::E
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ed25519_dalek::{Signer, Verifier};
 
     #[test]
     fn test_validate_hex_key_valid() {
@@ -162,5 +163,145 @@ mod tests {
         for byte in key.iter() {
             assert_eq!(*byte, 0xFF);
         }
+    }
+
+    #[test]
+    fn test_derive_identity_keypair_produces_valid_keys() {
+        let master_key: [u8; 32] = rand::thread_rng().gen();
+        let (signing_key, verifying_key) = derive_identity_keypair(&master_key);
+        
+        // Both keys should be non-zero
+        assert_ne!(signing_key.to_bytes(), [0u8; 32]);
+        assert_ne!(verifying_key.to_bytes(), [0u8; 32]);
+    }
+
+    #[test]
+    fn test_derive_identity_keypair_deterministic() {
+        let master_key: [u8; 32] = [42u8; 32];
+        let (signing_key1, verifying_key1) = derive_identity_keypair(&master_key);
+        let (signing_key2, verifying_key2) = derive_identity_keypair(&master_key);
+        
+        // Same master key should produce identical keypairs
+        assert_eq!(signing_key1.to_bytes(), signing_key2.to_bytes());
+        assert_eq!(verifying_key1.to_bytes(), verifying_key2.to_bytes());
+    }
+
+    #[test]
+    fn test_derive_identity_keypair_different_masters() {
+        let master_key1: [u8; 32] = [1u8; 32];
+        let master_key2: [u8; 32] = [2u8; 32];
+        
+        let (_signing_key1, verifying_key1) = derive_identity_keypair(&master_key1);
+        let (_signing_key2, verifying_key2) = derive_identity_keypair(&master_key2);
+        
+        // Different master keys should produce different public keys
+        assert_ne!(verifying_key1.to_bytes(), verifying_key2.to_bytes());
+    }
+
+    #[test]
+    fn test_derive_identity_keypair_signature_verification() {
+        let master_key: [u8; 32] = rand::thread_rng().gen();
+        let (signing_key, verifying_key) = derive_identity_keypair(&master_key);
+        
+        let message = b"test message";
+        let signature = signing_key.sign(message);
+        
+        // Verify the signature is valid
+        assert!(verifying_key.verify(message, &signature).is_ok());
+    }
+
+    #[test]
+    fn test_derive_identity_keypair_signature_verification_fails_with_wrong_message() {
+        let master_key: [u8; 32] = rand::thread_rng().gen();
+        let (signing_key, verifying_key) = derive_identity_keypair(&master_key);
+        
+        let message = b"original message";
+        let wrong_message = b"modified message";
+        let signature = signing_key.sign(message);
+        
+        // Verify should fail with different message
+        assert!(verifying_key.verify(wrong_message, &signature).is_err());
+    }
+
+    #[test]
+    fn test_get_public_key_hex_returns_valid_hex() {
+        let master_key: [u8; 32] = rand::thread_rng().gen();
+        let public_key_hex = get_public_key_hex(&master_key);
+        
+        // Result should be a valid hex string of correct length (32 bytes = 64 hex chars)
+        let result = validate_hex_key(&public_key_hex);
+        assert!(result.is_ok());
+        assert_eq!(public_key_hex.len(), 64);
+    }
+
+    #[test]
+    fn test_get_public_key_hex_deterministic() {
+        let master_key: [u8; 32] = [123u8; 32];
+        let hex1 = get_public_key_hex(&master_key);
+        let hex2 = get_public_key_hex(&master_key);
+        
+        // Same master key should produce same public key hex
+        assert_eq!(hex1, hex2);
+    }
+
+    #[test]
+    fn test_get_public_key_hex_different_for_different_masters() {
+        let master_key1: [u8; 32] = [1u8; 32];
+        let master_key2: [u8; 32] = [2u8; 32];
+        
+        let hex1 = get_public_key_hex(&master_key1);
+        let hex2 = get_public_key_hex(&master_key2);
+        
+        // Different master keys should produce different public keys
+        assert_ne!(hex1, hex2);
+    }
+
+    #[test]
+    fn test_get_public_key_hex_matches_keypair_derivation() {
+        let master_key: [u8; 32] = rand::thread_rng().gen();
+        
+        let hex_key = get_public_key_hex(&master_key);
+        let (_signing_key, verifying_key) = derive_identity_keypair(&master_key);
+        
+        // The hex string should match the encoded verifying key
+        assert_eq!(hex_key, hex::encode(verifying_key.to_bytes()));
+    }
+
+    #[test]
+    fn test_identity_keypair_key_consistency() {
+        let master_key: [u8; 32] = [99u8; 32];
+        let (signing_key, _) = derive_identity_keypair(&master_key);
+        
+        // The derived signing key should be usable
+        let test_msg = b"consistency test";
+        let sig = signing_key.sign(test_msg);
+        
+        // Signature should be 64 bytes for Ed25519
+        assert_eq!(sig.to_bytes().len(), 64);
+    }
+
+    #[test]
+    fn test_derive_identity_uses_consistent_derivation_constant() {
+        // Test that the derivation is consistent by checking determinism
+        let master_key: [u8; 32] = [77u8; 32];
+        
+        let mut hashes = Vec::new();
+        for _ in 0..3 {
+            let (_, verifying_key) = derive_identity_keypair(&master_key);
+            hashes.push(hex::encode(verifying_key.to_bytes()));
+        }
+        
+        // All three derivations should produce identical results
+        assert_eq!(hashes[0], hashes[1]);
+        assert_eq!(hashes[1], hashes[2]);
+    }
+
+    #[test]
+    fn test_public_key_hex_lowercase() {
+        let master_key: [u8; 32] = rand::thread_rng().gen();
+        let hex = get_public_key_hex(&master_key);
+        
+        // Public key hex should be lowercase
+        assert_eq!(hex, hex.to_lowercase());
     }
 }

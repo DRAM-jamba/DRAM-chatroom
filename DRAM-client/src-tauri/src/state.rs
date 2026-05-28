@@ -106,7 +106,6 @@ impl AppState {
         let store = handle.store("app_data.json")?;
 
         let Some(val) = store.get("servers_list") else {
-            println!("[state] No servers_list found in store");
             return Ok(());
         };
 
@@ -126,7 +125,6 @@ impl AppState {
             .map_err(|e| format!("Decrypt error: {}", e))?;
 
         let servers_vec = serde_json::from_slice::<Vec<PersistedServer>>(&plaintext)?;
-        println!("[state] Loaded {} servers from store", servers_vec.len());
         *self.servers.lock().await = servers_vec;
 
         Ok(())
