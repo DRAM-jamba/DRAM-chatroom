@@ -38,32 +38,24 @@ async fn get_server_context(
 }
 
 async fn solve_challenge(
-    state: tauri::State<'_, AppState>,
+    master_key: &[u8; 32],
     challenge_hex: String,
+    user_key: String,
 ) -> Result<ChallengeSolvePayload, String> {
-    use ed25519_dalek::Signer;
-
-    let signing_key = security::derive_identity_keypair(&*state.get_master_key())
-        .0
-        .to_owned();
-
+    use ed25519_dalek::Signer; 
+    let signing_key = security::derive_identity_keypair(master_key).0;
     let signature = signing_key.sign(challenge_hex.as_bytes());
-
     Ok(ChallengeSolvePayload {
         nonce: challenge_hex,
         signature: hex::encode(signature.to_bytes()),
-        user_key: get_server_context(&state)
-            .await
-            .map_err(|e| e.to_string())?
-            .1
-            .user_key,
+        user_key,
     })
 }
 
 // I genuinely hate how this looks
 fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
     let state_clone = state.inner().clone();
-
+    println!("Starting token refresh worker...");
     let handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(7 * 60));
         interval.tick().await;
@@ -73,10 +65,14 @@ fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
 
             let current_ip = state_clone.get_current_ip().await;
             let current_token = state_clone.get_token().await;
-
+            println!(
+                "[Worker] Tick: Current IP: {:?}, Current Token: {:?}",
+                current_ip, current_token
+            );
+            println!("[Worker] Attempting to refresh token...");
             if let (Some(ip), Some(token)) = (current_ip, current_token) {
                 if let Some(server) = state_clone.get_server(&ip).await {
-                    let api = crate::api::ServerApi::with_token(&format!("https://{}", ip), token);
+                    let api = crate::api::ServerApi::with_token(&format!("http://{}", ip), token);
                     let payload = serde_json::json!({ "user_key": server.user_key });
 
                     match api
@@ -119,9 +115,12 @@ async fn add_server(
     nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let api = ServerApi::new(&format!("http://{}", ip));
     let public_key = get_public_key_hex(&*state.get_master_key());
-
+    println!(
+        "Adding server with IP: {}, using public key: {}",
+        ip, public_key
+    );
     let response = ServerApi::http_post(
         &api.add_server(),
         &serde_json::json!({ "public_key": public_key }),
@@ -132,11 +131,6 @@ async fn add_server(
         .json()
         .await
         .map_err(|e| AppError::Protocol(format!("Failed to parse user key: {}", e)))?;
-
-    state.set_connection_ip(ip.clone()).await;
-    state
-        .set_connection_state(ServerConnectionState::Connected)
-        .await;
 
     state
         .add_server(ip, nickname, json_response.user_key)
@@ -152,25 +146,34 @@ async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), Ap
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let api = ServerApi::new(&format!("http://{}", ip));
 
-    let challenge_response = ServerApi::http_post(
+    println!(
+        "Connecting to server at {} with user key {}",
+        ip, server.user_key
+    );
+    let challenge_response = ServerApi::http_get(
         &api.challenge(),
         &serde_json::json!({ "user_key": server.user_key }),
     )
     .await?;
+    println!("Received challenge response: {:?}", challenge_response);
 
     let challenge_data: models::ChallengeFromServer = challenge_response
         .json()
         .await
         .map_err(|e| AppError::Protocol(format!("Failed to parse challenge: {}", e)))?;
-
-    let challenge_payload = solve_challenge(state.clone(), challenge_data.challenge)
-        .await
-        .map_err(|e| AppError::Auth(e))?;
-
+    println!("Parsed challenge data: {:?}", challenge_data);
+    let challenge_payload = solve_challenge(
+        &*state.get_master_key(),
+        challenge_data.challenge,
+        server.user_key, // from earlier
+    )
+    .await
+    .map_err(|e| AppError::Auth(e))?;
+    println!("Solved challenge: {:?}", challenge_payload);
     let token_response = ServerApi::http_post(&api.token_url(), &challenge_payload).await?;
-
+    println!("Received token response: {:?}", token_response);
     let token_data: models::TokenResponse = token_response
         .json()
         .await
@@ -215,7 +218,7 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     api.http_delete_authed(
         &api.forget_server(),
@@ -239,7 +242,7 @@ async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Resul
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     api.http_patch_authed(
         &api.set_nickname(),
@@ -278,7 +281,7 @@ async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppErr
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     let response = api
         .http_get_authed(
@@ -303,7 +306,7 @@ async fn create_session(name: String, state: State<'_, AppState>) -> Result<Stri
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     let response = api
         .http_post_authed(
@@ -328,7 +331,7 @@ async fn add_session(session_key: String, state: State<'_, AppState>) -> Result<
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     api.http_post_authed(
         &api.add_session(),
@@ -346,7 +349,7 @@ async fn connect_session(
     app: AppHandle,
 ) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let api = ServerApi::new(&format!("http://{}", ip));
 
     let ws_url = api.ws();
     let ws_client = client::WsClient::connect(&ws_url, &server.user_key, &session_key, app.clone())
@@ -402,7 +405,7 @@ async fn leave_session(state: State<'_, AppState>, _app: AppHandle) -> Result<()
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     if let SessionState::JoinedSession(ws_client) = &state.get_session_state().await {
         let _ = ws_client.close().await;
@@ -428,7 +431,7 @@ async fn forget_session(session_key: String, state: State<'_, AppState>) -> Resu
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     api.http_delete_authed(
         &api.forget_session(),
@@ -447,7 +450,7 @@ async fn delete_session(session_key: String, state: State<'_, AppState>) -> Resu
         AppError::Auth("No authentication token. Connect to server first.".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     api.http_delete_authed(
         &api.delete_session(),
@@ -511,13 +514,16 @@ async fn join_voice_chat(
     session_key: String,
     state: State<'_, AppState>,
 ) -> Result<models::VoiceChatInfo, AppError> {
+    // Might be problematic, need to test with actual domain
     let (ip, server) = get_server_context(&state).await?;
+    let host = ip.split(':').next().unwrap_or(&ip);
+    let lk_url = format!("ws://{}:7880", host);
 
     let token = state.get_token().await.ok_or_else(|| {
-        AppError::Auth("No authentication token. Connect to server first.".into())
+        AppError::Auth("No authentication token".into())
     })?;
 
-    let api = ServerApi::with_token(&format!("https://{}", ip), token);
+    let api = ServerApi::with_token(&format!("http://{}", ip), token);
 
     let response = api
         .http_get_authed(
@@ -529,9 +535,7 @@ async fn join_voice_chat(
     let json_response: models::VoiceToken = response
         .json()
         .await
-        .map_err(|e| AppError::Protocol(format!("Invalid voice token response: {}", e)))?;
-
-    let lk_url = format!("wss://{}", ip);
+        .map_err(|e| AppError::Protocol(format!("Invalid voice token: {}", e)))?;
 
     Ok(models::VoiceChatInfo {
         token: json_response.token,

@@ -98,19 +98,19 @@ pub struct UserKeyPayload {
     pub user_key: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ChallengeFromServer {
     pub challenge: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ChallengeSolvePayload {
     pub nonce: String,
     pub signature: String,
     pub user_key: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct TokenResponse {
     pub token: String,
 }
