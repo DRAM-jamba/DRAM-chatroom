@@ -141,65 +141,61 @@ pub async fn l_ensure_session_is_not_active(active_sessions: SessionMap, session
     Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::collections::HashMap;
-//     use std::sync::Arc;
-//     use tokio::sync::RwLock;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
 
-//     // hardcoded for now but at least shouldnt be empty
-//     #[test]
-//     fn test_generate_auth_token_not_empty() {
-//         let token = l_generate_auth_token();
-//         assert!(!token.is_empty());
-//     }
+    // function should generate jwt token
+    #[tokio::test]
+    async fn test_generate_auth_token_not_empty() {
+        let user_key = "d7971486-5a04-4208-985b-5f08ba7847ac".to_string();
+        let token = match l_create_jwt(&user_key).await {
+            Ok(t) => t,
+            Err(_e) => "".to_string()
+        };
+        assert!(!token.is_empty());
+    }
 
-//     // calling twice should give the same thing since its hardcoded
-//     #[test]
-//     fn test_generate_auth_token_consistent() {
-//         let t1 = l_generate_auth_token();
-//         let t2 = l_generate_auth_token();
-//         assert_eq!(t1, t2);
-//     }
+    // user not in the active map - route should be allowed
+    #[tokio::test]
+    async fn test_check_active_user_not_in_map() {
+        let map: UsersMap = Arc::new(RwLock::new(HashMap::new()));
+        let key = "somekey".to_string();
+        let result = l_ensure_user_not_in_session(map, &key).await;
+        assert!(result.is_ok());
+    }
 
-//     // user not in the active map - route should be allowed
-//     #[tokio::test]
-//     async fn test_check_active_user_not_in_map() {
-//         let map: UsersMap = Arc::new(RwLock::new(HashMap::new()));
-//         let key = "somekey".to_string();
-//         let result = l_ensure_user_not_in_session(map, &key).await;
-//         assert!(result.is_ok());
-//     }
+    // user is in the map meaning they are in a ws session - should block them
+    #[tokio::test]
+    async fn test_check_active_user_in_map_gives_error() {
+        let map: UsersMap = Arc::new(RwLock::new(HashMap::new()));
+        map.write().await.insert("busykey".to_string(), "session1".to_string());
+        let key = "busykey".to_string();
+        let result = l_ensure_user_not_in_session(map, &key).await;
+        assert!(result.is_err());
+    }
 
-//     // user is in the map meaning they are in a ws session - should block them
-//     #[tokio::test]
-//     async fn test_check_active_user_in_map_gives_error() {
-//         let map: UsersMap = Arc::new(RwLock::new(HashMap::new()));
-//         map.write().await.insert("busykey".to_string(), "session1".to_string());
-//         let key = "busykey".to_string();
-//         let result = l_ensure_user_not_in_session(map, &key).await;
-//         assert!(result.is_err());
-//     }
+    // session not in active map - should be fine
+    #[tokio::test]
+    async fn test_check_active_session_not_in_map() {
+        use crate::modules::active_sessions::{SessionMap};
+        let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let key = "somesession".to_string();
+        let result = l_ensure_session_is_not_active(map, &key).await;
+        assert!(result.is_ok());
+    }
 
-//     // session not in active map - should be fine
-//     #[tokio::test]
-//     async fn test_check_active_session_not_in_map() {
-//         use crate::modules::active_sessions::{SessionMap};
-//         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-//         let key = "somesession".to_string();
-//         let result = l_ensure_session_is_not_active(map, &key).await;
-//         assert!(result.is_ok());
-//     }
-
-//     // session is active - should return error
-//     #[tokio::test]
-//     async fn test_check_active_session_in_map_gives_error() {
-//         use crate::modules::active_sessions::{SessionMap, SessionChat};
-//         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-//         map.write().await.insert("activesession".to_string(), SessionChat::new());
-//         let key = "activesession".to_string();
-//         let result = l_ensure_session_is_not_active(map, &key).await;
-//         assert!(result.is_err());
-//     }
-// }
+    // session is active - should return error
+    #[tokio::test]
+    async fn test_check_active_session_in_map_gives_error() {
+        use crate::modules::active_sessions::{SessionMap, SessionChat};
+        let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        map.write().await.insert("activesession".to_string(), SessionChat::new());
+        let key = "activesession".to_string();
+        let result = l_ensure_session_is_not_active(map, &key).await;
+        assert!(result.is_err());
+    }
+}
