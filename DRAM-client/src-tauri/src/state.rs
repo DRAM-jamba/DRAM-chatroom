@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 use aes_gcm::{Aes256Gcm, Key, Nonce, aead::{Aead, KeyInit}};
 use rand::Rng;
@@ -28,6 +29,7 @@ pub struct AppState {
     connection: Arc<Mutex<ServerConnectionState>>,
     session: Arc<Mutex<SessionState>>,
     current_token: Arc<Mutex<Option<String>>>,
+    refresh_task: Arc<Mutex<Option<JoinHandle<()>>>>,
     app_handle: Option<AppHandle>,
 }
 
@@ -40,8 +42,18 @@ impl AppState {
             connection: Arc::new(Mutex::new(ServerConnectionState::Disconnected)),
             session: Arc::new(Mutex::new(SessionState::Idle)),
             current_token: Arc::new(Mutex::new(None)),
+            refresh_task: Arc::new(Mutex::new(None)),
             app_handle: Some(app_handle),
         }
+    }
+
+    // Refresh task management
+    pub async fn set_refresh_task(&self, new_task: Option<JoinHandle<()>>) {
+        let mut task_guard = self.refresh_task.lock().await;
+        if let Some(existing_task) = task_guard.take() {
+            existing_task.abort();
+        }
+        *task_guard = new_task;
     }
 
     // Master key getter
