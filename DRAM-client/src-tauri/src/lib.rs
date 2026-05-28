@@ -7,8 +7,7 @@ use crate::models::{
 use crate::security::get_public_key_hex;
 use crate::state::{AppState, ServerConnectionState, SessionState};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri::{AppHandle, Manager, State};
 
 pub mod api;
 mod client;
