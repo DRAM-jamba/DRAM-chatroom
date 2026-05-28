@@ -26,8 +26,31 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
     getServers().then(setServers);
   }, []);
 
+  const isValidAddress = (ip: string): boolean => {
+    return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:\d+)?$|^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(ip.trim());
+  };
+
   const handleAddServer = async () => {
-    if (!newServerName.trim() || !newServerIp.trim()) return;
+    if (!newServerName.trim() && !newServerIp.trim()) {
+      setError("Name and address can't be empty.");
+      return;
+    }
+    if (!newServerName.trim()) {
+      setError("Name can't be empty.");
+      return;
+    }
+    if (!newServerIp.trim()) {
+      setError("Address can't be empty.");
+      return;
+    }
+    if (!isValidAddress(newServerIp)) {
+      setError("Address is invalid.");
+      return;
+    }
+    if (servers.some((s) => s.ipAddress === newServerIp.trim())) {
+      setError("This server already exists.");
+      return;
+    }
     setError(null);
     try {
       await addServer({ nickname: newServerName, ip: newServerIp });
@@ -37,7 +60,7 @@ function ServersPage({ onOpenSessions }: ServersPageProps) {
       setNewServerIp("");
       setShowAddForm(false);
     } catch (e: any) {
-      setError(e?.message ?? String(e));
+      setError("Connection failed: Invalid or inactive link.");
     }
   };
 
