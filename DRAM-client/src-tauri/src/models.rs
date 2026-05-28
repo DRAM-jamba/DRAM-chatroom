@@ -81,3 +81,42 @@ pub struct BackMessageObj {
     pub m_type: MessageType,
     pub body: String,
 }
+
+// Auth structs
+#[derive(Serialize)]
+pub struct PublicKeyPayload {
+    pub public_key: String,
+}
+
+#[derive(Deserialize)]
+pub struct AddServerResponse {
+    pub user_key: String,
+}
+
+#[derive(Serialize)]
+pub struct UserKeyPayload {
+    pub user_key: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ChallengeFromServer {
+    pub challenge: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ChallengeSolvePayload {
+    pub nonce: String,
+    pub signature: String,
+    pub user_key: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TokenResponse {
+    pub token: String,
+}
+
+// Error payloads
+#[derive(serde::Deserialize)]
+pub struct ServerErrorPayload {
+    pub error: String,
+}
