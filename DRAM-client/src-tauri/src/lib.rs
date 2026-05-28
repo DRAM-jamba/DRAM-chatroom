@@ -52,8 +52,8 @@ async fn solve_challenge(
     let signing_key = security::derive_identity_keypair(&*state.get_master_key())
         .0
         .to_owned();
-    let challenge_bytes = hex::decode(&challenge_hex).map_err(|e| e.to_string())?;
-    let signature = signing_key.sign(&challenge_bytes);
+        
+    let signature = signing_key.sign(challenge_hex.as_bytes());
 
     Ok(ChallengeSolvePayload {
         nonce: challenge_hex,
