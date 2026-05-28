@@ -81,3 +81,9 @@ pub struct BackMessageObj {
     pub m_type: MessageType,
     pub body: String,
 }
+
+// Error payloads
+#[derive(serde::Deserialize)]
+pub struct ServerErrorPayload {
+    pub error: String,
+}

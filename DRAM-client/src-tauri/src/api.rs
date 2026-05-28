@@ -1,4 +1,5 @@
 use crate::error::AppError;
+use crate::models::ServerErrorPayload;
 
 pub struct ServerApi {
     base_url: String,
@@ -58,13 +59,43 @@ impl ServerApi {
         format!("{}/session/connect", self.base_url.replace("http", "ws"))
     }
 
+    async fn handle_response(response: reqwest::Response) -> Result<reqwest::Response, AppError> {
+        if response.status().is_success() {
+            return Ok(response);
+        }
+
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+
+        let error_msg = match serde_json::from_str::<ServerErrorPayload>(&error_text) {
+            Ok(payload) => {
+                if payload.error.contains("violates foreign key constraint") {
+                    "The provided key does not exist or is invalid.".to_string()
+                } else if payload.error.contains("violates unique constraint") {
+                    "This entry already exists.".to_string()
+                } else {
+                    payload.error
+                }
+            }
+            Err(_) => {
+                if error_text.is_empty() {
+                    "No error details provided by server".to_string()
+                } else {
+                    error_text
+                }
+            }
+        };
+
+        Err(AppError::Protocol(format!("{} (Status: {})", error_msg, status.as_u16())))
+    }
+
     pub async fn http_post_empty(url: &str) -> Result<reqwest::Response, AppError> {
         let response = reqwest::Client::new()
             .post(url)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 
     pub async fn http_post<B: serde::Serialize>(
@@ -75,9 +106,9 @@ impl ServerApi {
             .post(url)
             .json(body)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 
     pub async fn http_put<B: serde::Serialize>(
@@ -88,18 +119,18 @@ impl ServerApi {
             .put(url)
             .json(body)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 
     pub async fn http_delete_empty(url: &str) -> Result<reqwest::Response, AppError> {
         let response = reqwest::Client::new()
             .delete(url)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 
     pub async fn http_delete<B: serde::Serialize>(
@@ -110,9 +141,9 @@ impl ServerApi {
             .delete(url)
             .json(body)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 
     pub async fn http_get<B: serde::Serialize>(
@@ -123,9 +154,9 @@ impl ServerApi {
             .get(url)
             .json(body)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 
     pub async fn http_patch<B: serde::Serialize>(
@@ -136,8 +167,8 @@ impl ServerApi {
             .patch(url)
             .json(body)
             .send()
-            .await?
-            .error_for_status()?;
-        Ok(response)
+            .await?;
+            
+        Self::handle_response(response).await
     }
 }
