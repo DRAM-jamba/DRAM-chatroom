@@ -130,8 +130,6 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
     const handleKeyDown = (e: KeyboardEvent) => {
       const micKey = loadMicHotkey() ?? "";
       const headphonesKey = loadHeadphonesHotkey() ?? "";
-      console.log("Registering hotkeys:", micKey, headphonesKey);
-      invoke("register_hotkeys", { micKey, headphonesKey }).catch(console.error);
 
       if (micKey && getHotkeyString(e) === micKey) {
         handleToggleMute();
