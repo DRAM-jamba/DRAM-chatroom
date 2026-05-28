@@ -54,7 +54,6 @@ async fn solve_challenge(
 
 fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
     let state_clone = state.inner().clone();
-    println!("Starting token refresh worker...");
     let handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(7 * 60));
         interval.tick().await;
@@ -64,11 +63,6 @@ fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
 
             let current_ip = state_clone.get_current_ip().await;
             let current_token = state_clone.get_token().await;
-            println!(
-                "[Worker] Tick: Current IP: {:?}, Current Token: {:?}",
-                current_ip, current_token
-            );
-            println!("[Worker] Attempting to refresh token...");
             if let (Some(ip), Some(token)) = (current_ip, current_token) {
                 if let Some(server) = state_clone.get_server(&ip).await {
                     let api = crate::api::ServerApi::with_token(&format!("https://{}", ip), token);
@@ -85,7 +79,6 @@ fn start_token_refresh_worker(state: tauri::State<'_, AppState>) {
                             }
                             if let Ok(json_res) = response.json::<TokenResponse>().await {
                                 state_clone.set_token(json_res.token).await;
-                                println!("[Worker] Token refreshed successfully");
                             }
                         }
                         Err(e) => {
@@ -116,10 +109,6 @@ async fn add_server(
 ) -> Result<(), AppError> {
     let api = ServerApi::new(&format!("https://{}", ip));
     let public_key = get_public_key_hex(&*state.get_master_key());
-    println!(
-        "Adding server with IP: {}, using public key: {}",
-        ip, public_key
-    );
     let response = ServerApi::http_post(
         &api.add_server(),
         &serde_json::json!({ "public_key": public_key }),
@@ -767,6 +756,10 @@ mod tests {
         assert_eq!(servers[1].ip, "192.168.1.1:8080");
         assert_eq!(servers[0].user_nickname, Some("TestUser".to_string()));
         assert_eq!(servers[1].user_nickname, None);
+        // Check camelCase serialization
+        let json = serde_json::to_string(&servers[0]).unwrap();
+        assert!(json.contains("ipAddress"));
+        assert!(json.contains("name"));
     }
 
     #[test]
@@ -796,6 +789,16 @@ mod tests {
         assert_eq!(session_list.user_sessions[0].name, "General Chat");
         assert_eq!(session_list.user_sessions[0].user_role, "member");
         assert_eq!(session_list.user_sessions[1].user_role, "admin");
+        // Check camelCase deserialization
+        let camel_json = r#"{
+            \"user_sessions\": [
+                {\"sessionKey\": \"session_abc123\", \"sessionName\": \"General Chat\", \"userRole\": \"member\"}
+            ]
+        }"#;
+        let session_list: models::SessionList = serde_json::from_str(camel_json).unwrap();
+        assert_eq!(session_list.user_sessions[0].id, "session_abc123");
+        assert_eq!(session_list.user_sessions[0].name, "General Chat");
+        assert_eq!(session_list.user_sessions[0].user_role, "member");
     }
 
     #[test]

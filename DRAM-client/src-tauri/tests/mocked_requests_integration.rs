@@ -1,3 +1,40 @@
+#[test]
+fn test_server_api_auth_endpoints() {
+    let api = ServerApi::new("http://192.168.1.1:8080");
+    assert_eq!(api.challenge(), "http://192.168.1.1:8080/server/challenge");
+    assert_eq!(api.token_url(), "http://192.168.1.1:8080/server/token");
+    assert_eq!(api.refresh_token_url(), "http://192.168.1.1:8080/server/refresh_token");
+}
+#[test]
+fn test_token_response_parsing() {
+    let json = r#"{"token":"tok_123456"}"#;
+    let token: dram_client_lib::models::TokenResponse = serde_json::from_str(json).expect("Failed to parse TokenResponse");
+    assert_eq!(token.token, "tok_123456");
+}
+#[test]
+fn test_challenge_from_server_parsing() {
+    let json = r#"{"challenge":"abcdef123456"}"#;
+    let challenge: dram_client_lib::models::ChallengeFromServer = serde_json::from_str(json).expect("Failed to parse ChallengeFromServer");
+    assert_eq!(challenge.challenge, "abcdef123456");
+}
+#[test]
+fn test_challenge_solve_payload_serialization() {
+    let payload = dram_client_lib::models::ChallengeSolvePayload {
+        nonce: "nonce123".to_string(),
+        signature: "sig456".to_string(),
+        user_key: "user789".to_string(),
+    };
+    let json = serde_json::to_string(&payload).expect("Failed to serialize ChallengeSolvePayload");
+    assert!(json.contains("nonce123"));
+    assert!(json.contains("sig456"));
+    assert!(json.contains("user789"));
+}
+#[test]
+fn test_server_error_payload_parsing() {
+    let json = r#"{"error":"Something went wrong"}"#;
+    let err: dram_client_lib::models::ServerErrorPayload = serde_json::from_str(json).expect("Failed to parse ServerErrorPayload");
+    assert_eq!(err.error, "Something went wrong");
+}
 use dram_client_lib::models::{UserKey, SessionList, SessionKey, VoiceToken, Session};
 use dram_client_lib::api::ServerApi;
 
