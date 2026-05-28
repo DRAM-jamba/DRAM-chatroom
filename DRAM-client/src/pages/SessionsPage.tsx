@@ -53,12 +53,21 @@ function SessionsPage({
     getSessions().then(setSessions);
   }, []);
 
+
   const handleNicknameConfirm = async () => {
     const trimmed = nicknameInput.trim();
-    if (!trimmed) return;
-    await updateNickname(trimmed);
-    setIsEditingNickname(false);
-    onNicknameChange?.(trimmed);
+    if (!trimmed) {
+      setError("Invalid nickname.");
+      return;
+    }
+    try {
+      await updateNickname(trimmed);
+      setError(null);
+      setIsEditingNickname(false);
+      onNicknameChange?.(trimmed);
+    } catch {
+      setError("Invalid nickname.");
+    }
   };
 
   const handleNicknameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -80,7 +89,10 @@ function SessionsPage({
   };
 
   const handleCreateConfirm = async () => {
-    if (!sessionNameInput.trim()) return;
+    if (!sessionNameInput.trim()) {
+      setError("Invalid session name.");
+      return;
+    }
 
     const nameExists = sessions.some(
       (s) => s.name.toLowerCase() === sessionNameInput.trim().toLowerCase()
@@ -170,9 +182,8 @@ function SessionsPage({
     try {
       await deleteSession(sessionKey);
       setSessions((prev) => prev.filter((s) => s.id !== sessionKey));
-    } catch (error) {
-      console.error("Failed to delete session:", error);
-      getSessions().then(setSessions);
+    } catch {
+      setError("Some user is using this session right now.");
     }
   };
 
@@ -375,6 +386,7 @@ function SessionsPage({
             </div>
           )}
 
+          {view === "list" && error && <p className="error-text">{error}</p>}
           <div
             className={`server-list-container ${
               view !== "list" ? "session-list-hidden" : ""
