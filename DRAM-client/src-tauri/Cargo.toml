@@ -1,8 +1,8 @@
 [package]
 name = "quorthon"
-version = "0.69.0"
+version = "1.0.0"
 description = "Chat here"
-authors = ["you"]
+authors = ["DRAM-jamba"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

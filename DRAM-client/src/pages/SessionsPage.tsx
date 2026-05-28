@@ -456,7 +456,7 @@ function SessionsPage({
             )}
           </div>
 
-          <p className="version-text">ver. 0.69</p>
+          <p className="version-text">ver. 1.0.0</p>
         </div>
       </aside>
     </div>
