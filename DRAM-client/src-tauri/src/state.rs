@@ -27,6 +27,7 @@ pub struct AppState {
     current_ip: Arc<Mutex<Option<String>>>,
     connection: Arc<Mutex<ServerConnectionState>>,
     session: Arc<Mutex<SessionState>>,
+    current_token: Arc<Mutex<Option<String>>>,
     app_handle: Option<AppHandle>,
 }
 
@@ -38,11 +39,30 @@ impl AppState {
             current_ip: Arc::new(Mutex::new(None)),
             connection: Arc::new(Mutex::new(ServerConnectionState::Disconnected)),
             session: Arc::new(Mutex::new(SessionState::Idle)),
+            current_token: Arc::new(Mutex::new(None)),
             app_handle: Some(app_handle),
         }
     }
 
-    // Getters
+    // Master key getter
+    pub fn get_master_key(&self) -> &[u8; 32] {
+        &self.master_key
+    }
+
+    // Token getters/setters
+    pub async fn set_token(&self, token: String) {
+        *self.current_token.lock().await = Some(token);
+    }
+
+    pub async fn get_token(&self) -> Option<String> {
+        self.current_token.lock().await.clone()
+    }
+
+    pub async fn clear_token(&self) {
+        *self.current_token.lock().await = None;
+    }
+
+    // Server getters/setters
     pub async fn get_all_servers(&self) -> Vec<PersistedServer> {
         self.servers.lock().await.clone()
     }
@@ -55,7 +75,6 @@ impl AppState {
         self.session.lock().await.clone()
     }
 
-    // Setters
     pub async fn set_connection_ip(&self, ip: String) {
         *self.current_ip.lock().await = Some(ip);
     }

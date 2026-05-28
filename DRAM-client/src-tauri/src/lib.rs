@@ -33,6 +33,8 @@ async fn get_server_context(
     Ok((ip, server))
 }
 
+
+
 // Server commands
 #[tauri::command]
 async fn add_server(

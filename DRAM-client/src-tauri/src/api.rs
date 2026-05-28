@@ -1,15 +1,41 @@
 use crate::error::AppError;
-use crate::models::ServerErrorPayload;
+use crate::models::{ChallengeFromServer, ChallengeSolvePayload, ServerErrorPayload, TokenResponse};
+use crate::security::derive_identity_keypair;
+use ed25519_dalek::Signer;
 
 pub struct ServerApi {
     base_url: String,
+    token: Option<String>,
 }
 
 impl ServerApi {
     pub fn new(base_url: &str) -> Self {
         Self {
             base_url: base_url.to_string(),
+            token: None,
         }
+    }
+
+    pub fn with_token(base_url: &str, token: String) -> Self {
+        Self {
+            base_url: base_url.to_string(),
+            token: Some(token),
+        }
+    }
+
+    fn auth_header(&self) -> Option<String> {
+        self.token.as_ref().map(|t| format!("Bearer {}", t))
+    }
+
+    // Authentication endpoints
+    pub fn challenge(&self) -> String {
+        format!("{}/server/challenge", self.base_url)
+    }
+    pub fn token_url(&self) -> String {
+        format!("{}/server/token", self.base_url)
+    }
+    pub fn refresh_token_url(&self) -> String {
+        format!("{}/server/refresh_token", self.base_url)
     }
 
     // Server endpoints
@@ -57,6 +83,38 @@ impl ServerApi {
     // WebSocket URL
     pub fn ws(&self) -> String {
         format!("{}/session/connect", self.base_url.replace("http", "ws"))
+    }
+
+    async fn inject_auth(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match self.auth_header() {
+            Some(header) => builder.header("Authorization", header),
+            None => builder,
+        }
+    }
+
+    pub async fn http_post_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
+        let req = self.inject_auth(reqwest::Client::new().post(url).json(body)).await;
+        Self::handle_response(req.send().await?).await
+    }
+
+    pub async fn http_put_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
+        let req = self.inject_auth(reqwest::Client::new().put(url).json(body)).await;
+        Self::handle_response(req.send().await?).await
+    }
+
+    pub async fn http_delete_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
+        let req = self.inject_auth(reqwest::Client::new().delete(url).json(body)).await;
+        Self::handle_response(req.send().await?).await
+    }
+
+    pub async fn http_get_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
+        let req = self.inject_auth(reqwest::Client::new().get(url).json(body)).await;
+        Self::handle_response(req.send().await?).await
+    }
+
+    pub async fn http_patch_authed<B: serde::Serialize>(&self, url: &str, body: &B) -> Result<reqwest::Response, AppError> {
+        let req = self.inject_auth(reqwest::Client::new().patch(url).json(body)).await;
+        Self::handle_response(req.send().await?).await
     }
 
     async fn handle_response(response: reqwest::Response) -> Result<reqwest::Response, AppError> {
