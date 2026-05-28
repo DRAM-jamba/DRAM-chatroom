@@ -27,3 +27,10 @@ pub struct UserKeySessionName {
 pub struct PublicKey {
     pub public_key: String
 }
+
+#[derive(Deserialize)]
+pub struct ChallengeResponse {
+    pub nonce: String,
+    pub signature: String,
+    pub user_key: String
+}
