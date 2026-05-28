@@ -52,10 +52,7 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
     <div className="sidebar-line" />
 
     <div className="nickname-card">
-      <h2 className="nickname-title">Choose your nickname</h2>
-      <p className="nickname-subtitle">
-        This is how other users will see you on this server.
-      </p>
+          <h2 className="nickname-title">Choose your nickname</h2>
       
       <div className="nickname-input-group">
         <input
@@ -84,7 +81,7 @@ function NicknamePage({ onNicknameSet }: NicknamePageProps) {
     </div>
 
     <div className="sidebar-line bottom-line" />
-    <p className="version-text">ver. 0.2</p>
+        <p className="version-text">ver. 0.69</p>
   </aside>
 </div>
   );
