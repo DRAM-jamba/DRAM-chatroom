@@ -66,7 +66,7 @@ mod tests {
     // session not in active map - should be fine
     #[tokio::test]
     async fn test_check_active_session_not_in_map() {
-        use crate::modules::active_sessions::{SessionMap, SessionChat};
+        use crate::modules::active_sessions::{SessionMap};
         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let key = "somesession".to_string();
         let result = l_ensure_session_is_not_active(map, &key).await;

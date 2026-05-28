@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::{State}, routing::{delete, patch, post, put}};
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, server_logic::{l_add_user_to_server, l_connect_user_to_server, l_delete_user_from_server, l_set_user_nickname}}, modules::{request_bodies::{UserKey, UserKeyNickname}, server_state::ServerState}};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, server_logic::{l_add_user_to_server, l_connect_user_to_server, l_delete_user_from_server, l_set_user_nickname}}, modules::{request_bodies::{PublicKey, UserKey, UserKeyNickname}, server_state::ServerState}};
 
 pub fn router() -> Router<ServerState> {
     Router::new()
@@ -11,8 +11,9 @@ pub fn router() -> Router<ServerState> {
         .route("/nickname", patch(r_set_nickname))
 }
 
-async fn r_add_server(State(server_state): State<ServerState>) -> Result<Json<Value>, ApiError> {
-    match l_add_user_to_server(server_state.db_pool.clone()).await {
+async fn r_add_server(State(server_state): State<ServerState>,
+                      Json(payload): Json<PublicKey>) -> Result<Json<Value>, ApiError> {
+    match l_add_user_to_server(server_state.db_pool.clone(), payload.public_key).await {
         Ok(user_key) => {
             Ok(Json(json!({
                 "user_key": user_key

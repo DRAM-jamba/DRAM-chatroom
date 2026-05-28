@@ -22,3 +22,8 @@ pub struct UserKeySessionName {
     pub user_key: String,
     pub session_name: String
 }
+
+#[derive(Deserialize)]
+pub struct PublicKey {
+    pub public_key: String
+}

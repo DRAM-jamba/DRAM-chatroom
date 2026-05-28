@@ -6,11 +6,12 @@ use crate::{data_logic::{connection_data::d_get_user_connections, user_data::{d_
                         logic::{auth_logic::l_generate_auth_token, session_logic::{l_delete_session_by_owner_by_tx, l_forget_session_by_tx}}, 
                         modules::{active_sessions::SessionMap, user::User}};
 
-pub async fn l_add_user_to_server(db_pool: Pool<Postgres>) -> Result<String, ApiError> {
+pub async fn l_add_user_to_server(db_pool: Pool<Postgres>, public_key: String) -> Result<String, ApiError> {
 
     let new_user: User = User {user_key: l_generate_user_key(), 
                                nickname: chrono::Utc::now().to_string(), // nickname must be unique, should work 
-                               last_time_seen: chrono::Local::now().naive_local() };
+                               last_time_seen: chrono::Local::now().naive_local(),
+                               public_key: public_key };
     
     match d_add_user(db_pool.clone(), &new_user).await {
         Ok(()) => (),
@@ -92,7 +93,6 @@ fn l_generate_user_key() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::user::User;
 
     #[test]
     fn test_generate_user_key_is_not_empty() {
