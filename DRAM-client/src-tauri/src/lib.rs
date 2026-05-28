@@ -1,8 +1,18 @@
 use crate::api::ServerApi;
 use crate::error::AppError;
-use crate::models::{PersistedServer, Session, SessionKey, SessionList, UserKey, BackMessageObj, MessageType};
-use crate::state::{AppState, ServerConnectionState, SessionState};
-
+use crate::models::{
+    PersistedServer, 
+    Session, 
+    SessionKey, 
+    SessionList, 
+    UserKey, 
+    BackMessageObj, 
+    MessageType,
+    ChallengeSolvePayload};
+use crate::state::{
+    AppState, 
+    ServerConnectionState, 
+    SessionState};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
@@ -33,7 +43,28 @@ async fn get_server_context(
     Ok((ip, server))
 }
 
+async fn solve_challenge(
+    state: tauri::State<'_, AppState>,
+    challenge_hex: String,
+) -> Result<ChallengeSolvePayload, String> {
+    use ed25519_dalek::Signer;
 
+    let signing_key = security::derive_identity_keypair(&*state.get_master_key())
+        .0
+        .to_owned();
+    let challenge_bytes = hex::decode(&challenge_hex).map_err(|e| e.to_string())?;
+    let signature = signing_key.sign(&challenge_bytes);
+
+    Ok(ChallengeSolvePayload {
+        nonce: challenge_hex,
+        signature: hex::encode(signature.to_bytes()),
+        user_key: get_server_context(&state)
+            .await
+            .map_err(|e| e.to_string())?
+            .1
+            .user_key, 
+    })
+}
 
 // Server commands
 #[tauri::command]
@@ -42,9 +73,17 @@ async fn add_server(
     nickname: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
+    use crate::security::get_public_key_hex;
 
     let api = ServerApi::new(&format!("https://{}", ip));
-    let response = ServerApi::http_post_empty(&api.add_server()).await?;
+    let public_key = get_public_key_hex(&*state.get_master_key());
+    
+    let response = ServerApi::http_post(
+        &api.add_server(),
+        &serde_json::json!({ "public_key": public_key }),
+    )
+    .await?;
+    
     let json_response: UserKey = response
         .json()
         .await
@@ -72,11 +111,34 @@ async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), Ap
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
     let api = ServerApi::new(&format!("https://{}", ip));
 
-    ServerApi::http_put(
-        &api.connect_server(),
+    // Step 1: Get challenge from server
+    let challenge_response = ServerApi::http_post(
+        &api.challenge(),
         &serde_json::json!({ "user_key": server.user_key }),
     )
     .await?;
+    
+    let challenge_data: models::ChallengeFromServer = challenge_response
+        .json()
+        .await
+        .map_err(|e| AppError::Protocol(format!("Failed to parse challenge: {}", e)))?;
+
+    let challenge_payload = solve_challenge(state.clone(), challenge_data.challenge)
+        .await
+        .map_err(|e| AppError::Auth(e))?;
+
+    let token_response = ServerApi::http_post(
+        &api.token_url(),
+        &challenge_payload,
+    )
+    .await?;
+    
+    let token_data: models::TokenResponse = token_response
+        .json()
+        .await
+        .map_err(|e| AppError::Protocol(format!("Failed to parse token: {}", e)))?;
+
+    state.set_token(token_data.token).await;
 
     state.set_connection_ip(ip).await;
     state
@@ -88,10 +150,9 @@ async fn connect_server(ip: String, state: State<'_, AppState>) -> Result<(), Ap
 
 #[tauri::command]
 async fn leave_server(state: State<'_, AppState>) -> Result<(), AppError> {
-    let (ip, _server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
-
-    ServerApi::http_delete_empty(&api.leave_server()).await?;
+    let (_ip, _server) = get_server_context(&state).await?;
+    
+    state.clear_token().await;
 
     let empty_ip = "0.0.0.0:0000";
     state.set_connection_ip(empty_ip.to_string()).await;
@@ -110,9 +171,15 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
         .get_server(&ip)
         .await
         .ok_or_else(|| AppError::Auth(format!("No user key for {} — add it first", ip)))?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    ServerApi::http_delete(
+    api.http_delete_authed(
         &api.forget_server(),
         &serde_json::json!({ "user_key": server.user_key }),
     )
@@ -129,9 +196,15 @@ async fn forget_server(ip: String, state: State<'_, AppState>) -> Result<(), App
 #[tauri::command]
 async fn set_nickname(new_nickname: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    ServerApi::http_patch(
+    api.http_patch_authed(
         &api.set_nickname(),
         &serde_json::json!({ "user_key": server.user_key, "nickname": new_nickname }),
     )
@@ -160,9 +233,15 @@ async fn rename_server(ip: String, nickname: String, state: State<'_, AppState>)
 #[tauri::command]
 async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    let response = ServerApi::http_get(
+    let response = api.http_get_authed(
         &api.session_list(),
         &serde_json::json!({ "user_key": server.user_key }),
     )
@@ -179,9 +258,15 @@ async fn get_sessions(state: State<'_, AppState>) -> Result<Vec<Session>, AppErr
 #[tauri::command]
 async fn create_session(name: String, state: State<'_, AppState>) -> Result<String, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    let response = ServerApi::http_post(
+    let response = api.http_post_authed(
         &api.create_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_name": name }),
     )
@@ -198,9 +283,15 @@ async fn create_session(name: String, state: State<'_, AppState>) -> Result<Stri
 #[tauri::command]
 async fn add_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    ServerApi::http_post(
+    api.http_post_authed(
         &api.add_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )
@@ -266,14 +357,20 @@ async fn resize_for_sessions(app: AppHandle) -> Result<(), AppError> {
 #[tauri::command]
 async fn leave_session(state: State<'_, AppState>, _app: AppHandle) -> Result<(), AppError> {
     println!("Leaving session...");
-    let (ip, _server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    let (ip, server) = get_server_context(&state).await?;
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
     if let SessionState::JoinedSession(ws_client) = &state.get_session_state().await {
         let _ = ws_client.close().await;
     }
 
-    ServerApi::http_delete_empty(&api.leave_session()).await?;
+    api.http_delete_authed(&api.leave_session(), &serde_json::json!({ "user_key": server.user_key })).await?;
 
     state.set_session_state(SessionState::Idle).await;
 
@@ -284,9 +381,15 @@ async fn leave_session(state: State<'_, AppState>, _app: AppHandle) -> Result<()
 #[tauri::command]
 async fn forget_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    ServerApi::http_delete(
+    api.http_delete_authed(
         &api.forget_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )
@@ -298,9 +401,15 @@ async fn forget_session(session_key: String, state: State<'_, AppState>) -> Resu
 #[tauri::command]
 async fn delete_session(session_key: String, state: State<'_, AppState>) -> Result<(), AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
 
-    ServerApi::http_delete(
+    api.http_delete_authed(
         &api.delete_session(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )
@@ -358,9 +467,15 @@ async fn reset_mic_permission(app: AppHandle) -> Result<(), AppError> {
 #[tauri::command]
 async fn join_voice_chat(session_key: String, state: State<'_, AppState>) -> Result<models::VoiceChatInfo, AppError> {
     let (ip, server) = get_server_context(&state).await?;
-    let api = ServerApi::new(&format!("https://{}", ip));
+    
+    let token = state
+        .get_token()
+        .await
+        .ok_or_else(|| AppError::Auth("No authentication token. Connect to server first.".into()))?;
+    
+    let api = ServerApi::with_token(&format!("https://{}", ip), token);
  
-    let response = ServerApi::http_get(
+    let response = api.http_get_authed(
         &api.create_voicechat(),
         &serde_json::json!({ "user_key": server.user_key, "session_key": session_key }),
     )

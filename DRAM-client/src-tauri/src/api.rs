@@ -1,7 +1,5 @@
 use crate::error::AppError;
-use crate::models::{ChallengeFromServer, ChallengeSolvePayload, ServerErrorPayload, TokenResponse};
-use crate::security::derive_identity_keypair;
-use ed25519_dalek::Signer;
+use crate::models::ServerErrorPayload;
 
 pub struct ServerApi {
     base_url: String,
