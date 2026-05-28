@@ -17,6 +17,7 @@ mod events;
 pub mod models;
 mod security;
 mod state;
+mod hotkeys;
 
 // Helper functions
 async fn get_server_context(
@@ -599,54 +600,21 @@ async fn save_nickname(nickname: String, state: State<'_, AppState>) -> Result<(
     Ok(())
 }
 
+
+
+
 #[tauri::command]
-async fn register_hotkeys(
-    mic_key: String,
-    headphones_key: String,
-    app: AppHandle,
-) -> Result<(), AppError> {
-    app.global_shortcut()
-        .unregister_all()
-        .map_err(|e| AppError::Internal(format!("Failed to unregister shortcuts: {}", e)))?;
-
-    if !mic_key.is_empty() {
-        let mic_key_clone = mic_key.clone();
-        app.global_shortcut()
-            .on_shortcut(
-                mic_key_clone.as_str(),
-                move |app_handle, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let _ = app_handle.emit("global_mic_hotkey", ());
-                    }
-                },
-            )
-            .map_err(|e| eprintln!("Failed to register mic shortcut: {}", e))
-            .ok();
-    }
-
-    if !headphones_key.is_empty() {
-        let headphones_key_clone = headphones_key.clone();
-        app.global_shortcut()
-            .on_shortcut(
-                headphones_key_clone.as_str(),
-                move |app_handle, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let _ = app_handle.emit("global_headphones_hotkey", ());
-                    }
-                },
-            )
-            .map_err(|e| eprintln!("Failed to register headphones shortcut: {}", e))
-            .ok();
-    }
-
+async fn register_hotkeys(mic_key: String, headphones_key: String, app: AppHandle) -> Result<(), AppError> {
+    hotkeys::unregister_hooks();
+    let mic_vk = if mic_key.is_empty() { None } else { hotkeys::key_str_to_vk(&mic_key) };
+    let hp_vk = if headphones_key.is_empty() { None } else { hotkeys::key_str_to_vk(&headphones_key) };
+    hotkeys::register_hooks(app, mic_vk, hp_vk);
     Ok(())
 }
 
 #[tauri::command]
-async fn unregister_hotkeys(app: AppHandle) -> Result<(), AppError> {
-    app.global_shortcut()
-        .unregister_all()
-        .map_err(|e| AppError::Internal(format!("Failed to unregister shortcuts: {}", e)))?;
+async fn unregister_hotkeys() -> Result<(), AppError> {
+    hotkeys::unregister_hooks();
     Ok(())
 }
 
@@ -655,7 +623,6 @@ pub fn run() {
         security::get_or_create_master_key().expect("Failed to initialize secure system storage");
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {

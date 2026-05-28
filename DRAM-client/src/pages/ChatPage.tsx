@@ -5,6 +5,7 @@ import MessageInput from "../components/MessageInput";
 import SettingsPage from "./SettingsPage";
 import { joinSession } from "../services/sessionService";
 import { listen } from "@tauri-apps/api/event";
+import { getHotkeyString } from "../services/hotkeysService";
 import {
   sendMessage,
   leaveSession,
@@ -124,6 +125,26 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   useEffect(() => {
     invoke("resize_for_chat");
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const micKey = loadMicHotkey() ?? "";
+      const headphonesKey = loadHeadphonesHotkey() ?? "";
+      console.log("Registering hotkeys:", micKey, headphonesKey);
+      invoke("register_hotkeys", { micKey, headphonesKey }).catch(console.error);
+
+      if (micKey && getHotkeyString(e) === micKey) {
+        handleToggleMute();
+      }
+
+      if (headphonesKey && getHotkeyString(e) === headphonesKey) {
+        handleToggleDeafen();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [muted, deafened, isInVoiceCall]);
 
   useEffect(() => {
     const micKey = loadMicHotkey() ?? "";
