@@ -1,20 +1,26 @@
 use std::{env, process::exit, sync::Arc};
 
 use axum::{Json, Router, response::IntoResponse, routing::get};
+use chrono::Utc;
+use dotenvy::dotenv;
 use serde_json::{Value, json};
 use tokio::{net::TcpListener};
 use sqlx::{postgres::PgPoolOptions};
 
-use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::{server_state::{ServerInfo, ServerState}}};
+use crate::{api::{server_routes, session_routes }, errors::api_error::ApiError, modules::{active_nonce::NonceMap, server_state::{ServerInfo, ServerState}}};
 
 mod api;
 mod modules;
 mod logic;
 mod data_logic;
 mod errors;
+mod middleware;
 
 #[tokio::main]
 async fn main() {
+
+    dotenv().ok();
+
     let db_url = match env::var("DATABASE_URL") {
         Ok(url) => url,
         Err(e) => {
@@ -39,8 +45,10 @@ async fn main() {
 
     let server_state: ServerState = Arc::new(ServerInfo::new(pool));
 
-    let session_router = session_routes::router();
-    let server_router = server_routes::router();
+    start_nonce_cleanup(server_state.active_nonce.clone());
+
+    let session_router = session_routes::router(server_state.clone());
+    let server_router = server_routes::router(server_state.clone());
     
     // let cors_layer = CorsLayer::new().allow_methods(Any).allow_origin("http://127.0.0.1:8080".parse::<HeaderValue>().unwrap());
 
@@ -68,4 +76,27 @@ async fn server_check() -> impl IntoResponse {
 
 async fn error_check() -> Result<Json<Value>, ApiError> {
     Err(ApiError::NotFound)
+}
+
+pub fn start_nonce_cleanup(active_nonce: NonceMap) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(
+            tokio::time::Duration::from_secs(60)
+        );
+
+        loop {
+            interval.tick().await;
+
+            let now = Utc::now();
+            let before = active_nonce.len();
+
+            // retain only nonces that haven't expired
+            active_nonce.retain(|_, pending| pending.expires_at > now);
+
+            let _removed = before - active_nonce.len();
+            // if removed > 0 {
+            //     tracing::info!("cleaned up {} expired nonces", removed);
+            // }
+        }
+    });
 }

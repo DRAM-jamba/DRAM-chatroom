@@ -1,18 +1,22 @@
-use axum::{Json, Router, extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{delete, get, post}};
+use axum::{Json, Router, extract::{State, WebSocketUpgrade}, middleware, response::IntoResponse, routing::{delete, get, post}};
 use hyper::HeaderMap;
 use serde_json::{Value, json};
-use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}, voice_logic::l_create_voice_token}, modules::{request_bodies::{UserKey, UserKeySessionName, UserSessionKeys}, server_state::ServerState}};
+use crate::{errors::api_error::ApiError, logic::{auth_logic::l_ensure_user_not_in_session, chat_logic::l_connection_handler, session_logic::{l_add_session, l_create_session, l_delete_session_by_owner, l_forget_session, l_get_session_list}, voice_logic::l_create_voice_token}, middleware::auth_middleware::auth_middle, modules::{request_bodies::{UserKey, UserKeySessionName, UserSessionKeys}, server_state::ServerState}};
 
-pub fn router() -> Router<ServerState> {
+pub fn router(server_state: ServerState) -> Router<ServerState> {
     Router::new() // move user_key to body of request
         .route("/list", get(r_get_session_list))
         .route("/create", post(r_create_session))
         .route("/add", post(r_add_session))
-        .route("/connect", get(r_connect_to_session))
         .route("/leave", delete(r_leave_session))
-        .route("/token", get(r_create_voice_token))
         .route("/forget", delete(r_forget_session))
         .route("/delete", delete(r_delete_session))
+        .route("/token", get(r_create_voice_token))
+        .route_layer(middleware::from_fn_with_state(
+            server_state.clone(), 
+            auth_middle
+        ))
+        .route("/connect", get(r_connect_to_session))
 }
 
 async fn r_get_session_list(State(server_state): State<ServerState>,

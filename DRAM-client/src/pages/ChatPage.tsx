@@ -4,6 +4,7 @@ import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import SettingsPage from "./SettingsPage";
 import { joinSession } from "../services/sessionService";
+import { listen } from "@tauri-apps/api/event";
 import {
   sendMessage,
   leaveSession,
@@ -53,6 +54,21 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   const [deafened, setDeafened] = useState(false);
   const [expandedVoiceMember, setExpandedVoiceMember] = useState<string | null>(null);
   const [voiceVolumes, setVoiceVolumes] = useState<Record<string, number>>({});
+  const mutedRef = useRef(muted);
+  const deafenedRef = useRef(deafened);
+  const isInVoiceCallRef = useRef(isInVoiceCall);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+
+  useEffect(() => {
+    deafenedRef.current = deafened;
+  }, [deafened]);
+
+  useEffect(() => {
+    isInVoiceCallRef.current = isInVoiceCall;
+  }, [isInVoiceCall]);
 
   const appendMessage = (msg: Message) => {
     setMessages((prev) => {
@@ -110,22 +126,57 @@ function ChatPage({ sessionName, sessionKey, nickname, onLeaveSession }: ChatPag
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const micKey = loadMicHotkey();
-      const headphonesKey = loadHeadphonesHotkey();
+    const micKey = loadMicHotkey() ?? "";
+    const headphonesKey = loadHeadphonesHotkey() ?? "";
 
-    if (micKey && e.key.toUpperCase() === micKey) {
-      handleToggleMute();
-    }
+    invoke("register_hotkeys", { micKey, headphonesKey }).catch(console.error);
 
-    if (headphonesKey && e.key.toUpperCase() === headphonesKey) {
-      handleToggleDeafen();
+    const unlistenMic = listen("global_mic_hotkey", async () => {
+      const nextMuted = !mutedRef.current;
+
+      mutedRef.current = nextMuted;
+      setMuted(nextMuted);
+
+      if (!nextMuted && deafenedRef.current) {
+        deafenedRef.current = false;
+        setDeafened(false);
+
+        if (isInVoiceCallRef.current) {
+          await setServiceDeafened(false);
+        }
+      }
+
+      if (isInVoiceCallRef.current) {
+        await setMicMuted(nextMuted);
+      }
+    });
+
+    const unlistenHeadphones = listen("global_headphones_hotkey", async () => {
+      const nextDeafened = !deafenedRef.current;
+
+      deafenedRef.current = nextDeafened;
+      setDeafened(nextDeafened);
+
+      if (nextDeafened && !mutedRef.current) {
+        mutedRef.current = true;
+        setMuted(true);
+
+        if (isInVoiceCallRef.current) {
+          await setMicMuted(true);
+        }
+      }
+
+    if (isInVoiceCallRef.current) {
+      await setServiceDeafened(nextDeafened);
     }
+  });
+
+    return () => {
+    invoke("unregister_hotkeys").catch(console.error);
+    unlistenMic.then((f) => f());
+    unlistenHeadphones.then((f) => f());
   };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [muted, deafened, isInVoiceCall]);
+  }, []);
 
   const handleSend = async (content: string) => {
     await sendMessage(content);

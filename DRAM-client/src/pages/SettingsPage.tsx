@@ -25,6 +25,7 @@ import {
 import {
   loadNoiseSuppression
 } from "../services/settingsService";
+import { invoke } from "@tauri-apps/api/core";
 
 
 
@@ -57,15 +58,27 @@ function SettingsPage({ onBack, hideHeader = false }: SettingsPageProps) {
       const key = e.key.toUpperCase();
 
       if (listeningFor === "mic") {
-        if (key === headphonesHotkey) return; 
+        if (key === headphonesHotkey) return;
+
         setMicHotkey(key);
         saveMicHotkey(key);
+
+        invoke("register_hotkeys", {
+          micKey: key,
+          headphonesKey: headphonesHotkey ?? "",
+        }).catch(console.error);
       }
 
       if (listeningFor === "headphones") {
-        if (key === micHotkey) return; 
+        if (key === micHotkey) return;
+
         setHeadphonesHotkey(key);
         saveHeadphonesHotkey(key);
+
+        invoke("register_hotkeys", {
+          micKey: micHotkey ?? "",
+          headphonesKey: key,
+        }).catch(console.error);
       }
 
       setListeningFor(null);

@@ -12,6 +12,9 @@
     "core:window:allow-start-dragging",
     "core:window:allow-toggle-maximize",
     "opener:default",
-    "keyring:default"
+    "keyring:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-unregister-all"
   ]
 }

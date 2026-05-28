@@ -3,7 +3,8 @@ use crate::error::AppError;
 use crate::models::{PersistedServer, Session, SessionKey, SessionList, UserKey, BackMessageObj, MessageType};
 use crate::state::{AppState, ServerConnectionState, SessionState};
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 pub mod api;
 mod client;
@@ -433,11 +434,52 @@ async fn save_nickname(nickname: String, state: State<'_, AppState>) -> Result<(
 }
 
 
+#[tauri::command]
+async fn register_hotkeys(mic_key: String, headphones_key: String, app: AppHandle) -> Result<(), AppError> {
+    app.global_shortcut().unregister_all()
+        .map_err(|e| AppError::Internal(format!("Failed to unregister shortcuts: {}", e)))?;
+
+    if !mic_key.is_empty() {
+        let mic_key_clone = mic_key.clone();
+        app.global_shortcut()
+            .on_shortcut(mic_key_clone.as_str(), move |app_handle, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    let _ = app_handle.emit("global_mic_hotkey", ());
+                }
+            })
+            .map_err(|e| eprintln!("Failed to register mic shortcut: {}", e))
+            .ok();
+    }
+
+    if !headphones_key.is_empty() {
+        let headphones_key_clone = headphones_key.clone();
+        app.global_shortcut()
+            .on_shortcut(headphones_key_clone.as_str(), move |app_handle, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    let _ = app_handle.emit("global_headphones_hotkey", ());
+                }
+            })
+            .map_err(|e| eprintln!("Failed to register headphones shortcut: {}", e))
+            .ok();
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn unregister_hotkeys(app: AppHandle) -> Result<(), AppError> {
+    app.global_shortcut().unregister_all()
+        .map_err(|e| AppError::Internal(format!("Failed to unregister shortcuts: {}", e)))?;
+    Ok(())
+}
+
+
 pub fn run() {
     let master_key =
         security::get_or_create_master_key().expect("Failed to initialize secure system storage");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
@@ -480,6 +522,9 @@ pub fn run() {
             get_servers,
             get_nickname,
             save_nickname,
+            // mic hotkeys
+            register_hotkeys,
+            unregister_hotkeys,
         ])
         .run(tauri::generate_context!())
         .expect("error while running quorthon");
