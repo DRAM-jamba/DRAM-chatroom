@@ -10,14 +10,14 @@ services:
       DATABASE_URL: postgres://antihype:W440Qh6qWJ5JsY184@quorthon_db:5432/quorthon_api
       LIVEKIT_URL: ws://livekit:7880
       LIVEKIT_API_KEY: quorthon_key
-      LIVEKIT_API_SECRET: mP9vkR==zvRN8vZHpH7kxXf5jpPhWfm4I=49RyWk
-      JWT_SECRET: jllJv9rydQYM57GxWUk9IIZr8yrr4s6zqmuC0Q0IuTs=
+      LIVEKIT_API_SECRET:
+      JWT_SECRET:
   db:
     image: postgres:15
     container_name: quorthon_db
     environment:
       POSTGRES_USER: antihype
-      POSTGRES_PASSWORD: W440Qh6qWJ5JsY184
+      POSTGRES_PASSWORD:
       POSTGRES_DB: quorthon_api
     volumes:
       - quorthon_data:/var/lib/postgresql/data
@@ -41,7 +41,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     environment:
-      - DOMAIN=quorthon.eu
+      - DOMAIN=
     depends_on:
       - app
 volumes:
